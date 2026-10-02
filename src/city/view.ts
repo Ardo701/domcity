@@ -42,9 +42,14 @@ export interface ViewStats {
   calls: number;
 }
 
+/**
+ * Ce que désigne le survol quand ce n'est pas le lot lui-même : une rue qu'il a fait tracer,
+ * ou l'aéroport (qui n'est pas un lot : son numéro suit le dernier).
+ */
+export type HoverPart = { kind: "road"; style: RoadStyle } | { kind: "airport" } | null;
+
 export interface ViewEvents {
-  /** `road` : la souris est sur une rue tracée par ce lot, pas sur le lot lui-même. */
-  onHover?: (lotId: number | null, screen: { x: number; y: number } | null, road: RoadStyle | null) => void;
+  onHover?: (lotId: number | null, screen: { x: number; y: number } | null, part: HoverPart) => void;
   onSelect?: (lotId: number | null) => void;
   onModeChange?: (mode: ViewMode) => void;
   onWalkChange?: (state: WalkState) => void;
@@ -265,6 +270,8 @@ export class CityView {
   }
 
   select(lotId: number | null, focus = false) {
+    // L'aéroport n'est pas un élément de la page : rien à inspecter.
+    if (lotId !== null && !this.layout.lots[lotId]) return;
     if (lotId === this.selected) {
       if (focus && lotId !== null) this.focus(lotId);
       return;
@@ -658,7 +665,7 @@ export class CityView {
     this.invalidate();
   }
 
-  private setHover(lotId: number | null, screen: { x: number; y: number } | null, road: RoadStyle | null = null) {
+  private setHover(lotId: number | null, screen: { x: number; y: number } | null, part: HoverPart = null) {
     if (lotId !== this.hovered) {
       const previous = this.hovered;
       this.hovered = lotId;
@@ -667,7 +674,7 @@ export class CityView {
       this.renderer.domElement.style.cursor = lotId !== null && this.mode === "aerial" ? "pointer" : "";
       this.invalidate();
     }
-    this.events.onHover?.(lotId, screen, road);
+    this.events.onHover?.(lotId, screen, part);
   }
 
   // -------------------------------------------------------------------------
@@ -787,7 +794,7 @@ export class CityView {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.city.pickables, false);
     let lotId: number | null = null;
-    let road: RoadStyle | null = null;
+    let part: HoverPart = null;
     for (const hit of hits) {
       const object = hit.object;
       if (object instanceof THREE.InstancedMesh && hit.instanceId !== undefined) {
@@ -796,7 +803,9 @@ export class CityView {
         lotId = object.userData.lotId;
       }
       if (lotId !== null) {
-        if (object.userData.part === "road") road = this.roadAt(lotId, hit.point);
+        const style = object.userData.part === "road" ? this.roadAt(lotId, hit.point) : null;
+        if (style) part = { kind: "road", style };
+        if (lotId === this.layout.airport?.id) part = { kind: "airport" };
         break;
       }
     }
@@ -808,9 +817,9 @@ export class CityView {
         x: ((ndc.x + 1) / 2) * rect.width + rect.left,
         y: ((1 - ndc.y) / 2) * rect.height + rect.top,
       };
-      this.setHover(lotId, lotId === null ? null : screen, road);
+      this.setHover(lotId, lotId === null ? null : screen, part);
     } else {
-      this.setHover(lotId, null, road);
+      this.setHover(lotId, null, part);
     }
   }
 

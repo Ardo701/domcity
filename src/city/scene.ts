@@ -12,8 +12,8 @@
 import * as THREE from "three";
 import * as shapes from "./geometries";
 import {
-  CURB, FLOOR, WATER_DEPTH, cutRect, harborWater,
-  type Bridge, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road,
+  BASE, CURB, FLOOR, PLANE, WATER_DEPTH, cutRect, harborWater,
+  type Airport, type Bridge, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road,
 } from "./layout";
 import { FACADE, GROUND, ROAD, ROAD_AXIS, emblemMaterial, type CityMaterials } from "./materials";
 import * as PALETTE from "./palette";
@@ -122,9 +122,12 @@ const tmpScale = new THREE.Vector3();
 const tmpQuaternion = new THREE.Quaternion();
 const tmpEuler = new THREE.Euler(0, 0, 0, "YXZ");
 
-/** Base au centre (cx, y, cz), taille (w, h, d), rotation autour de la verticale puis de x. */
-function at(cx: number, y: number, cz: number, w: number, h: number, d: number, rotY = 0, rotX = 0): THREE.Matrix4 {
-  tmpQuaternion.setFromEuler(tmpEuler.set(rotX, rotY, 0));
+/**
+ * Base au centre (cx, y, cz), taille (w, h, d), rotation autour de la verticale puis de x ;
+ * `rotZ` cabre une forme tournée vers +x (un avion qui décolle).
+ */
+function at(cx: number, y: number, cz: number, w: number, h: number, d: number, rotY = 0, rotX = 0, rotZ = 0): THREE.Matrix4 {
+  tmpQuaternion.setFromEuler(tmpEuler.set(rotX, rotY, rotZ));
   return tmpMatrix.compose(tmpPosition.set(cx, y, cz), tmpQuaternion, tmpScale.set(w, h, d));
 }
 
@@ -200,6 +203,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     poplar: new Batch(shapes.poplarGeometry(), materials.painted, { receive: false }),
     car: new Batch(shapes.carGeometry(), materials.painted, { receive: false }),
     lamp: new Batch(shapes.lampGeometry(), materials.painted, { cast: false, receive: false }),
+    plane: new Batch(shapes.planeGeometry(), materials.painted, pickable),
     sign: new Batch(shapes.faceGeometry(), emblemSurface, { attribute: "aIcon", cast: false, pickable: true }),
     flag: new Batch(shapes.flagGeometry(), emblemSurface, { attribute: "aIcon", pickable: true }),
   };
@@ -614,6 +618,71 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     obstacles.add(channel, 0.6);
   }
   for (const span of layout.bridges) bridge(span);
+  if (layout.airport) airfield(layout.airport);
+
+  /**
+   * L'aéroport, hors les murs : le socle s'agrandit pour lui. Terminal vitré et tour de contrôle
+   * côté ville, avions aux portes sur le tarmac, voies de circulation, pistes.
+   */
+  function airfield(a: Airport) {
+    const { id } = a;
+    ground(id, a, 0, BASE, "base");
+    // La pelouse s'écarte pour l'avenue qui vient du périphérique.
+    let lawn: Rect[] = [a];
+    for (const road of layout.roads) lawn = lawn.flatMap((piece) => cutRect(piece, road));
+    for (const piece of lawn) ground(id, piece, BASE, CURB, "grass");
+
+    ground(id, a.apron, a.y, 0.03, "sidewalk");
+    for (const strip of a.runways) {
+      kit.road.add(id, at(strip.x + strip.w / 2, a.y, strip.z + strip.d / 2, strip.w, 0.03, strip.d), "#3b3c41", [ROAD.runway, 1, 0, 0]);
+    }
+    for (const way of a.taxiways) {
+      kit.road.add(id, at(way.x + way.w / 2, a.y, way.z + way.d / 2, way.w, 0.03, way.d), "#4a4b50", [ROAD.taxiway, way.axis === "x" ? 0 : 1, 0, 0]);
+    }
+
+    // Le terminal : un long hall vitré, son toit débordant, l'auvent de la dépose côté ville.
+    const t = a.terminal;
+    const tcx = t.x + t.w / 2;
+    const tcz = t.z + t.d / 2;
+    facade(id, tcx, a.y, tcz, t.w, 2.6, t.d, "#cfd8de", FACADE.glass, 0, 1.3);
+    box(id, tcx, a.y + 2.6, tcz, t.w + 0.5, 0.22, t.d + 0.5, "#d4d6d9");
+    box(id, t.x - 0.9, a.y + 2.1, tcz, 1.8, 0.12, Math.min(t.d * 0.6, 14), "#e8e4da");
+    obstacles.add(t, 0.8);
+
+    // La tour de contrôle.
+    const cx = a.tower.x + a.tower.w / 2;
+    const cz = a.tower.z + a.tower.d / 2;
+    kit.cylinder.add(id, at(cx, a.y, cz, 1.3, 10, 1.3), "#e2dccf");
+    kit.cylinder.add(id, at(cx, a.y + 10, cz, 2.7, 1.4, 2.7), "#6f93a8");
+    kit.cylinder.add(id, at(cx, a.y + 11.4, cz, 3, 0.3, 3), "#3b3d42");
+    box(id, cx, a.y + 11.7, cz, 0.08, 1.8, 0.08, "#3b3d42");
+    kit.ball.add(id, at(cx + 0.7, a.y + 11.7, cz, 0.7, 0.7, 0.7), "#f4f2ee");
+    obstacles.add(a.tower, 0.5);
+
+    // Les avions aux portes, nez vers le terminal, chacun relié par sa passerelle.
+    const gate = (a.apron.d - 6) / a.planes;
+    const px = a.apron.x + a.apron.w / 2 + 0.4;
+    for (let i = 0; i < a.planes; i += 1) {
+      const pz = a.apron.z + 3 + gate * (i + 0.5);
+      planeAt(id, px, a.y, pz, Math.PI, i);
+      const from = t.x + t.w;
+      const to = px - PLANE * 0.36;
+      box(id, (from + to) / 2, a.y + 0.62, pz - PLANE * 0.1, to - from, 0.5, 0.55, "#c9c5bb");
+      box(id, to - 0.3, a.y, pz - PLANE * 0.1, 0.16, 0.62, 0.16, "#8e9197");
+    }
+    // Un avion attend en bout de piste ; une page très ouverte en a un autre qui décolle.
+    const [main] = a.runways;
+    if (a.runways.length >= 2) planeAt(id, main.x + main.w / 2, a.y, main.z + main.d - PLANE * 0.9, Math.PI / 2, 20);
+    if (a.runways.length >= 3) planeAt(id, main.x + main.w / 2, a.y + 6, main.z - PLANE * 0.4, Math.PI / 2, 21, 0.22);
+  }
+
+  /** Un avion (nez vers +x avant rotation) et sa dérive aux couleurs d'une compagnie. */
+  function planeAt(id: number, x: number, y: number, z: number, heading: number, salt: number, pitch = 0) {
+    kit.plane.add(id, at(x, y, z, PLANE, PLANE, PLANE, heading, 0, pitch), "#ffffff");
+    const fin = new THREE.Vector3(-0.43 * PLANE, 0.15 * PLANE, 0).applyEuler(new THREE.Euler(0, heading, pitch, "YXZ"));
+    const livery = pick(["#ff4b12", "#2346d8", "#2f8f6b", "#c4462e", "#d9a21b", "#22324a"], rand(id, 500 + salt));
+    kit.plain.add(id, at(x + fin.x, y + fin.y, z + fin.z, 0.12 * PLANE, 0.16 * PLANE, 0.014 * PLANE, heading, 0, pitch), livery);
+  }
 
   /** Le pont d'une rue sur un chenal : un tablier juste au-dessus de l'eau, et ses parapets. */
   function bridge(span: Bridge) {

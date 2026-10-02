@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CityDoc, CityNode } from "@/format/types";
-import { emblemOf, gridLines, layoutCity, stripLayout, type Lot, type Rect } from "./layout";
+import { emblemOf, externalLinks, gridLines, layoutCity, runwaysFor, stripLayout, type Lot, type Rect } from "./layout";
 
 function doc(root: CityNode): CityDoc {
   return {
@@ -276,6 +276,39 @@ describe("layoutCity", () => {
       expect(city.bridges.some((bridge) => bridge.style === "ring")).toBe(true);
       for (const bridge of city.bridges) expect(inside(bridge, channel)).toBe(true);
     }
+  });
+
+  it("bâtit un aéroport hors les murs pour les liens vers d'autres sites, à sa mesure", () => {
+    const page = (external: number) =>
+      doc({
+        tag: "body",
+        children: [
+          { tag: "section", children: [{ tag: "p", text: 400, links: { internal: 3, external } }, { tag: "p", text: 300 }] },
+          { tag: "footer", children: [{ tag: "p", text: 80 }, { tag: "p", text: 60 }] },
+        ],
+      });
+    expect(externalLinks(page(12).root)).toBe(12);
+    expect(layoutCity(page(4)).airport).toBeUndefined();
+    expect([5, 49, 50, 299, 300].map(runwaysFor)).toEqual([1, 1, 2, 2, 3]);
+
+    const city = layoutCity(page(320));
+    const airport = city.airport!;
+    expect(airport.runways).toHaveLength(3);
+    expect(airport.planes).toBeGreaterThan(0);
+    // hors les murs : à l'est du socle de la ville, et compris dans ses limites
+    const socle = city.lots[0];
+    expect(airport.x).toBeCloseTo(socle.x + socle.w, 6);
+    expect(city.bounds.maxX).toBeCloseTo(airport.x + airport.w, 6);
+    for (const rect of [...airport.runways, ...airport.taxiways, airport.apron, airport.terminal, airport.tower]) {
+      expect(inside(rect, airport)).toBe(true);
+    }
+    // une avenue le relie au périphérique, à travers la ceinture verte
+    const access = city.roads.find((road) => road.x < airport.x && road.x + road.w > airport.x)!;
+    expect(access.x + access.w).toBeCloseTo(airport.terminal.x, 6);
+    expect(city.roads.some((road) => road.style === "ring" && Math.abs(road.x + road.w - access.x) < 1e-6)).toBe(true);
+    for (const plate of city.plates) expect(overlaps(plate, access)).toBe(false);
+    // le chenal du port ne passe pas par l'aéroport
+    for (const channel of city.channels) expect(overlaps(channel, airport)).toBe(false);
   });
 
   it("compte la ville", () => {

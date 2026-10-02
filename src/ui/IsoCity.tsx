@@ -1,4 +1,4 @@
-import { WATER_DEPTH, layoutCity, type Lot } from "@/city/layout";
+import { BASE, CURB, WATER_DEPTH, cutRect, layoutCity, type Airport, type Lot, type Rect } from "@/city/layout";
 import { BRICK, CONCRETE, COPPER, GLASS, GROUND_COLORS, HOUSES, ROOFS, STUCCO, WATER, pick, rand } from "@/city/palette";
 import { KINDS } from "@/format/taxonomy";
 import type { CityDoc } from "@/format/types";
@@ -8,6 +8,26 @@ export interface IsoAnnotation {
   match: (lot: Lot) => boolean;
   tag: string;
   name: string;
+}
+
+/** L'aéroport hors les murs, au trait : socle, pelouse, tarmac, pistes, terminal et tour. */
+function airportFaces(a: Airport, roads: Rect[]): { ground: IsoFace[]; buildings: IsoFace[] } {
+  let lawn: Rect[] = [a];
+  for (const road of roads) lawn = lawn.flatMap((piece) => cutRect(piece, road));
+  const t = a.terminal;
+  return {
+    ground: [
+      ...isoBox(a.x, 0, a.z, a.w, BASE, a.d, GROUND_COLORS.base),
+      ...lawn.flatMap((p) => isoBox(p.x, BASE, p.z, p.w, CURB, p.d, GROUND_COLORS.grass)),
+      ...isoBox(a.apron.x, a.y, a.apron.z, a.apron.w, 0.03, a.apron.d, GROUND_COLORS.sidewalk),
+      ...[...a.taxiways, ...a.runways].flatMap((r) => isoBox(r.x, a.y, r.z, r.w, 0.03, r.d, "#3b3c41")),
+    ],
+    buildings: [
+      ...isoBox(t.x, a.y, t.z, t.w, 2.6, t.d, GLASS[0]),
+      ...isoBox(a.tower.x + 0.5, a.y, a.tower.z + 0.5, 1.4, 10, 1.4, "#e2dccf"),
+      ...isoBox(a.tower.x, a.y + 10, a.tower.z, a.tower.w, 1.4, a.tower.d, "#6f93a8"),
+    ],
+  };
 }
 
 const CONTAINER_GROUND: Partial<Record<Lot["kind"], keyof typeof GROUND_COLORS>> = {
@@ -105,7 +125,8 @@ export function IsoCity({
   className?: string;
   title: string;
 }) {
-  const { lots, plates, channels } = layoutCity(doc);
+  const { lots, plates, channels, roads, airport } = layoutCity(doc);
+  const field = airport ? airportFaces(airport, roads) : { ground: [], buildings: [] };
   const depthOf = (r: { x: number; z: number; w: number; d: number }) => r.x + r.w / 2 + r.z + r.d / 2;
   // Le sol d'abord (socle, places, trottoirs, eau), puis les bâtiments du fond vers l'avant.
   const grounds = [
@@ -114,7 +135,7 @@ export function IsoCity({
     ...channels.map((c) => ({ y: c.y, depth: depthOf(c), faces: isoBox(c.x, c.y, c.z, c.w, WATER_DEPTH, c.d, WATER) })),
   ].sort((a, b) => a.y - b.y || a.depth - b.depth);
   const leaves = lots.filter((l) => !l.container && l.kind !== "river").sort((a, b) => depthOf(a) - depthOf(b) || a.y - b.y);
-  const faces = [...grounds.flatMap((g) => g.faces), ...leaves.flatMap(facesOf)];
+  const faces = [...field.ground, ...grounds.flatMap((g) => g.faces), ...leaves.flatMap(facesOf), ...field.buildings];
 
   let minX = Infinity;
   let maxX = -Infinity;

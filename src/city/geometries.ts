@@ -194,6 +194,42 @@ export function carGeometry(): THREE.BufferGeometry {
   return merge([part(body), part(cabin, "#2b333b"), part(roof), ...wheels]);
 }
 
+/**
+ * Avion de ligne, long d'une unité le long de x (nez vers +x), envergure d'une unité le long de z.
+ * La dérive n'en fait pas partie : elle est peinte aux couleurs de sa compagnie, à part.
+ */
+export function planeGeometry(): THREE.BufferGeometry {
+  const r = 0.055;
+  const y = 0.1;
+  const body = new THREE.CylinderGeometry(r, r, 0.78, 12, 1);
+  body.rotateZ(Math.PI / 2);
+  body.translate(-0.02, y, 0);
+  const nose = new THREE.ConeGeometry(r, 0.12, 12, 1);
+  nose.rotateZ(-Math.PI / 2);
+  nose.translate(0.43, y, 0);
+  const tail = new THREE.ConeGeometry(r, 0.14, 12, 1);
+  tail.rotateZ(Math.PI / 2);
+  tail.translate(-0.48, y + 0.015, 0);
+  const cockpit = boxAt(0.05, 0.022, 0.07, 0.39, y + 0.022);
+  const wings = boxAt(0.17, 0.012, 1, 0.02, y - 0.03);
+  const stabilizer = boxAt(0.08, 0.01, 0.34, -0.45, y + 0.03);
+  const engines = [-0.2, 0.2].map((z) => {
+    const engine = new THREE.CylinderGeometry(0.028, 0.026, 0.13, 10, 1);
+    engine.rotateZ(Math.PI / 2);
+    engine.translate(0.08, y - 0.055, z);
+    return part(engine, "#b9bcc2");
+  });
+  return merge([
+    part(body, "#f4f2ee"),
+    part(nose, "#f4f2ee"),
+    part(tail, "#f4f2ee"),
+    part(cockpit, "#2b333b"),
+    part(wings, "#d8dade"),
+    part(stabilizer, "#d8dade"),
+    ...engines,
+  ]);
+}
+
 /** Lampadaire : mât, crosse, lanterne. */
 export function lampGeometry(): THREE.BufferGeometry {
   const pole = new THREE.CylinderGeometry(0.035, 0.05, 1, 6, 1);

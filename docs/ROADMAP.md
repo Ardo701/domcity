@@ -136,6 +136,7 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `form` / `button`, `input`… | Place de la mairie (pavés, fontaine) / Guichet à auvent |
 | `table` | Champs cultivés |
 | `hr` | Canal entre deux quais, avec ses ponts |
+| liens externes (toute la page) | Aéroport hors les murs, à l'est, relié au périphérique : 1 piste dès 5 liens, 2 dès 50, 3 dès 300, et un avion par porte (12 au plus) |
 | `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo, chenal vers le large), Parc arboré |
 
 Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
@@ -196,6 +197,7 @@ Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « me
 Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
 Rues alignées (demande de l'utilisateur : dans un lotissement, les petites rues « ne s'alignent pas ») : chaque rangée coupait ses pâtés à sa façon, les rues transversales se décalaient d'une rangée à l'autre (90 petites rues sur 73 positions dans les références de Paris). Elles suivent désormais une grille commune à la ville, au pas d'un pâté ; les cases voisines s'étirent de 30 % au plus pour l'atteindre. Paris : toutes sur 4 lignes, et les listes empilées partagent les mêmes rues.
 Survol d'une rue (demande de l'utilisateur : « pourquoi une route s'appelle un îlot ? ») : une rue appartient au conteneur qui l'a fait tracer, la bulle affichait donc ce conteneur. Elle nomme désormais la rue (rue, ruelle, allée, avenue), puis le conteneur : « Ruelle · dans <li.gallerybox> · îlot · Pas dans la page : la ville la trace entre les 2 éléments de ce <li.gallerybox> ». Un clic ouvre toujours la fiche du conteneur.
+Aéroport (demande de l'utilisateur) : les liens de la page vers d'autres sites. Il n'est pas un élément de la page : il est hors les murs, à l'est, sur une extension du socle (`airport` dans `layout.ts`), relié au périphérique par une avenue à travers la ceinture verte. Terminal vitré et tour de contrôle côté ville, avions aux portes avec passerelles (dérives aux couleurs de compagnies), voie de circulation à axe jaune, pistes à touches de piano (deux styles de chaussée de plus dans le shader). Avec 2 pistes, un avion attend en bout de piste ; avec 3, un autre décolle. Au survol : « Aéroport · 540 liens vers d'autres sites · 3 pistes · 12 avions aux portes » ; un clic n'ouvre pas de fiche. Paris : 540 liens, 3 pistes ; Tour Eiffel : 167, 2 pistes ; GitHub : 14, 1 piste. Un port ne fait jamais passer son chenal par l'aéroport.
 Ports ouverts sur le large (demande de l'utilisateur : un port enfermé dans la ville « n'est pas logique ») : un chenal mène le bassin jusqu'au bord de la maquette, par le plus court chemin libre (bassin prolongé vers l'ouest ou l'est, ou chenal vers le sud). Il ne passe sous aucun bâtiment ni le long d'une rue ; trottoirs et ceinture verte s'écartent, les rues le franchissent sur un pont (`channels` et `bridges` dans `layout.ts`). Le bassin est descendu au niveau de l'eau des canaux, sous le quai. Sur github.com/vercel/next.js : 13 m vers l'ouest, sous le périphérique.
 Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fois dans la fenêtre « voir l'image » (jusqu'à 240 px de côté) et dans l'aperçu de l'inspecteur (160 px) ; au-delà de ×4 ses pixels restent nets plutôt que flous (`src/ui/explorer/FitImage.tsx`). Les images SVG restent vectorielles.
 
@@ -211,7 +213,7 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 ## 10. Étapes suivantes
 
 ### Étape 4 : la mégalopole
-Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées (branchées sur les coins du périphérique de chaque ville : ouvrir un côté vers l'extérieur d'un `Joint` en fait un carrefour, le moteur le dessine déjà), niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
+Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées (branchées sur les coins du périphérique de chaque ville : ouvrir un côté vers l'extérieur d'un `Joint` en fait un carrefour, le moteur le dessine déjà), niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Vols entre les aéroports des sites liés (validé par l'utilisateur) : il faudra relever les domaines des liens externes (aujourd'hui seulement leur nombre), donc une évolution du favori et du format. Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
 
 ### Étape 5 : machine à remonter le temps et ambiance
 Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6. Les données sont déjà relevées par le favori : `page.scripts` (usines), `page.thirdParty` à comparer à une liste de traqueurs tenue par le moteur (caméras), `page.bytes` et `page.domSize` (météo), `page.comments` (graffitis), `bg` et `page.colors` (vraies couleurs).
@@ -242,7 +244,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 57 tests
+npm test           # 58 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

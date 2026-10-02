@@ -1,21 +1,25 @@
 import { formatChars, formatCount, ROAD_NAMES, type LotInfo } from "@/city/describe";
-import type { RoadStyle } from "@/city/layout";
+import type { Airport } from "@/city/layout";
+import type { HoverPart } from "@/city/view";
 import { KindSwatch, RoadSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
 
 /**
  * Bulle de survol : ce qu'était ce bâtiment dans la page. Sur une rue, `info` est la fiche
- * du conteneur qui l'a fait tracer : la bulle nomme la rue, puis ce conteneur.
+ * du conteneur qui l'a fait tracer : la bulle nomme la rue, puis ce conteneur. L'aéroport
+ * n'est pas un élément : sa bulle compte les liens de toute la page vers d'autres sites.
  */
 export function Tooltip({
   info,
-  road,
+  part,
+  airport,
   x,
   y,
   centered,
 }: {
-  info: LotInfo;
-  road?: RoadStyle | null;
+  info: LotInfo | null;
+  part: HoverPart;
+  airport?: Airport;
   x: number;
   y: number;
   centered: boolean;
@@ -24,7 +28,30 @@ export function Tooltip({
   const left = centered ? window.innerWidth / 2 + 28 : Math.min(x + 18, window.innerWidth - width - 12);
   const top = centered ? window.innerHeight / 2 + 28 : y + 18 > window.innerHeight - 190 ? y - 170 : y + 18;
 
-  if (road) {
+  if (part?.kind === "airport" && airport) {
+    const runways = airport.runways.length;
+    return (
+      <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+        <div className={styles.tooltipHead}>
+          <KindSwatch kind="airport" size={26} />
+          <div>
+            <p className={styles.tooltipName}>Aéroport</p>
+            <p className={styles.tooltipSelector}>hors les murs · toute la page</p>
+          </div>
+        </div>
+        <ul className={styles.tooltipFacts}>
+          <li>{formatCount(airport.external)} liens vers d&apos;autres sites</li>
+          <li>
+            {runways} piste{runways > 1 ? "s" : ""} · {airport.planes} avion{airport.planes > 1 ? "s" : ""} aux portes
+          </li>
+        </ul>
+      </div>
+    );
+  }
+  if (!info) return null;
+
+  if (part?.kind === "road") {
+    const road = part.style;
     const between =
       info.children > 1
         ? `entre les ${formatCount(info.children)} éléments de ce <${info.selector}>`

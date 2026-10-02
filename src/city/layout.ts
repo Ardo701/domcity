@@ -154,6 +154,27 @@ export interface Bridge extends Rect {
   y: number;
 }
 
+/**
+ * L'aéroport : les liens de la page vers d'autres sites. Il n'est pas un élément de la page :
+ * il est hors les murs, à l'est de la ville, sur une extension du socle, relié au périphérique.
+ */
+export interface Airport extends Rect {
+  /** Numéro de survol : juste après le dernier lot (ce n'est pas un lot). */
+  id: number;
+  /** Niveau des pistes et du tarmac. */
+  y: number;
+  /** Liens vers d'autres sites, dans toute la page. */
+  external: number;
+  runways: Rect[];
+  /** Voies de circulation des avions : la grande, parallèle aux pistes, et ses bretelles. */
+  taxiways: Array<Rect & { axis: "x" | "z" }>;
+  apron: Rect;
+  terminal: Rect;
+  tower: Rect;
+  /** Avions aux portes du terminal. */
+  planes: number;
+}
+
 export interface CityStats {
   buildings: number;
   districts: number;
@@ -176,6 +197,7 @@ export interface CityLayout {
   /** Chenaux des ports vers l'extérieur, et ponts des rues qui les franchissent. */
   channels: Channel[];
   bridges: Bridge[];
+  airport?: Airport;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number };
   stats: CityStats;
 }
@@ -597,6 +619,7 @@ interface Ctx {
   decor: Decor[];
   channels: Channel[];
   bridges: Bridge[];
+  airport?: Airport;
 }
 
 interface Env {
@@ -622,7 +645,8 @@ export function layoutCity(doc: CityDoc): CityLayout {
   const side = Math.sqrt(rootPlot.area);
   const edge = { x: -side / 2, z: -side / 2, w: side, d: side };
   place(rootPlot, edge, 0, -1, ctx, { streets: "street" });
-  openHarbors(ctx, edge);
+  ctx.airport = planAirport(ctx, edge, externalLinks(doc.root));
+  openHarbors(ctx, ctx.airport ? { ...edge, w: ctx.airport.x + ctx.airport.w - edge.x } : edge);
   const { lots } = ctx;
 
   // Le monument (h1) domine toujours la ville.
@@ -656,9 +680,102 @@ export function layoutCity(doc: CityDoc): CityLayout {
       default: stats.buildings += 1;
     }
   }
+  if (ctx.airport) bounds.maxX = ctx.airport.x + ctx.airport.w;
   return {
     lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor,
-    channels: ctx.channels, bridges: ctx.bridges, bounds, stats,
+    channels: ctx.channels, bridges: ctx.bridges, airport: ctx.airport, bounds, stats,
+  };
+}
+
+/** Liens vers d'autres sites, dans toute la page. */
+export function externalLinks(node: CityNode): number {
+  let total = node.links?.external ?? 0;
+  for (const child of node.children ?? []) total += externalLinks(child);
+  return total;
+}
+
+/** En dessous, la page est presque fermée sur elle-même : pas d'aéroport. */
+export const AIRPORT_MIN = 5;
+/** Longueur (et envergure) d'un avion. */
+export const PLANE = 8;
+const RUNWAY_WIDTH = 6;
+const TAXIWAY_WIDTH = 2.4;
+
+/** Pistes : une pour un aérodrome, trois pour une page très ouverte sur le web. */
+export function runwaysFor(external: number): number {
+  return external >= 300 ? 3 : external >= 50 ? 2 : 1;
+}
+
+/**
+ * L'aéroport, à l'est de la ceinture verte : terminal et tour de contrôle côté ville, avions
+ * aux portes sur le tarmac, puis la voie de circulation et les pistes. Une avenue le relie au
+ * périphérique à travers la ceinture.
+ */
+function planAirport(ctx: Ctx, edge: Rect, external: number): Airport | undefined {
+  if (external < AIRPORT_MIN) return undefined;
+  const runways = runwaysFor(external);
+  const x0 = edge.x + edge.w;
+  const center = edge.z + edge.d / 2;
+  const length = Math.max(30, Math.min(edge.d - 8, 55 + 25 * runways));
+  const top = edge.z + edge.d / 2 - length / 2;
+
+  let x = x0 + 2;
+  const terminalX = x;
+  x += 5;
+  const apronX = x;
+  x += PLANE * 1.4;
+  const apronW = x - apronX;
+  x += 1.5;
+  const taxiway = { x, z: top, w: TAXIWAY_WIDTH, d: length, axis: "z" as const };
+  x += TAXIWAY_WIDTH;
+  const strips: Rect[] = [];
+  for (let k = 0; k < runways; k += 1) {
+    x += 4;
+    strips.push({ x, z: top, w: RUNWAY_WIDTH, d: length });
+    x += RUNWAY_WIDTH;
+  }
+  x += 4;
+
+  // Une porte par avion, autant que le tarmac en contient.
+  const gate = PLANE * 1.15;
+  const planes = Math.min(clamp(Math.round(Math.sqrt(external) / 2), 1, 12), Math.floor((length - 6) / gate));
+  const apronD = Math.min(length, planes * gate + 6);
+  const apron = { x: apronX, z: center - apronD / 2, w: apronW, d: apronD };
+  const terminal = { x: terminalX, z: apron.z, w: 5, d: apronD };
+
+  // Bretelles : du tarmac à la grande voie, et de la grande voie à chaque piste.
+  const taxiways: Airport["taxiways"] = [taxiway];
+  for (const z of [apron.z + 1.5, apron.z + apron.d - 1.5 - TAXIWAY_WIDTH]) {
+    taxiways.push({ x: apron.x + apron.w, z, w: taxiway.x - apron.x - apron.w, d: TAXIWAY_WIDTH, axis: "x" });
+  }
+  let from = taxiway.x + TAXIWAY_WIDTH;
+  for (const strip of strips) {
+    for (const z of [top + 1, center - TAXIWAY_WIDTH / 2, top + length - 1 - TAXIWAY_WIDTH]) {
+      taxiways.push({ x: from, z, w: strip.x - from, d: TAXIWAY_WIDTH, axis: "x" });
+    }
+    from = strip.x + RUNWAY_WIDTH;
+  }
+
+  // L'avenue d'accès, du périphérique au terminal : elle coupe la ceinture verte.
+  const avenue = roadWidth("avenue", 0);
+  const access: Road = {
+    x: x0 - BELT, z: center - avenue / 2, w: terminalX - (x0 - BELT), d: avenue,
+    axis: "x", style: "avenue", owner: 0, y: BASE,
+  };
+  ctx.plates = ctx.plates.flatMap((plate) => cutRect(plate, access).map((piece) => ({ ...plate, ...piece })));
+  ctx.roads.push(access);
+
+  return {
+    id: ctx.lots.length,
+    x: x0, z: edge.z, w: x - x0, d: edge.d,
+    y: BASE + CURB,
+    external,
+    runways: strips,
+    taxiways,
+    apron,
+    terminal,
+    tower: { x: terminalX + 1.3, z: terminal.z - 3.6, w: 2.4, d: 2.4 },
+    planes,
   };
 }
 
@@ -723,7 +840,8 @@ function openHarbors(ctx: Ctx, edge: Rect) {
       ) &&
       !ctx.joints.some((joint) => overlap(joint, c)) &&
       !ctx.roads.some((road) => road.axis === c.axis && overlap(road, c)) &&
-      !ctx.decor.some((decor) => decor.type !== "square" && overlap(decor, c));
+      !ctx.decor.some((decor) => decor.type !== "square" && overlap(decor, c)) &&
+      !(ctx.airport && overlap(ctx.airport, c));
     const best = candidates.filter(free).sort((a, b) => length(a) - length(b))[0];
     if (!best) continue;
 

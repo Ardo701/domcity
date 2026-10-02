@@ -5,7 +5,7 @@ import { isoBox } from "./iso";
 const HEIGHTS: Partial<Record<Kind, number>> = {
   tower: 1.8, residence: 1.2, house: 0.8, monument: 2.2, belfry: 1.7, kiosk: 0.9,
   bollard: 0.6, billboard: 1.1, screen: 1.1, embassy: 1, sculpture: 0.9, counter: 0.6,
-  vacant: 0.08, river: 0.08, fields: 0.15,
+  vacant: 0.08, river: 0.08, fields: 0.15, airport: 0.08,
 };
 
 /** Petit bloc isométrique à la couleur d'un genre, pour la légende et les fiches. */
