@@ -2,13 +2,25 @@
 
 import { KINDS, type Kind } from "@/format/taxonomy";
 import type { CityImage, CityLinks } from "@/format/types";
-import { FLOOR, type CityLayout, type Lot } from "./layout";
+import { FLOOR, type CityLayout, type Lot, type RoadStyle } from "./layout";
 
 export interface LotStep {
   id: number;
   selector: string;
   name: string;
 }
+
+/**
+ * Les rues ne sont pas dans la page : la ville les trace entre les éléments d'un conteneur.
+ * Au survol, elles portent le nom de leur genre, et la fiche est celle de ce conteneur.
+ */
+export const ROAD_NAMES: Record<RoadStyle, string> = {
+  ring: "Périphérique",
+  avenue: "Avenue",
+  street: "Rue",
+  lane: "Ruelle",
+  path: "Allée",
+};
 
 export interface LotInfo {
   id: number;

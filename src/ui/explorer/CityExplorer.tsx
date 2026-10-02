@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { fetchWikipediaCity, WikiNotFoundError, wikiPath, type WikiLang } from "@/capture/wikipedia";
 import { describeLot } from "@/city/describe";
-import { layoutCity, type CityLayout } from "@/city/layout";
+import { layoutCity, type CityLayout, type RoadStyle } from "@/city/layout";
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, ViewMode, WalkState } from "@/city/view";
 import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
@@ -76,7 +76,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const [status, setStatus] = useState<Status>({ phase: "loading", step: 0 });
   const [doc, setDoc] = useState<CityDoc | null>(null);
   const [layout, setLayout] = useState<CityLayout | null>(null);
-  const [hover, setHover] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ id: number; x: number; y: number; road: RoadStyle | null } | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [mode, setMode] = useState<ViewMode>("aerial");
   const [walking, setWalking] = useState<WalkState>("off");
@@ -132,7 +132,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         const { CityView } = await import("@/city/view");
         if (cancelled || !stageRef.current) return;
         view = new CityView(stageRef.current, cityLayout, {
-          onHover: (id, screen) => setHover(id === null ? null : { id, x: screen?.x ?? -1, y: screen?.y ?? -1 }),
+          onHover: (id, screen, road) =>
+            setHover(id === null ? null : { id, x: screen?.x ?? -1, y: screen?.y ?? -1, road }),
           onSelect: setSelected,
           onModeChange: setMode,
           onWalkChange: setWalking,
@@ -365,7 +366,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       )}
 
       {ready && hoverInfo && hover && (hover.x >= 0 || walking === "locked") && (
-        <Tooltip info={hoverInfo} x={hover.x} y={hover.y} centered={walking === "locked"} />
+        <Tooltip info={hoverInfo} road={hover.road} x={hover.x} y={hover.y} centered={walking === "locked"} />
       )}
 
       {ready && selectedInfo && (

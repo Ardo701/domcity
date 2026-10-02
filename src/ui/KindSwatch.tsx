@@ -1,3 +1,4 @@
+import { ROAD_COLORS } from "@/city/palette";
 import { ROOF_COLOR, type Kind, KINDS } from "@/format/taxonomy";
 import { isoBox } from "./iso";
 
@@ -15,6 +16,18 @@ export function KindSwatch({ kind, size = 22 }: { kind: Kind; size?: number }) {
   const w = narrow ? 0.6 : 1;
   const offset = (1 - w) / 2;
   const faces = isoBox(offset, 0, offset, w, h, w, info.color, { top: kind === "house" ? ROOF_COLOR : undefined });
+  return (
+    <svg width={size} height={size} viewBox="-1.05 -2.35 2.1 3.45" aria-hidden>
+      {faces.map((face, i) => (
+        <polygon key={i} points={face.points} fill={face.fill} stroke="#15151a" strokeWidth={0.06} strokeLinejoin="round" />
+      ))}
+    </svg>
+  );
+}
+
+/** Une dalle d'asphalte : les rues, qui ne sont pas des éléments de la page. */
+export function RoadSwatch({ size = 22 }: { size?: number }) {
+  const faces = isoBox(0, 0, 0, 1, 0.08, 1, ROAD_COLORS.street);
   return (
     <svg width={size} height={size} viewBox="-1.05 -2.35 2.1 3.45" aria-hidden>
       {faces.map((face, i) => (

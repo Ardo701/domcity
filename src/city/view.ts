@@ -11,7 +11,7 @@
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
-import type { CityLayout, Lot } from "./layout";
+import type { CityLayout, Lot, RoadStyle } from "./layout";
 import { createMaterials, type CityMaterials } from "./materials";
 import { buildCityScene, type CityScene, type LabelSlot } from "./scene";
 import {
@@ -43,7 +43,8 @@ export interface ViewStats {
 }
 
 export interface ViewEvents {
-  onHover?: (lotId: number | null, screen: { x: number; y: number } | null) => void;
+  /** `road` : la souris est sur une rue tracée par ce lot, pas sur le lot lui-même. */
+  onHover?: (lotId: number | null, screen: { x: number; y: number } | null, road: RoadStyle | null) => void;
   onSelect?: (lotId: number | null) => void;
   onModeChange?: (mode: ViewMode) => void;
   onWalkChange?: (state: WalkState) => void;
@@ -657,7 +658,7 @@ export class CityView {
     this.invalidate();
   }
 
-  private setHover(lotId: number | null, screen: { x: number; y: number } | null) {
+  private setHover(lotId: number | null, screen: { x: number; y: number } | null, road: RoadStyle | null = null) {
     if (lotId !== this.hovered) {
       const previous = this.hovered;
       this.hovered = lotId;
@@ -666,7 +667,7 @@ export class CityView {
       this.renderer.domElement.style.cursor = lotId !== null && this.mode === "aerial" ? "pointer" : "";
       this.invalidate();
     }
-    this.events.onHover?.(lotId, screen);
+    this.events.onHover?.(lotId, screen, road);
   }
 
   // -------------------------------------------------------------------------
@@ -786,6 +787,7 @@ export class CityView {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.city.pickables, false);
     let lotId: number | null = null;
+    let road: RoadStyle | null = null;
     for (const hit of hits) {
       const object = hit.object;
       if (object instanceof THREE.InstancedMesh && hit.instanceId !== undefined) {
@@ -793,7 +795,10 @@ export class CityView {
       } else if (typeof object.userData.lotId === "number") {
         lotId = object.userData.lotId;
       }
-      if (lotId !== null) break;
+      if (lotId !== null) {
+        if (object.userData.part === "road") road = this.roadAt(lotId, hit.point);
+        break;
+      }
     }
     // Le terrain nu n'est pas une cible intéressante au survol.
     if (lotId === 0) lotId = null;
@@ -803,10 +808,24 @@ export class CityView {
         x: ((ndc.x + 1) / 2) * rect.width + rect.left,
         y: ((1 - ndc.y) / 2) * rect.height + rect.top,
       };
-      this.setHover(lotId, lotId === null ? null : screen);
+      this.setHover(lotId, lotId === null ? null : screen, road);
     } else {
-      this.setHover(lotId, null);
+      this.setHover(lotId, null, road);
     }
+  }
+
+  /** Le genre de la rue sous ce point, parmi celles qu'a fait tracer ce lot. Le tablier d'un pont n'en est pas une. */
+  private roadAt(lotId: number, point: THREE.Vector3): RoadStyle | null {
+    const margin = 0.05;
+    const road = this.layout.roads.find(
+      (r) =>
+        r.owner === lotId &&
+        point.x >= r.x - margin &&
+        point.x <= r.x + r.w + margin &&
+        point.z >= r.z - margin &&
+        point.z <= r.z + r.d + margin,
+    );
+    return road?.style ?? null;
   }
 
   // -------------------------------------------------------------------------

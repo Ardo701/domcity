@@ -812,6 +812,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     const mesh = batch.build(refs, baseColors);
     if (!mesh) continue;
     group.add(mesh);
+    // Une rue désigne le conteneur qui l'a fait tracer : le survol doit savoir que c'en est une.
+    if (batch === kit.road || batch === kit.bend) mesh.userData.part = "road";
     if (batch.options.pickable) pickables.push(mesh);
   }
   pickables.push(...panelMeshes);
