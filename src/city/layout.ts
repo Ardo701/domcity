@@ -470,6 +470,71 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = []): Row[] 
   return rows;
 }
 
+/** Un joint de rangée ne va chercher sa ligne de grille qu'à cette fraction de l'espacement. */
+const SNAP = 0.3;
+/** Pas de ligne de grille si près du bord d'un tronçon : le bout de pâté serait trop court. */
+const GRID_MARGIN = 0.4;
+
+/**
+ * Lignes de la grille des rues transversales qui traversent un tronçon. La grille est calée sur
+ * la ville entière : deux listes l'une au-dessus de l'autre partagent les mêmes lignes.
+ */
+export function gridLines(x0: number, width: number, spacing: number): number[] {
+  const lines: number[] = [];
+  const from = x0 + spacing * GRID_MARGIN;
+  const to = x0 + width - spacing * GRID_MARGIN;
+  // « || 0 » : l'arrondi d'un nombre négatif proche de zéro donne -0.
+  for (let k = Math.ceil(from / spacing) || 0; k * spacing < to; k += 1) lines.push(k * spacing);
+  return lines;
+}
+/** Étirement permis aux cases entre deux joints déplacés. */
+const STRETCH: [number, number] = [0.7, 1.4];
+
+/**
+ * Choisit dans une rangée les joints où passent les rues transversales : ceux qui tombent près
+ * d'une grille commune à toutes les rangées. Chaque joint retenu est amené sur sa ligne, en étirant
+ * un peu les cases d'entre deux. D'une rangée à l'autre, les rues se prolongent au lieu de se décaler.
+ * Renvoie le numéro de la case qui suit chaque joint retenu.
+ */
+function alignJoints(row: Row, lines: number[], spacing: number): Set<number> {
+  const items = row.items;
+  const start = items[0].x;
+  const end = items[items.length - 1].x + items[items.length - 1].w;
+  // Repères : un joint, sa position d'origine et sa place sur la grille. Les deux bouts ne bougent pas.
+  const pins = [{ j: 0, from: start, to: start }];
+  const fits = (a: { from: number; to: number }, b: { from: number; to: number }) => {
+    const scale = (b.to - a.to) / (b.from - a.from);
+    return scale >= STRETCH[0] && scale <= STRETCH[1];
+  };
+  for (const line of lines) {
+    const previous = pins[pins.length - 1];
+    // Le joint le plus proche de la ligne ; s'il étire trop les cases d'avant, le suivant.
+    const candidates: number[] = [];
+    for (let j = previous.j + 1; j < items.length; j += 1) {
+      if (Math.abs(items[j].x - line) < spacing * SNAP) candidates.push(j);
+    }
+    candidates.sort((a, b) => Math.abs(items[a].x - line) - Math.abs(items[b].x - line));
+    const pin = candidates
+      .map((j) => ({ j, from: items[j].x, to: line }))
+      .find((candidate) => fits(previous, candidate));
+    if (pin) pins.push(pin);
+  }
+  const last = { j: items.length, from: end, to: end };
+  while (pins.length > 1 && !fits(pins[pins.length - 1], last)) pins.pop();
+  pins.push(last);
+
+  for (let k = 0; k < pins.length - 1; k += 1) {
+    const a = pins[k];
+    const b = pins[k + 1];
+    const scale = (b.to - a.to) / (b.from - a.from);
+    for (let j = a.j; j < b.j; j += 1) {
+      items[j].x = a.to + (items[j].x - a.from) * scale;
+      items[j].w *= scale;
+    }
+  }
+  return new Set(pins.slice(1, -1).map((pin) => pin.j));
+}
+
 /** Les mêmes rangées, à plat : une case par surface. */
 export function stripLayout(areas: number[], rect: Rect): Rect[] {
   const cells: Rect[] = areas.map(() => ({ ...rect, w: 0, d: 0 }));
@@ -740,6 +805,10 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     }
   }
 
+  // Grille des rues transversales, à la longueur d'un pâté.
+  const spacing = blockLength(mode);
+  const lines = gridLines(rect.x, rect.w, spacing);
+
   const half = (edge: Edge) => edge.width / 2;
   const groundTop = env.ground ? top : top + CURB;
   // Retrait d'un bâtiment : trottoir côté rue et côté bord, presque rien côté voisin.
@@ -773,14 +842,16 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       });
     }
 
-    // Dans la rangée : une rue autour des conteneurs et des grands édifices, et tous les ~24 m.
+    // Dans la rangée : une rue autour des conteneurs et des grands édifices, et sur la grille commune.
+    // Si aucun joint ne s'y prête, une rue coupe quand même un pâté devenu bien trop long.
+    const aligned = streets ? alignJoints(row, lines, spacing) : new Set<number>();
     const cross: Edge[] = [];
     let run = row.items[0].w;
     for (let j = 1; j < row.items.length; j += 1) {
       const a = items[row.items[j - 1].index];
       const b = items[row.items[j].index];
       const w = row.items[j].w;
-      const wanted = streets && (big(a) || big(b) || run + w > blockLength(mode));
+      const wanted = streets && (aligned.has(j) || big(a) || big(b) || run + w > blockLength(mode) * 1.6);
       const edge = wanted ? street(row.items[j - 1].w, w) : null;
       if (!streets) cross.push({ side: "soft", width: soft });
       else if (edge) {

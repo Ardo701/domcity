@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CityDoc, CityNode } from "@/format/types";
-import { emblemOf, layoutCity, stripLayout, type Lot, type Rect } from "./layout";
+import { emblemOf, gridLines, layoutCity, stripLayout, type Lot, type Rect } from "./layout";
 
 function doc(root: CityNode): CityDoc {
   return {
@@ -207,6 +207,35 @@ describe("layoutCity", () => {
     // Une image sans adresse ni taille reste un panonceau vierge ; une grande image perdue garde son panneau.
     expect(emblemOf({ tag: "img" })).toBe("sign");
     expect(emblemOf({ tag: "img", img: { src: "", w: 800, h: 600 } })).toBeUndefined();
+  });
+
+  it("cale la grille des rues transversales sur la ville, loin des bords", () => {
+    expect(gridLines(-20, 100, 26)).toEqual([0, 26, 52]);
+    // à moins de 0,4 pas du bord (10,4 m), pas de ligne : le bout de pâté serait trop court
+    expect(gridLines(-10, 100, 26)).toEqual([26, 52, 78]);
+    expect(gridLines(5, 10, 26)).toEqual([]);
+  });
+
+  it("aligne les petites rues d'un lotissement d'une rangée à l'autre", () => {
+    const items: CityNode[] = Array.from({ length: 160 }, (_, i) => ({ tag: "li", text: 40 + ((i * 37) % 260) }));
+    const city = layoutCity(doc({ tag: "body", children: [{ tag: "ol", children: items }] }));
+    const estate = city.lots.find((lot) => lot.node.tag === "ol")!;
+    const cross = city.roads.filter((road) => road.owner === estate.id && road.axis === "z");
+    const rowRoads = city.roads.filter((road) => road.owner === estate.id && road.axis === "x");
+    expect(rowRoads.length).toBeGreaterThan(4);
+    expect(cross.length).toBeGreaterThan(rowRoads.length);
+    // chaque petite rue tombe sur une ligne de la grille (tous les 26 m), jamais entre deux
+    for (const road of cross) {
+      const center = road.x + road.w / 2;
+      expect(Math.abs(center / 26 - Math.round(center / 26))).toBeLessThan(1e-6);
+    }
+    // et chaque ligne traverse plusieurs rangées
+    const perLine = new Map<number, number>();
+    for (const road of cross) {
+      const line = Math.round((road.x + road.w / 2) / 26);
+      perLine.set(line, (perLine.get(line) ?? 0) + 1);
+    }
+    for (const count of perLine.values()) expect(count).toBeGreaterThan(2);
   });
 
   it("compte la ville", () => {

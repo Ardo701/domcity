@@ -92,7 +92,7 @@ docs/ROADMAP.md                  ce document
 Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) → `layoutCity` (lots, rues, trottoirs, décors) → `buildCityScene` (instances Three.js) → `CityView`.
 
 Le rendu (`src/city/`) :
-- `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique (coins arrondis) et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
+- `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique (coins arrondis) et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les rues transversales suivent une grille calée sur toute la ville (un joint entre deux maisons est amené sur la ligne la plus proche), si bien qu'elles se prolongent d'une rangée à l'autre et d'une liste à la suivante ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
 - `palette.ts` : couleurs partagées par la 3D et le dessin de l'accueil (`src/ui/IsoCity.tsx`).
 - `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, virage et son bas-côté, plaque, drapeau qui ondule, arbres, voiture, lampadaire).
 - `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
@@ -194,6 +194,7 @@ Scintillement de loin corrigé (affiches rayées par leur cadre, chaussées, cha
 Boutons Recadrer, Légende et FPS sur fond de papier encadré (ils se perdaient dans la ville).
 Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « menaient nulle part ») : chaque coin est une **case de raccord** (`Joint` dans `layout.ts`) qui dit par quels côtés la chaussée sort. Deux côtés voisins donnent un virage (quart de disque, marquage qui suit la courbe, bas-côté gazonné, arbres le long de l'arrondi) ; deux côtés opposés une ligne droite ; trois ou quatre un carrefour.
 Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
+Rues alignées (demande de l'utilisateur : dans un lotissement, les petites rues « ne s'alignent pas ») : chaque rangée coupait ses pâtés à sa façon, les rues transversales se décalaient d'une rangée à l'autre (90 petites rues sur 73 positions dans les références de Paris). Elles suivent désormais une grille commune à la ville, au pas d'un pâté ; les cases voisines s'étirent de 30 % au plus pour l'atteindre. Paris : toutes sur 4 lignes, et les listes empilées partagent les mêmes rues.
 Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fois dans la fenêtre « voir l'image » (jusqu'à 240 px de côté) et dans l'aperçu de l'inspecteur (160 px) ; au-delà de ×4 ses pixels restent nets plutôt que flous (`src/ui/explorer/FitImage.tsx`). Les images SVG restent vectorielles.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
@@ -237,7 +238,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 53 tests
+npm test           # 55 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
