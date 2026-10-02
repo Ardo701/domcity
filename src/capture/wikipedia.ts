@@ -1,6 +1,9 @@
 /**
  * Mode Wikipédia : l'API de Wikipédia autorise les autres sites à lire ses
  * pages (en-tête CORS `*`). Tout se passe donc dans le navigateur, sans proxy.
+ *
+ * Le même code tourne sur le serveur au moment d'un partage : il relève
+ * l'article lui-même au lieu de croire la ville envoyée par le navigateur.
  */
 
 import type { CityDoc } from "@/format/types";
@@ -52,17 +55,25 @@ export interface WikiSuggestion {
   title: string;
 }
 
+export interface WikiFetchOptions {
+  /** En-têtes en plus (côté serveur : l'User-Agent demandé par Wikimédia). */
+  headers?: Record<string, string>;
+  /** Analyseur HTML (côté serveur, le navigateur n'en fournit pas). */
+  parse?: (html: string) => Document;
+}
+
 export async function suggestWikipedia(
   lang: WikiLang,
   query: string,
   signal?: AbortSignal,
+  options: WikiFetchOptions = {},
 ): Promise<WikiSuggestion[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const url =
     `https://${lang}.wikipedia.org/w/api.php?action=opensearch&namespace=0&limit=6` +
     `&format=json&origin=*&search=${encodeURIComponent(q)}`;
-  const response = await fetch(url, { signal });
+  const response = await fetch(url, { signal, headers: options.headers });
   if (!response.ok) return [];
   const data = (await response.json()) as [string, string[]];
   return (data[1] ?? []).map((title) => ({ title }));
@@ -73,17 +84,18 @@ export async function resolveWikipediaTitle(
   lang: WikiLang,
   title: string,
   signal?: AbortSignal,
+  options: WikiFetchOptions = {},
 ): Promise<string | null> {
   const url =
     `https://${lang}.wikipedia.org/w/api.php?action=query&redirects=1&format=json` +
     `&formatversion=2&origin=*&titles=${encodeURIComponent(title)}`;
-  const response = await fetch(url, { signal });
+  const response = await fetch(url, { signal, headers: options.headers });
   if (response.ok) {
     const data = (await response.json()) as { query?: { pages?: Array<{ title: string; missing?: boolean }> } };
     const page = data.query?.pages?.[0];
     if (page && !page.missing) return page.title;
   }
-  const suggestions = await suggestWikipedia(lang, title, signal);
+  const suggestions = await suggestWikipedia(lang, title, signal, options);
   return suggestions[0]?.title ?? null;
 }
 
@@ -97,20 +109,21 @@ export async function fetchWikipediaCity(
   lang: WikiLang,
   requestedTitle: string,
   signal?: AbortSignal,
+  options: WikiFetchOptions = {},
 ): Promise<WikiFetchResult> {
-  const title = await resolveWikipediaTitle(lang, requestedTitle, signal);
+  const title = await resolveWikipediaTitle(lang, requestedTitle, signal, options);
   if (!title) throw new WikiNotFoundError(requestedTitle);
 
   const slug = toWikiSlug(title);
   const response = await fetch(
     `https://${lang}.wikipedia.org/w/rest.php/v1/page/${encodeURIComponent(slug)}/html`,
-    { signal },
+    { signal, headers: options.headers },
   );
   if (response.status === 404) throw new WikiNotFoundError(requestedTitle);
   if (!response.ok) throw new Error(`Wikipédia a répondu ${response.status}.`);
 
   const html = await response.text();
-  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const parsed = options.parse ? options.parse(html) : new DOMParser().parseFromString(html, "text/html");
   // Sur wikipedia.org, le titre <h1> est affiché au-dessus du contenu, mais l'API ne le renvoie pas.
   // On le remet en tête de page : c'est lui qui devient le monument principal.
   const heading = parsed.createElement("h1");

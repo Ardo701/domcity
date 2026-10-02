@@ -8,7 +8,7 @@ import * as THREE from "three";
 export type ImageStatus = "loading" | "shown" | "blocked" | "missing";
 
 /** Polices du site, lues dans les variables CSS posées par next/font. */
-function fontFamily(variable: "--font-display" | "--font-mono", fallback: string): string {
+export function fontFamily(variable: "--font-display" | "--font-mono", fallback: string): string {
   if (typeof document === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
   return value || fallback;

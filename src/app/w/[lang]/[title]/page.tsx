@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fromWikiSlug, isWikiLang } from "@/capture/wikipedia";
+import { sharingEnabled } from "@/server/config";
 import { CityExplorer } from "@/ui/explorer/CityExplorer";
 
 function readTitle(raw: string): string {
@@ -26,5 +27,7 @@ export default async function WikiCityPage(props: PageProps<"/w/[lang]/[title]">
   if (!isWikiLang(lang)) notFound();
   const name = readTitle(title);
   if (!name) notFound();
-  return <CityExplorer key={`${lang}/${name}`} lang={lang} title={name} />;
+  return (
+    <CityExplorer key={`${lang}/${name}`} source={{ kind: "wikipedia", lang, title: name }} canShare={sharingEnabled()} />
+  );
 }

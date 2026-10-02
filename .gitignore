@@ -42,3 +42,7 @@ next-env.d.ts
 
 # outils locaux
 /.claude/
+
+# villes partagées en mode local (base et fichiers)
+/.data/
+!.env.example

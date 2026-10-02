@@ -857,6 +857,264 @@
   color: var(--signal-deep);
 }
 
+/* ---------- Partage, signalement ---------- */
+
+.toolAccent {
+  background: var(--signal);
+  font-weight: 700;
+}
+
+.toolAccent:hover {
+  background: #ff6a37;
+}
+
+.place a {
+  color: var(--ink-3);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.place a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.modalWrap {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(21, 21, 26, 0.45);
+  overflow-y: auto;
+}
+
+.modal {
+  composes: panel;
+  width: min(560px, 100%);
+  padding: 22px 24px 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.modalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.modalHead p {
+  color: var(--signal-deep);
+  margin-bottom: 6px;
+}
+
+.modalHead h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  text-transform: uppercase;
+}
+
+.thumbFrame {
+  aspect-ratio: 1200 / 630;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(45deg, var(--paper-sunk) 0 8px, var(--paper) 8px 16px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ink-3);
+}
+
+.thumbFrame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbNote {
+  margin-top: -8px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.published {
+  border-top: 1px solid var(--ink);
+  padding-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.published > p:first-child {
+  color: var(--ink-3);
+}
+
+.published ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.headingList {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.errorLine {
+  padding: 8px 10px;
+  border-left: 4px solid var(--signal);
+  background: #fde3d8;
+  font-size: 14px;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionsRow a {
+  text-decoration: none;
+}
+
+.shareDone {
+  display: grid;
+  gap: 14px;
+}
+
+.copyField {
+  display: grid;
+  gap: 6px;
+}
+
+.copyField label {
+  color: var(--ink-3);
+}
+
+.copyField > div {
+  display: flex;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.copyField input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 9px 10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: var(--paper);
+}
+
+.copyField button {
+  border: 0;
+  border-left: 1px solid var(--ink);
+  background: var(--paper-raised);
+  padding: 0 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copyField button:hover {
+  background: var(--beacon);
+}
+
+.copySecret > div {
+  border-color: var(--signal-deep);
+}
+
+.copySecret input {
+  background: #fdeee6;
+}
+
+.warning {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.reportForm {
+  display: grid;
+  gap: 14px;
+}
+
+.reportForm fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.reportForm legend {
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.radio input {
+  accent-color: var(--signal);
+}
+
+.textareaLabel {
+  display: grid;
+  gap: 6px;
+}
+
+.textareaLabel span {
+  color: var(--ink-3);
+}
+
+.textareaLabel textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  resize: vertical;
+}
+
+.versions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.versions span {
+  color: var(--ink-3);
+}
+
+.versions select {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 13px;
+}
+
 /* ---------- Écrans moyens et petits ---------- */
 
 @media (max-width: 1100px) {

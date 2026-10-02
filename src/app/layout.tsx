@@ -23,6 +23,7 @@ const mono = Martian_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: {
     default: "DOMCity · Chaque page web est une ville",
     template: "%s · DOMCity",

@@ -1,13 +1,6 @@
 import { formatCount } from "@/city/describe";
 import styles from "./explorer.module.css";
 
-export const LOADING_STEPS = [
-  "Relevé de l'article sur Wikipédia",
-  "Tracé du plan et des rues",
-  "Construction",
-  "Mise en lumière",
-];
-
 export function LoadingPanel({
   title,
   step,

@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { wikiPath } from "@/capture/wikipedia";
+import type { CityCard } from "@/format/shared";
 import { KINDS, LEGEND_GROUPS, type Kind } from "@/format/taxonomy";
+import { sharingEnabled } from "@/server/config";
+import { fileStore, thumbKey } from "@/server/files";
+import { recentCaptures } from "@/server/store";
+import { CityGallery } from "@/ui/CityGallery";
+import { CitySearch } from "@/ui/CitySearch";
 import { IsoCity } from "@/ui/IsoCity";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { Wordmark } from "@/ui/Logo";
+import { MyCities } from "@/ui/MyCities";
 import { EXAMPLES, HERO_SAMPLE } from "@/ui/samples";
 import { WikiSearch } from "@/ui/WikiSearch";
 import styles from "./page.module.css";
@@ -28,7 +35,21 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
+// La galerie se met à jour toutes les minutes.
+export const revalidate = 60;
+
+export default async function Home() {
+  const sharing = sharingEnabled();
+  let recent: CityCard[] = [];
+  if (sharing) {
+    try {
+      recent = await recentCaptures(9);
+    } catch (error) {
+      console.error("galerie", error);
+    }
+  }
+  const files = sharing ? fileStore() : null;
+
   return (
     <div className={`${styles.sheet} graph-paper`}>
       <div className={styles.frame} aria-hidden>
@@ -42,6 +63,7 @@ export default function Home() {
           <Wordmark />
         </Link>
         <nav className={styles.nav} aria-label="Sections">
+          {sharing && <a href="#villes">Les villes</a>}
           <a href="#legende">La légende</a>
           <a href="#methode">La méthode</a>
         </nav>
@@ -108,9 +130,27 @@ export default function Home() {
           </figure>
         </section>
 
+        {sharing && files && (
+          <section id="villes" className={styles.section}>
+            <div className={styles.sectionHead}>
+              <p className="mono-caps">Planche 02</p>
+              <h2>Les villes partagées</h2>
+              <p className={styles.sectionLead}>
+                Chaque ville publiée garde la date de son relevé. Cherchez un site ou une page, ou parcourez les
+                dernières constructions.
+              </p>
+            </div>
+            <div className={styles.sharedTools}>
+              <CitySearch />
+              <MyCities />
+            </div>
+            <CityGallery cities={recent} thumbUrl={(slug) => files.publicUrl(thumbKey(slug))} />
+          </section>
+        )}
+
         <section id="legende" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche 02</p>
+            <p className="mono-caps">Planche {sharing ? "03" : "02"}</p>
             <h2>La légende du plan</h2>
             <p className={styles.sectionLead}>
               Chaque balise HTML a sa place dans la ville. Les couleurs suivent un plan de zonage : des tons calmes
@@ -141,7 +181,7 @@ export default function Home() {
 
         <section id="methode" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche 03</p>
+            <p className="mono-caps">Planche {sharing ? "04" : "03"}</p>
             <h2>La méthode</h2>
           </div>
           <ol className={styles.steps}>

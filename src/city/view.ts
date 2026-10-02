@@ -17,6 +17,7 @@ import { buildCityScene, type CityScene, type LabelSlot } from "./scene";
 import {
   createQueue,
   ensureFonts,
+  fontFamily,
   loadImageTexture,
   plaqueTexture,
   probeImage,
@@ -255,6 +256,66 @@ export class CityView {
     const direction = this.camera.position.clone().sub(this.aerial.target).normalize();
     if (direction.y < 0.35) direction.setY(0.35).normalize();
     this.flyTo(target.clone().addScaledVector(direction, distance), target, true);
+  }
+
+  /**
+   * Miniature 1200 × 630 de la vue actuelle, pour l'aperçu sur les réseaux et la galerie,
+   * avec un petit cartouche DOMCity dans le coin.
+   */
+  async snapshot(title: string, place: string): Promise<Blob | null> {
+    const width = 1200;
+    const height = 630;
+    const out = document.createElement("canvas");
+    out.width = width;
+    out.height = height;
+    const ctx = out.getContext("2d");
+    if (!ctx) return null;
+
+    // Rendu et copie dans la même tâche : le tampon WebGL est encore plein.
+    this.updateLabels();
+    this.renderer.render(this.scene, this.camera);
+    const source = this.renderer.domElement;
+    const scale = Math.max(width / source.width, height / source.height);
+    const sw = width / scale;
+    const sh = height / scale;
+    ctx.drawImage(source, (source.width - sw) / 2, (source.height - sh) / 2, sw, sh, 0, 0, width, height);
+
+    const display = fontFamily("--font-display", "sans-serif");
+    const mono = fontFamily("--font-mono", "monospace");
+    const name = title.toUpperCase();
+    const kicker = "DOMCITY · CHAQUE PAGE WEB EST UNE VILLE";
+    ctx.font = `800 44px ${display}`;
+    const nameWidth = ctx.measureText(name).width + 40;
+    ctx.font = `600 15px ${mono}`;
+    const kickerWidth = ctx.measureText(kicker).width + 56;
+    ctx.font = `500 15px ${mono}`;
+    const placeWidth = ctx.measureText(place).width + 40;
+    const boxWidth = Math.min(width - 64, Math.max(nameWidth, kickerWidth, placeWidth));
+    const x = 32;
+    const y = height - 32 - 124;
+    ctx.fillStyle = "#F6F3EC";
+    ctx.fillRect(x, y, boxWidth, 124);
+    ctx.strokeStyle = "#15151A";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, boxWidth, 124);
+    ctx.beginPath();
+    ctx.moveTo(x, y + 36);
+    ctx.lineTo(x + boxWidth, y + 36);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = "#FF4B12";
+    ctx.fillRect(x + 16, y + 13, 10, 10);
+    ctx.fillStyle = "#15151A";
+    ctx.textBaseline = "middle";
+    ctx.font = `600 15px ${mono}`;
+    ctx.fillText(kicker, x + 36, y + 19);
+    ctx.font = `800 44px ${display}`;
+    ctx.fillText(name, x + 20, y + 70, boxWidth - 40);
+    ctx.font = `500 15px ${mono}`;
+    ctx.fillStyle = "#45454F";
+    ctx.fillText(place, x + 20, y + 104, boxWidth - 40);
+
+    return new Promise((resolve) => out.toBlob(resolve, "image/jpeg", 0.86));
   }
 
   dispose() {
