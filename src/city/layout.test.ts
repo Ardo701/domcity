@@ -256,6 +256,28 @@ describe("layoutCity", () => {
     for (const count of perLine.values()) expect(count).toBeGreaterThan(2);
   });
 
+  it("ouvre le port sur le large : un chenal jusqu'au bord, des ponts, rien de bâti dessus", () => {
+    const page = (footerFirst: boolean) => {
+      const footer: CityNode = { tag: "footer", children: [{ tag: "p", text: 120 }, { tag: "ul", children: [{ tag: "li", text: 20 }, { tag: "li", text: 30 }] }] };
+      const main: CityNode = { tag: "main", children: [{ tag: "h1", text: 12, heading: "Titre" }, { tag: "p", text: 900 }, { tag: "div", text: 2000 }] };
+      return layoutCity(doc({ tag: "body", children: footerFirst ? [footer, main] : [main, footer] }));
+    };
+    for (const city of [page(false), page(true)]) {
+      expect(city.channels).toHaveLength(1);
+      const [channel] = city.channels;
+      const { minX, maxX, maxZ } = city.bounds;
+      // il touche le bord de la maquette
+      const touches = [channel.x - minX, maxX - (channel.x + channel.w), maxZ - (channel.z + channel.d)].some((gap) => Math.abs(gap) < 1e-6);
+      expect(touches).toBe(true);
+      // rien de bâti dessus, aucune chaussée ni aucun trottoir : seulement des ponts
+      for (const lot of city.lots) if (!lot.container) expect(overlaps(lot, channel)).toBe(false);
+      for (const road of city.roads) expect(overlaps(road, channel)).toBe(false);
+      for (const plate of city.plates) expect(overlaps(plate, channel)).toBe(false);
+      expect(city.bridges.some((bridge) => bridge.style === "ring")).toBe(true);
+      for (const bridge of city.bridges) expect(inside(bridge, channel)).toBe(true);
+    }
+  });
+
   it("compte la ville", () => {
     expect(layout.stats).toMatchObject({ districts: 1, rivers: 1, billboards: 1, monuments: 1 });
     expect(layout.stats.buildings).toBe(7);

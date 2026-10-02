@@ -136,7 +136,7 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `form` / `button`, `input`… | Place de la mairie (pavés, fontaine) / Guichet à auvent |
 | `table` | Champs cultivés |
 | `hr` | Canal entre deux quais, avec ses ponts |
-| `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo), Parc arboré |
+| `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo, chenal vers le large), Parc arboré |
 
 Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
 
@@ -196,6 +196,7 @@ Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « me
 Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
 Rues alignées (demande de l'utilisateur : dans un lotissement, les petites rues « ne s'alignent pas ») : chaque rangée coupait ses pâtés à sa façon, les rues transversales se décalaient d'une rangée à l'autre (90 petites rues sur 73 positions dans les références de Paris). Elles suivent désormais une grille commune à la ville, au pas d'un pâté ; les cases voisines s'étirent de 30 % au plus pour l'atteindre. Paris : toutes sur 4 lignes, et les listes empilées partagent les mêmes rues.
 Survol d'une rue (demande de l'utilisateur : « pourquoi une route s'appelle un îlot ? ») : une rue appartient au conteneur qui l'a fait tracer, la bulle affichait donc ce conteneur. Elle nomme désormais la rue (rue, ruelle, allée, avenue), puis le conteneur : « Ruelle · dans <li.gallerybox> · îlot · Pas dans la page : la ville la trace entre les 2 éléments de ce <li.gallerybox> ». Un clic ouvre toujours la fiche du conteneur.
+Ports ouverts sur le large (demande de l'utilisateur : un port enfermé dans la ville « n'est pas logique ») : un chenal mène le bassin jusqu'au bord de la maquette, par le plus court chemin libre (bassin prolongé vers l'ouest ou l'est, ou chenal vers le sud). Il ne passe sous aucun bâtiment ni le long d'une rue ; trottoirs et ceinture verte s'écartent, les rues le franchissent sur un pont (`channels` et `bridges` dans `layout.ts`). Le bassin est descendu au niveau de l'eau des canaux, sous le quai. Sur github.com/vercel/next.js : 13 m vers l'ouest, sous le périphérique.
 Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fois dans la fenêtre « voir l'image » (jusqu'à 240 px de côté) et dans l'aperçu de l'inspecteur (160 px) ; au-delà de ×4 ses pixels restent nets plutôt que flous (`src/ui/explorer/FitImage.tsx`). Les images SVG restent vectorielles.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
@@ -221,6 +222,8 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ## 11. En réserve (idées et limites connues)
 
 - Promenade : pas encore de collisions avec les bâtiments.
+- Canaux (`hr`) : les mener eux aussi jusqu'au bord de la maquette, comme les ports (mis de côté par l'utilisateur pour l'instant).
+- Port d'un `<footer>` peu profond (rangée pleine largeur) : bassin et chenal étroits (1,6 m sur GitHub).
 - Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
 - Rendu : niveaux de détail par page (arbres et voitures masqués au loin) si une mégalopole devient lourde ; immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
@@ -239,7 +242,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 56 tests
+npm test           # 57 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

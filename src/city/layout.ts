@@ -136,6 +136,24 @@ export interface Decor extends Rect {
   y: number;
 }
 
+/** Chenal d'un port : son eau, du bassin jusqu'au bord de la maquette. */
+export interface Channel extends Rect {
+  /** Sens du chenal : le long de x (bassin prolongé vers l'ouest ou l'est), de z (vers le sud). */
+  axis: "x" | "z";
+  /** Le port, pour le survol. */
+  owner: number;
+  /** Base de l'eau : celle du bassin. */
+  y: number;
+}
+
+/** Le pont d'une rue au-dessus d'un chenal : la partie de la chaussée qui franchit l'eau. */
+export interface Bridge extends Rect {
+  axis: "x" | "z";
+  style: RoadStyle;
+  owner: number;
+  y: number;
+}
+
 export interface CityStats {
   buildings: number;
   districts: number;
@@ -155,6 +173,9 @@ export interface CityLayout {
   joints: Joint[];
   plates: Plate[];
   decor: Decor[];
+  /** Chenaux des ports vers l'extérieur, et ponts des rues qui les franchissent. */
+  channels: Channel[];
+  bridges: Bridge[];
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number };
   stats: CityStats;
 }
@@ -176,6 +197,10 @@ const RIVER_WIDTH = 3.4;
 const QUAY = 1.3;
 const GATE_BAND = 7;
 const HARBOR_BAND = 10;
+/** Part de la bande du port prise par le quai, au nord du bassin. */
+const QUAY_SHARE = 0.38;
+/** Épaisseur de l'eau : sa surface reste sous le niveau des quais. */
+export const WATER_DEPTH = 0.05;
 
 type StreetMode = RoadStyle | "none";
 
@@ -570,6 +595,8 @@ interface Ctx {
   joints: Joint[];
   plates: Plate[];
   decor: Decor[];
+  channels: Channel[];
+  bridges: Bridge[];
 }
 
 interface Env {
@@ -591,9 +618,11 @@ const EDGE: Edge = { side: "edge", width: 0 };
 
 export function layoutCity(doc: CityDoc): CityLayout {
   const rootPlot = buildPlot(doc.root, 0, "street");
-  const ctx: Ctx = { lots: [], roads: [], joints: [], plates: [], decor: [] };
+  const ctx: Ctx = { lots: [], roads: [], joints: [], plates: [], decor: [], channels: [], bridges: [] };
   const side = Math.sqrt(rootPlot.area);
-  place(rootPlot, { x: -side / 2, z: -side / 2, w: side, d: side }, 0, -1, ctx, { streets: "street" });
+  const edge = { x: -side / 2, z: -side / 2, w: side, d: side };
+  place(rootPlot, edge, 0, -1, ctx, { streets: "street" });
+  openHarbors(ctx, edge);
   const { lots } = ctx;
 
   // Le monument (h1) domine toujours la ville.
@@ -627,7 +656,91 @@ export function layoutCity(doc: CityDoc): CityLayout {
       default: stats.buildings += 1;
     }
   }
-  return { lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor, bounds, stats };
+  return {
+    lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor,
+    channels: ctx.channels, bridges: ctx.bridges, bounds, stats,
+  };
+}
+
+/** Le bassin d'un port : le sud de sa bande, au pied du quai. */
+export function harborWater(harbor: Rect): Rect {
+  const quay = harbor.d * QUAY_SHARE;
+  return { x: harbor.x, z: harbor.z + quay, w: harbor.w, d: harbor.d - quay };
+}
+
+const overlap = (a: Rect, b: Rect, pad = 0) =>
+  a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.z < b.z + b.d + pad && b.z < a.z + a.d + pad;
+
+/** Ce qui reste d'un rectangle quand on en retire un autre : jusqu'à quatre morceaux. */
+export function cutRect(a: Rect, b: Rect): Rect[] {
+  if (!overlap(a, b)) return [a];
+  const z0 = Math.max(a.z, b.z);
+  const z1 = Math.min(a.z + a.d, b.z + b.d);
+  const pieces = [
+    { x: a.x, z: a.z, w: a.w, d: z0 - a.z },
+    { x: a.x, z: z1, w: a.w, d: a.z + a.d - z1 },
+    { x: a.x, z: z0, w: b.x - a.x, d: z1 - z0 },
+    { x: b.x + b.w, z: z0, w: a.x + a.w - b.x - b.w, d: z1 - z0 },
+  ];
+  return pieces.filter((piece) => piece.w > 0.01 && piece.d > 0.01);
+}
+
+/**
+ * Un port s'ouvre sur le large : un chenal mène son bassin jusqu'au bord de la maquette, par le
+ * plus court chemin libre (le bassin prolongé vers l'ouest ou l'est, ou un chenal vers le sud).
+ * Il ne passe sous aucun bâtiment ni le long d'une rue ; les trottoirs et la ceinture verte
+ * s'écartent, et les rues qu'il coupe le franchissent sur un pont.
+ */
+function openHarbors(ctx: Ctx, edge: Rect) {
+  for (const harbor of ctx.decor) {
+    if (harbor.type !== "harbor") continue;
+    const port = ctx.lots[harbor.owner];
+    const water = harborWater(harbor);
+    const candidates: Array<Rect & { axis: "x" | "z" }> = [
+      { x: edge.x, z: water.z, w: water.x - edge.x, d: water.d, axis: "x" },
+      { x: water.x + water.w, z: water.z, w: edge.x + edge.w - water.x - water.w, d: water.d, axis: "x" },
+    ];
+    // Vers le sud : depuis le milieu du bassin, puis de plus en plus près de ses bouts.
+    const width = clamp(water.d, 2, 4);
+    const south = water.z + water.d;
+    const reach = Math.max(0, Math.floor((water.w - width) / 2));
+    for (let k = 0; k <= reach; k += 1) {
+      for (const sign of k === 0 ? [1] : [-1, 1]) {
+        const cx = water.x + water.w / 2 + sign * k;
+        candidates.push({ x: cx - width / 2, z: south, w: width, d: edge.z + edge.d - south, axis: "z" });
+      }
+    }
+    const length = (c: Rect & { axis: "x" | "z" }) => (c.axis === "x" ? c.w : c.d);
+    const free = (c: Rect & { axis: "x" | "z" }) =>
+      length(c) > 0.01 &&
+      // Ni bâtiment, ni conteneur qui a son propre sol (parc, place, champs…), hors le socle et le port.
+      !ctx.lots.some(
+        (lot) =>
+          lot.id !== 0 &&
+          (lot.id < port.id || lot.id >= port.subtreeEnd) &&
+          (!lot.container || lot.h > 0) &&
+          overlap(lot, c, 0.15),
+      ) &&
+      !ctx.joints.some((joint) => overlap(joint, c)) &&
+      !ctx.roads.some((road) => road.axis === c.axis && overlap(road, c)) &&
+      !ctx.decor.some((decor) => decor.type !== "square" && overlap(decor, c));
+    const best = candidates.filter(free).sort((a, b) => length(a) - length(b))[0];
+    if (!best) continue;
+
+    const { axis, ...rect } = best;
+    ctx.channels.push({ ...rect, axis, owner: port.id, y: port.y });
+    ctx.roads = ctx.roads.flatMap((road) => {
+      if (!overlap(road, rect)) return [road];
+      const x0 = Math.max(road.x, rect.x);
+      const z0 = Math.max(road.z, rect.z);
+      ctx.bridges.push({
+        x: x0, z: z0, w: Math.min(road.x + road.w, rect.x + rect.w) - x0, d: Math.min(road.z + road.d, rect.z + rect.d) - z0,
+        axis: road.axis, style: road.style, owner: road.owner, y: road.y,
+      });
+      return cutRect(road, rect).map((piece) => ({ ...road, ...piece }));
+    });
+    ctx.plates = ctx.plates.flatMap((plate) => cutRect(plate, rect).map((piece) => ({ ...plate, ...piece })));
+  }
 }
 
 function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lot {

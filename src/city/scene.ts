@@ -11,7 +11,10 @@
 
 import * as THREE from "three";
 import * as shapes from "./geometries";
-import { CURB, FLOOR, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road } from "./layout";
+import {
+  CURB, FLOOR, WATER_DEPTH, cutRect, harborWater,
+  type Bridge, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road,
+} from "./layout";
 import { FACADE, GROUND, ROAD, ROAD_AXIS, emblemMaterial, type CityMaterials } from "./materials";
 import * as PALETTE from "./palette";
 import { IconAtlas } from "./textures";
@@ -559,10 +562,14 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     terrain: "base", park: "grass", estate: "lawn", townhall: "plaza", gate: "plaza", boulevard: "plaza", fields: "crops", port: "wharf",
   };
 
+  // Le bassin d'un port est plus bas que son quai : le sol du port s'arrête à son bord.
+  const basins = new Map(layout.decor.filter((d) => d.type === "harbor").map((d) => [d.owner, harborWater(d)]));
+
   for (const lot of layout.lots) {
     if (lot.container) {
       const style = lot.depth === 0 ? "base" : CONTAINER_GROUND[lot.kind];
-      if (style && lot.h > 0) ground(lot.id, lot, lot.y, lot.h, style);
+      const basin = basins.get(lot.id);
+      if (style && lot.h > 0) for (const part of basin ? cutRect(lot, basin) : [lot]) ground(lot.id, part, lot.y, lot.h, style);
       continue;
     }
     switch (lot.kind) {
@@ -600,6 +607,27 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
   for (const joint of layout.joints) {
     junction(joint);
     obstacles.add(joint);
+  }
+  // Chenaux des ports : l'eau jusqu'au bord de la maquette, et un pont pour chaque rue qui les coupe.
+  for (const channel of layout.channels) {
+    kit.water.add(channel.owner, at(channel.x + channel.w / 2, channel.y, channel.z + channel.d / 2, channel.w, WATER_DEPTH, channel.d), PALETTE.WATER);
+    obstacles.add(channel, 0.6);
+  }
+  for (const span of layout.bridges) bridge(span);
+
+  /** Le pont d'une rue sur un chenal : un tablier juste au-dessus de l'eau, et ses parapets. */
+  function bridge(span: Bridge) {
+    const cx = span.x + span.w / 2;
+    const cz = span.z + span.d / 2;
+    const deckY = span.y + WATER_DEPTH + 0.01;
+    const alongX = span.axis === "x";
+    kit.road.add(span.owner, at(cx, deckY, cz, span.w, 0.06, span.d), ROAD_COLORS[span.style], [ROAD[span.style], alongX ? 0 : 1, 0, 0]);
+    const length = (alongX ? span.w : span.d) + 0.6;
+    const rail = "#d8d2c4";
+    for (const side of [-1, 1]) {
+      if (alongX) box(span.owner, cx, deckY + 0.06, cz + side * (span.d / 2 - 0.06), length, 0.3, 0.12, rail);
+      else box(span.owner, cx + side * (span.w / 2 - 0.06), deckY + 0.06, cz, 0.12, 0.3, length, rail);
+    }
   }
   for (const decor of layout.decor) {
     if (decor.type === "harbor") harbor(decor);
@@ -659,9 +687,11 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
   /** Le port : bassin, grues portiques, conteneurs empilés, un cargo à quai. */
   function harbor(decor: Decor) {
     const id = decor.owner;
-    const quay = decor.d * 0.38;
-    const water: Rect = { x: decor.x, z: decor.z + quay, w: decor.w, d: decor.d - quay };
-    kit.water.add(id, at(water.x + water.w / 2, decor.y, water.z + water.d / 2, water.w, 0.04, water.d), "#4f88a6");
+    const water = harborWater(decor);
+    const quay = water.z - decor.z;
+    // L'eau au pied du quai, au niveau de celle du chenal qui mène au large.
+    const base = layout.lots[id].y;
+    kit.water.add(id, at(water.x + water.w / 2, base, water.z + water.d / 2, water.w, WATER_DEPTH, water.d), PALETTE.WATER);
     obstacles.add(water, 0.6);
     const cranes = clamp(Math.floor(decor.w / 16), 1, 4);
     for (let i = 0; i < cranes; i += 1) {

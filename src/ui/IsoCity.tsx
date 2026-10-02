@@ -1,4 +1,4 @@
-import { layoutCity, type Lot } from "@/city/layout";
+import { WATER_DEPTH, layoutCity, type Lot } from "@/city/layout";
 import { BRICK, CONCRETE, COPPER, GLASS, GROUND_COLORS, HOUSES, ROOFS, STUCCO, WATER, pick, rand } from "@/city/palette";
 import { KINDS } from "@/format/taxonomy";
 import type { CityDoc } from "@/format/types";
@@ -105,12 +105,13 @@ export function IsoCity({
   className?: string;
   title: string;
 }) {
-  const { lots, plates } = layoutCity(doc);
+  const { lots, plates, channels } = layoutCity(doc);
   const depthOf = (r: { x: number; z: number; w: number; d: number }) => r.x + r.w / 2 + r.z + r.d / 2;
   // Le sol d'abord (socle, places, trottoirs, eau), puis les bâtiments du fond vers l'avant.
   const grounds = [
     ...lots.filter((l) => l.container || l.kind === "river").map((lot) => ({ y: lot.y, depth: depthOf(lot), faces: facesOf(lot) })),
     ...plates.map((p) => ({ y: p.y, depth: depthOf(p), faces: isoBox(p.x, p.y, p.z, p.w, p.h, p.d, GROUND_COLORS[p.style]) })),
+    ...channels.map((c) => ({ y: c.y, depth: depthOf(c), faces: isoBox(c.x, c.y, c.z, c.w, WATER_DEPTH, c.d, WATER) })),
   ].sort((a, b) => a.y - b.y || a.depth - b.depth);
   const leaves = lots.filter((l) => !l.container && l.kind !== "river").sort((a, b) => depthOf(a) - depthOf(b) || a.y - b.y);
   const faces = [...grounds.flatMap((g) => g.faces), ...leaves.flatMap(facesOf)];
