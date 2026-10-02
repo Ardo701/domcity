@@ -94,9 +94,10 @@ Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) 
 Le rendu (`src/city/`) :
 - `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique (coins arrondis) et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
 - `palette.ts` : couleurs partagées par la 3D et le dessin de l'accueil (`src/ui/IsoCity.tsx`).
-- `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, virage et son bas-côté, arbres, voiture, lampadaire).
+- `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, virage et son bas-côté, plaque, drapeau qui ondule, arbres, voiture, lampadaire).
 - `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
 - `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
+- `textures.ts` : affiches, panneau « indisponible », plaques des monuments, et l'atlas des icônes (toutes les petites images de la ville dans une seule texture, un seul appel de dessin).
 - `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection.
 Flux d'un partage Wikipédia : le navigateur envoie langue + titre + miniature JPEG → le serveur **relève lui-même l'article** (linkedom) pour ne pas faire confiance au JSON envoyé → gzip → R2 → ligne Supabase visible.
 Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic compte comme geste) → relevé de la page affichée (`live: true`) → `/nouveau` appelle « pret » → le favori répond avec la ville, adressée à l'origine de DOMCity seulement → `/nouveau` vérifie (zod, et que la ville vient bien du site qu'elle décrit) → « recu ». **Plan B** si l'onglet n'a pas pu s'ouvrir ou si le site coupe le lien entre fenêtres (en-tête COOP) : la ville compressée part dans l'ancre `#ville=…` et s'ouvre dans le même onglet. Partage : la ville est envoyée telle quelle (`source: "bookmarklet"`), le serveur la valide mais ne peut pas la vérifier.
@@ -128,7 +129,7 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `p`, `blockquote`, `pre` | Immeuble d'habitation (béton, brique ou enduit, commerces au rez-de-chaussée) |
 | `ul`, `ol` / `li` | Lotissement sur pelouse / Maison à toit et cheminée |
 | `h1` / `h2` / `h3` / `h4-h6` | Tour Art déco qui domine la ville / Beffroi à horloge / Kiosque à coupole / Statue, avec plaque gravée pour h1 à h3 |
-| `img` | Panneau avec la vraie image (icônes < 48 px : panneau simple) |
+| `img` | Panneau avec la vraie image ; icône de moins de 48 px : panonceau à son image ; petit drapeau : drapeau sur son mât |
 | `video`, `canvas` | Écran géant |
 | `iframe` | Ambassade à colonnes, sous son drapeau |
 | `svg` | Sculpture abstraite |
@@ -192,6 +193,7 @@ Compteur **FPS** (bouton « FPS » de la barre d'outils, mémorisé dans le navi
 Scintillement de loin corrigé (affiches rayées par leur cadre, chaussées, champs et toits verts qui clignotaient en dézoomant) : le plan proche de la caméra avance jusqu'à mi-chemin de la ville en vue aérienne, ce qui rend à la profondeur toute sa précision, et l'affiche passe toujours devant son cadre.
 Boutons Recadrer, Légende et FPS sur fond de papier encadré (ils se perdaient dans la ville).
 Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « menaient nulle part ») : chaque coin est une **case de raccord** (`Joint` dans `layout.ts`) qui dit par quels côtés la chaussée sort. Deux côtés voisins donnent un virage (quart de disque, marquage qui suit la courbe, bas-côté gazonné, arbres le long de l'arrondi) ; deux côtés opposés une ligne droite ; trois ou quatre un carrefour.
+Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -234,7 +236,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 48 tests
+npm test           # 50 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

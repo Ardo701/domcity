@@ -1,6 +1,6 @@
 /**
  * Textures dessinées ou chargées : affiches des panneaux, panneau « indisponible »,
- * plaques des monuments.
+ * plaques des monuments, atlas des icônes.
  */
 
 import * as THREE from "three";
@@ -197,4 +197,112 @@ export function plaqueTexture(text: string, level: PlaqueLevel): { texture: THRE
   ctx.fillText(title, pad * 2 + kickerWidth, height / 2 + size * 0.06, titleWidth);
 
   return { texture: canvasTexture(canvas), ratio: width / height };
+}
+
+/** Une case de l'atlas, en pixels, dont une marge pour que les cases voisines ne bavent pas de loin. */
+const CELL = 64;
+const GUTTER = 4;
+/** Au-delà, les icônes restantes gardent une plaque vierge (2 048 px de côté au plus). */
+const MAX_CELLS = 1024;
+const PLATE = "#F4F1EA";
+
+/**
+ * Atlas des icônes : toutes les petites images de la ville (panonceaux, drapeaux) dans une
+ * seule texture, une case par adresse. Un seul appel de dessin pour toutes, au lieu d'un par icône.
+ * La case 0 reste vierge : la plaque d'une icône sans adresse.
+ */
+export class IconAtlas {
+  readonly texture: THREE.CanvasTexture;
+  /** Adresse de chaque case à partir de la case 1. */
+  readonly sources: string[];
+  private readonly ctx: CanvasRenderingContext2D;
+  private readonly columns: number;
+  private readonly size: { width: number; height: number };
+
+  constructor(sources: string[]) {
+    this.sources = sources.slice(0, MAX_CELLS - 1);
+    const cells = this.sources.length + 1;
+    this.columns = Math.ceil(Math.sqrt(cells));
+    const canvas = document.createElement("canvas");
+    canvas.width = this.columns * CELL;
+    canvas.height = Math.ceil(cells / this.columns) * CELL;
+    this.size = { width: canvas.width, height: canvas.height };
+    this.ctx = canvas.getContext("2d")!;
+    this.ctx.fillStyle = PLATE;
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.texture = canvasTexture(canvas);
+  }
+
+  /** Numéro de case d'une adresse (0 : plaque vierge). */
+  index(src: string | undefined): number {
+    if (!src) return 0;
+    const at = this.sources.indexOf(src);
+    return at < 0 ? 0 : at + 1;
+  }
+
+  /** Coin bas-gauche et taille de la partie utile d'une case, en coordonnées de texture. */
+  cell(index: number): [number, number, number, number] {
+    const { x, y } = this.origin(index);
+    const inner = CELL - GUTTER * 2;
+    const { width, height } = this.size;
+    // La texture est retournée à l'envoi : le haut de la toile est en v = 1.
+    return [(x + GUTTER) / width, 1 - (y + GUTTER + inner) / height, inner / width, inner / height];
+  }
+
+  /** Peint l'icône dans sa case, sur la plaque claire (les icônes ont souvent un fond transparent). */
+  draw(index: number, image: CanvasImageSource) {
+    const { x, y } = this.origin(index);
+    const ctx = this.ctx;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = PLATE;
+    ctx.fillRect(x, y, CELL, CELL);
+    // La marge reçoit l'image étirée : de loin, la case se mélange à ses propres bords.
+    ctx.drawImage(image, x, y, CELL, CELL);
+    ctx.fillRect(x + GUTTER, y + GUTTER, CELL - GUTTER * 2, CELL - GUTTER * 2);
+    ctx.drawImage(image, x + GUTTER, y + GUTTER, CELL - GUTTER * 2, CELL - GUTTER * 2);
+    this.texture.needsUpdate = true;
+  }
+
+  /** Icône inutilisable : les hachures de chantier des affiches indisponibles, en petit. */
+  drawUnavailable(index: number) {
+    const { x, y } = this.origin(index);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, CELL, CELL);
+    ctx.clip();
+    ctx.fillStyle = "#DCD5C6";
+    ctx.fillRect(x, y, CELL, CELL);
+    ctx.strokeStyle = "rgba(21,21,26,0.16)";
+    ctx.lineWidth = 5;
+    for (let k = -CELL; k < CELL; k += 14) {
+      ctx.beginPath();
+      ctx.moveTo(x + k, y + CELL);
+      ctx.lineTo(x + k + CELL, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    this.texture.needsUpdate = true;
+  }
+
+  dispose() {
+    this.texture.dispose();
+  }
+
+  private origin(index: number) {
+    return { x: (index % this.columns) * CELL, y: Math.floor(index / this.columns) * CELL };
+  }
+}
+
+/** Charge une image lisible par la 3D : il faut que son site l'autorise (CORS), sinon échec. */
+export function loadCorsImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.decoding = "async";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }

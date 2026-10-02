@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CityDoc, CityNode } from "@/format/types";
-import { layoutCity, stripLayout, type Lot, type Rect } from "./layout";
+import { emblemOf, layoutCity, stripLayout, type Lot, type Rect } from "./layout";
 
 function doc(root: CityNode): CityDoc {
   return {
@@ -171,6 +171,42 @@ describe("layoutCity", () => {
   it("donne aux panneaux les proportions de l'image", () => {
     const board = lots.find((l) => l.kind === "billboard")!;
     expect(board.panel!.width / board.panel!.height).toBeCloseTo(2, 6);
+  });
+
+  it("fait des petites images des panonceaux et des drapeaux, pas des panneaux vides", () => {
+    const icons = layoutCity(
+      doc({
+        tag: "body",
+        children: [
+          {
+            tag: "table",
+            children: [
+              { tag: "img", img: { src: "https://upload.wikimedia.org/20px-Flag_of_Italy.svg.png", w: 20, h: 13 } },
+              { tag: "img", img: { src: "https://upload.wikimedia.org/20px-Steady.svg.png", alt: "en stagnation", w: 9, h: 12 } },
+              { tag: "img", img: { src: "https://example.com/x.png", alt: "Drapeau de la France", w: 20, h: 13 } },
+              { tag: "img", img: { src: "https://example.com/photo.jpg", w: 400, h: 300 } },
+            ],
+          },
+        ],
+      }),
+    ).lots.filter((l) => l.kind === "billboard");
+    expect(icons.map((l) => l.panel!.emblem)).toEqual(["flag", "sign", "flag", undefined]);
+    const [flag, sign, , photo] = icons;
+    // Un panonceau tient dans un mètre et garde la forme de l'icône ; le drapeau flotte en haut de son mât.
+    expect(Math.max(sign.panel!.width, sign.panel!.height)).toBeLessThanOrEqual(1);
+    expect(sign.panel!.width / sign.panel!.height).toBeCloseTo(9 / 12, 6);
+    expect(flag.panel!.lift).toBeGreaterThan(3);
+    expect(photo.panel!.width).toBeGreaterThan(flag.panel!.width);
+  });
+
+  it("reconnaît un drapeau à son fichier ou à son texte, et à sa forme", () => {
+    expect(emblemOf({ tag: "img", img: { src: "https://a.org/Unofficial_flag_of_X.png", w: 22, h: 15 } })).toBe("flag");
+    expect(emblemOf({ tag: "img", img: { src: "https://a.org/Blason.png", alt: "Blason", w: 18, h: 20 } })).toBe("sign");
+    // Carré : un logo, même s'il s'appelle « flag ».
+    expect(emblemOf({ tag: "img", img: { src: "https://a.org/flag-icon.png", w: 16, h: 16 } })).toBe("sign");
+    // Une image sans adresse ni taille reste un panonceau vierge ; une grande image perdue garde son panneau.
+    expect(emblemOf({ tag: "img" })).toBe("sign");
+    expect(emblemOf({ tag: "img", img: { src: "", w: 800, h: 600 } })).toBeUndefined();
   });
 
   it("compte la ville", () => {

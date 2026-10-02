@@ -276,6 +276,31 @@ if (vDcNormal.y > 0.5) {
 }
 `;
 
+/**
+ * Panonceaux et drapeaux : toutes les icônes de la ville sont dessinées dans une seule texture
+ * (l'atlas), chaque instance y lit sa case. aIcon = (u, v, largeur, hauteur) de la case.
+ * Visible des deux côtés : un drapeau se lit à l'envers de dos, comme un vrai.
+ */
+export function emblemMaterial(atlas: THREE.Texture): THREE.MeshStandardMaterial {
+  const material = new THREE.MeshStandardMaterial({
+    map: atlas,
+    roughness: 0.7,
+    metalness: 0,
+    side: THREE.DoubleSide,
+    // Comme les affiches : la plaque gagne toujours sur son support, même de loin.
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -4,
+  });
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec4 aIcon;")
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvMapUv = aIcon.xy + vMapUv * aIcon.zw;");
+  };
+  material.customProgramCacheKey = () => "domcity-emblem";
+  return material;
+}
+
 export interface CityMaterials {
   /** Façades à fenêtres (attribut aFacade). */
   facade: THREE.MeshStandardMaterial;

@@ -104,7 +104,7 @@ export const KINDS: Record<Kind, KindInfo> = {
   belfry:    { name: "Beffroi",            tags: "h2",                  group: "Monuments",        color: "#5C8F80", blurb: "Un titre de partie : un beffroi à horloge, qui nomme son quartier." },
   kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#C4683F", blurb: "Un sous-titre : un pavillon à coupole." },
   bollard:   { name: "Statue",             tags: "h4 · h5 · h6",        group: "Monuments",        color: "#6D5D45", blurb: "Un petit titre : une statue de bronze sur son socle." },
-  billboard: { name: "Panneau",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, affichée sur un panneau." },
+  billboard: { name: "Panneau",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, affichée sur un panneau. Une icône devient un panonceau, un petit drapeau flotte sur son mât." },
   screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin." },
   embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#EFE8DA", blurb: "Un autre site, enclavé dans celui-ci : un édifice à colonnes, sous son drapeau." },
   sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },

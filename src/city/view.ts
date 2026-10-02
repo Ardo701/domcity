@@ -18,6 +18,7 @@ import {
   createQueue,
   ensureFonts,
   fontFamily,
+  loadCorsImage,
   loadImageTexture,
   plaqueTexture,
   probeImage,
@@ -536,7 +537,7 @@ export class CityView {
     this.scene.add(sun, sun.target);
   }
 
-  /** Plaques des monuments et affiches des panneaux, une fois les polices prêtes. */
+  /** Plaques des monuments, affiches des panneaux et icônes, une fois les polices prêtes. */
   private async decorate() {
     await ensureFonts();
     if (this.disposed) return;
@@ -584,6 +585,25 @@ export class CityView {
         }
       });
     }
+
+    // Les icônes ensuite : petites et nombreuses, elles se peignent dans l'atlas commun.
+    const { atlas, owners } = this.city.emblems;
+    atlas.sources.forEach((src, i) => {
+      const index = i + 1;
+      void enqueue(async () => {
+        if (this.disposed) return;
+        let status: ImageStatus = "shown";
+        try {
+          atlas.draw(index, await loadCorsImage(src));
+        } catch {
+          status = await probeImage(src);
+          atlas.drawUnavailable(index);
+        }
+        if (this.disposed) return;
+        for (const lotId of owners[i]) this.events.onImageStatus?.(lotId, status);
+        this.invalidate();
+      });
+    });
   }
 
   private updateLabels() {

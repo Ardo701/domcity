@@ -134,6 +134,29 @@ export function bendVergeGeometry(): THREE.BufferGeometry {
   return g;
 }
 
+/** Face plate, debout, tournée vers +z : la plaque d'un panonceau. */
+export function faceGeometry(): THREE.BufferGeometry {
+  const g = new THREE.PlaneGeometry(1, 1);
+  g.translate(0, 0.5, 0);
+  return g;
+}
+
+/**
+ * Drapeau, attaché au mât par son bord ouest (x = -0.5) : il ondule de plus en plus vers le
+ * bout libre. L'ondulation est à l'échelle de la profondeur de l'instance.
+ */
+export function flagGeometry(): THREE.BufferGeometry {
+  const g = new THREE.PlaneGeometry(1, 1, 10, 1);
+  const position = g.getAttribute("position");
+  for (let i = 0; i < position.count; i += 1) {
+    const t = position.getX(i) + 0.5;
+    position.setZ(i, 0.07 * t * Math.sin(t * Math.PI * 1.7));
+  }
+  g.translate(0, 0.5, 0);
+  g.computeVertexNormals();
+  return g;
+}
+
 /** Arbre feuillu : tronc et trois touffes. */
 export function treeGeometry(): THREE.BufferGeometry {
   const trunk = new THREE.CylinderGeometry(0.05, 0.07, 0.42, 5, 1);

@@ -6,14 +6,15 @@
  * page donne toujours la même ville. Toutes les pièces répétées sont des
  * InstancedMesh, quelques dizaines d'appels de dessin pour des milliers de
  * bâtiments, d'arbres et de voitures. Seules les affiches des panneaux (une
- * texture chacune) sont des objets à part.
+ * texture chacune) sont des objets à part ; les icônes partagent un atlas.
  */
 
 import * as THREE from "three";
 import * as shapes from "./geometries";
-import { CURB, FLOOR, type CityLayout, type Decor, type Joint, type Lot, type Rect, type Road } from "./layout";
-import { FACADE, GROUND, ROAD, ROAD_AXIS, type CityMaterials } from "./materials";
+import { CURB, FLOOR, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road } from "./layout";
+import { FACADE, GROUND, ROAD, ROAD_AXIS, emblemMaterial, type CityMaterials } from "./materials";
 import * as PALETTE from "./palette";
+import { IconAtlas } from "./textures";
 
 export interface InstanceRef {
   mesh: THREE.InstancedMesh;
@@ -24,6 +25,13 @@ export interface BillboardSlot {
   lot: Lot;
   panels: THREE.Mesh[];
   ratio: number;
+}
+
+/** Panonceaux et drapeaux : l'atlas à remplir, et les lots qui portent chacune de ses icônes. */
+export interface EmblemSet {
+  atlas: IconAtlas;
+  /** owners[i] : lots de l'icône atlas.sources[i]. */
+  owners: number[][];
 }
 
 export interface LabelSlot {
@@ -40,6 +48,7 @@ export interface CityScene {
   /** Couleurs d'origine de chaque InstancedMesh. */
   baseColors: Map<THREE.InstancedMesh, Float32Array>;
   billboards: BillboardSlot[];
+  emblems: EmblemSet;
   labels: LabelSlot[];
   dispose(): void;
 }
@@ -47,9 +56,6 @@ export interface CityScene {
 const GROUND_COLORS = PALETTE.GROUND_COLORS;
 const ROAD_COLORS = PALETTE.ROAD_COLORS;
 const { GLASS, CONCRETE, BRICK, STUCCO, HOUSES, ROOFS, ACCENTS, CARS, STONE, SIGNAL, rand, pick } = PALETTE;
-
-/** En dessous de cette taille (en pixels), une image est une icône : pas d'affiche. */
-const ICON_SIZE = 48;
 
 // ---------------------------------------------------------------------------
 // Instances
@@ -160,6 +166,18 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
   group.name = "domcity";
   const pickable = { pickable: true };
 
+  // Icônes : une case d'atlas par adresse, dans l'ordre de la page.
+  const iconOwners = new Map<string, number[]>();
+  for (const lot of layout.lots) {
+    const src = lot.panel?.emblem ? lot.node.img?.src : undefined;
+    if (!src) continue;
+    const owners = iconOwners.get(src);
+    if (owners) owners.push(lot.id);
+    else iconOwners.set(src, [lot.id]);
+  }
+  const atlas = new IconAtlas([...iconOwners.keys()]);
+  const emblemSurface = emblemMaterial(atlas.texture);
+
   const kit = {
     facade: new Batch(shapes.boxGeometry(), materials.facade, { attribute: "aFacade", pickable: true }),
     plain: new Batch(shapes.boxGeometry(), materials.plain, pickable),
@@ -179,6 +197,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     poplar: new Batch(shapes.poplarGeometry(), materials.painted, { receive: false }),
     car: new Batch(shapes.carGeometry(), materials.painted, { receive: false }),
     lamp: new Batch(shapes.lampGeometry(), materials.painted, { cast: false, receive: false }),
+    sign: new Batch(shapes.faceGeometry(), emblemSurface, { attribute: "aIcon", cast: false, pickable: true }),
+    flag: new Batch(shapes.flagGeometry(), emblemSurface, { attribute: "aIcon", pickable: true }),
   };
 
   const billboards: BillboardSlot[] = [];
@@ -456,18 +476,41 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     }
   }
 
+  /** Petite image : un panonceau sur son poteau, ou un drapeau en haut de son mât. */
+  function emblem(lot: Lot, panel: Panel) {
+    const cell = atlas.cell(atlas.index(lot.node.img?.src));
+    const cz = lot.z + lot.d / 2;
+    if (panel.emblem === "flag") {
+      const pole = lot.x;
+      const top = panel.lift + panel.height + 0.3;
+      kit.cylinder.add(lot.id, at(pole, lot.y, cz, 0.09, top, 0.09), "#dcd9d2");
+      kit.ball.add(lot.id, at(pole, lot.y + top, cz, 0.18, 0.18, 0.18), "#c9a54e");
+      kit.flag.add(lot.id, at(pole + 0.04 + panel.width / 2, lot.y + panel.lift, cz, panel.width, panel.height, panel.width), "#ffffff", cell);
+      return;
+    }
+    // Plaque d'aluminium lisible des deux côtés, poteau derrière.
+    const cx = lot.x + lot.w / 2;
+    kit.cylinder.add(lot.id, at(cx, lot.y, cz - 0.07, 0.08, panel.lift + panel.height * 0.85, 0.08), "#8e9197");
+    box(lot.id, cx, lot.y + panel.lift - 0.03, cz, panel.width + 0.06, panel.height + 0.06, 0.04, "#b4b7bd");
+    for (const side of [1, -1]) {
+      const face = at(cx, lot.y + panel.lift, cz + side * 0.021, panel.width, panel.height, 1, side < 0 ? Math.PI : 0);
+      kit.sign.add(lot.id, face, "#ffffff", cell);
+    }
+  }
+
   function board(lot: Lot) {
     const panel = lot.panel!;
+    if (panel.emblem) {
+      emblem(lot, panel);
+      return;
+    }
     const cx = lot.x + lot.w / 2;
     const cz = lot.z + lot.d / 2;
-    const size = Math.max(lot.node.img?.w ?? 0, lot.node.img?.h ?? 0);
-    const isIcon = lot.kind === "billboard" && (!lot.node.img?.src || (size > 0 && size < ICON_SIZE));
     const frameY = lot.y + panel.lift;
-    box(lot.id, cx, frameY - 0.15, cz, panel.width + 0.3, panel.height + 0.3, 0.3, isIcon ? "#e9e3d6" : "#2b2b31");
-    if (!isIcon) box(lot.id, cx, frameY - 0.45, cz + 0.35, panel.width * 0.9, 0.08, 0.5, "#55575c");
+    box(lot.id, cx, frameY - 0.15, cz, panel.width + 0.3, panel.height + 0.3, 0.3, "#2b2b31");
+    box(lot.id, cx, frameY - 0.45, cz + 0.35, panel.width * 0.9, 0.08, 0.5, "#55575c");
     const spread = panel.width * 0.32;
     for (const dx of [-spread, spread]) kit.cylinder.add(lot.id, at(cx + dx, lot.y, cz, 0.24, panel.lift, 0.24), "#55575c");
-    if (isIcon) return;
 
     const material = new THREE.MeshStandardMaterial({
       color: lot.kind === "screen" ? "#1b1d2b" : "#cfc8b9",
@@ -779,6 +822,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     refs,
     baseColors,
     billboards,
+    emblems: { atlas, owners: atlas.sources.map((src) => iconOwners.get(src)!) },
     labels,
     dispose() {
       group.traverse((object) => {
@@ -788,6 +832,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
         }
       });
       panelGeometry.dispose();
+      atlas.dispose();
+      emblemSurface.dispose();
       for (const material of panelMaterials) {
         (material as THREE.MeshStandardMaterial).map?.dispose();
         material.dispose();

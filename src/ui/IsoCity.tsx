@@ -40,6 +40,16 @@ function facesOf(lot: Lot): IsoFace[] {
     return ground && lot.h > 0 ? isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, GROUND_COLORS[ground]) : [];
   }
   if (lot.kind === "river") return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, WATER);
+  if (lot.panel?.emblem) {
+    // Panonceau sur son poteau, ou drapeau en haut de son mât (sans l'icône : le dessin reste au trait).
+    const { width, height, lift, emblem } = lot.panel;
+    const cz = lot.z + lot.d / 2;
+    const pole = emblem === "flag" ? lot.x : lot.x + lot.w / 2;
+    return [
+      ...isoBox(pole - 0.05, lot.y, cz - 0.05, 0.1, lift + height, 0.1, "#8e9197"),
+      ...isoBox(emblem === "flag" ? lot.x + 0.05 : lot.x, lot.y + lift, cz - 0.02, width, height, 0.04, "#f4f1ea"),
+    ];
+  }
   if (lot.panel) {
     const { width, height, lift } = lot.panel;
     const cx = lot.x + lot.w / 2;

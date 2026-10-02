@@ -24,7 +24,36 @@ export interface Panel {
   height: number;
   /** Hauteur du bas de l'affiche au-dessus du sol. */
   lift: number;
+  /** Petite image : un panonceau ou un drapeau sur son mât, plutôt qu'un grand panneau. */
+  emblem?: Emblem;
 }
+
+export type Emblem = "sign" | "flag";
+
+/** Sous cette taille (en pixels), une image est une icône : pas de grand panneau pour elle. */
+export const ICON_SIZE = 48;
+const FLAG_NAME = /flag|drapeau|bandera|flagge|bandiera|bandeira/i;
+
+/**
+ * Petite image : drapeau (son fichier ou son texte de remplacement le dit, et il est plus large
+ * que haut) ou simple icône. Rien pour une vraie image, même perdue : elle garde son panneau.
+ */
+export function emblemOf(node: CityNode): Emblem | undefined {
+  const img = node.img;
+  const size = Math.max(img?.w ?? 0, img?.h ?? 0);
+  const small = size > 0 && size < ICON_SIZE;
+  if (!small && (img?.src || size > 0)) return undefined;
+  const file = (img?.src ?? "").split(/[?#]/)[0].split("/").pop() ?? "";
+  const wide = (img?.w ?? 0) > (img?.h ?? 0) * 1.15;
+  return wide && (FLAG_NAME.test(file) || FLAG_NAME.test(img?.alt ?? "")) ? "flag" : "sign";
+}
+
+/** Panonceau : la plus grande dimension de la plaque, et la hauteur de son bas. */
+const SIGN_SIZE = 1;
+const SIGN_LIFT = 1.4;
+/** Drapeau : sa largeur, et la hauteur de son haut sur le mât. */
+const FLAG_WIDTH = 1.6;
+const FLAG_TOP = 5;
 
 export interface Lot {
   id: number;
@@ -209,10 +238,7 @@ function leafArea(kind: Kind, node: CityNode): number {
     case "belfry": return 48;
     case "kiosk": return 16;
     case "bollard": return 5;
-    case "billboard": {
-      const size = Math.max(node.img?.w ?? 0, node.img?.h ?? 0);
-      return size > 0 && size < 48 ? 6 : 24;
-    }
+    case "billboard": return emblemOf(node) ? 6 : 24;
     case "screen": return 30;
     case "embassy": return 44;
     case "sculpture": return 12;
@@ -861,16 +887,27 @@ function shapeLeaf(lot: Lot, node: CityNode): void {
     case "billboard":
     case "screen": {
       const ratio =
-        lot.kind === "screen" ? 16 / 9 : clamp((node.img?.w ?? 4) / (node.img?.h ?? 3), 0.45, 3);
+        lot.kind === "screen" ? 16 / 9 : clamp((node.img?.w || 4) / (node.img?.h || 3), 0.45, 3);
+      const emblem = lot.kind === "billboard" ? emblemOf(node) : undefined;
       let width = lot.w * 0.92;
       let height = width / ratio;
-      const maxHeight = Math.max(2, lot.d * 2.2, 3);
-      if (height > maxHeight) {
-        height = maxHeight;
-        width = height * ratio;
+      let lift = lot.kind === "screen" ? 2.2 : 1.6;
+      if (emblem === "flag") {
+        width = FLAG_WIDTH;
+        height = width / clamp(ratio, 1.2, 2.2);
+        lift = FLAG_TOP - height;
+      } else if (emblem === "sign") {
+        width = Math.min(lot.w * 0.92, ratio >= 1 ? SIGN_SIZE : SIGN_SIZE * ratio);
+        height = width / ratio;
+        lift = SIGN_LIFT;
+      } else {
+        const maxHeight = Math.max(2, lot.d * 2.2, 3);
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * ratio;
+        }
       }
-      const lift = lot.kind === "screen" ? 2.2 : 1.6;
-      lot.panel = { width, height, lift };
+      lot.panel = emblem ? { width, height, lift, emblem } : { width, height, lift };
       lot.x = cx - width / 2;
       lot.w = width;
       lot.z = cz - 0.2;

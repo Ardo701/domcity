@@ -39,6 +39,16 @@ export interface LotInfo {
 
 const STOREYED = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "embassy"]);
 
+/** Les petites images ne sont pas des panneaux : elles ont leur propre nom. */
+const EMBLEMS = {
+  sign: { name: "Panonceau", blurb: "Une icône du site (moins de 48 px), sur un petit panneau à son image." },
+  flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur son mât." },
+} as const;
+
+function nameOf(lot: Lot): { name: string; blurb: string } {
+  return lot.panel?.emblem ? EMBLEMS[lot.panel.emblem] : KINDS[lot.kind];
+}
+
 export function selectorOf(lot: Lot): string {
   return `${lot.node.tag}${lot.node.label ?? ""}`;
 }
@@ -50,7 +60,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
   let current: Lot | undefined = lot;
   while (current) {
     if (!current.ownText) {
-      path.unshift({ id: current.id, selector: selectorOf(current), name: KINDS[current.kind].name });
+      path.unshift({ id: current.id, selector: selectorOf(current), name: nameOf(current).name });
     }
     current = current.parent >= 0 ? layout.lots[current.parent] : undefined;
   }
@@ -69,10 +79,10 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
   return {
     id,
     kind: lot.kind,
-    name: kind.name,
+    name: nameOf(lot).name,
     blurb: lot.ownText
       ? `Le texte écrit directement dans ce ${KINDS[layout.lots[lot.parent].kind].name.toLowerCase()}, sans balise à lui.`
-      : kind.blurb,
+      : nameOf(lot).blurb,
     color: kind.color,
     selector: selectorOf(lot),
     heading: lot.node.heading,

@@ -6,7 +6,7 @@ import styles from "./explorer.module.css";
 
 const IMAGE_STATUS: Record<ImageStatus, string> = {
   loading: "Chargement de l'affiche…",
-  shown: "Affichée sur le panneau",
+  shown: "Affichée dans la ville",
   blocked: "Le site de l'image interdit de l'utiliser en 3D. Elle reste visible ici.",
   missing: "Introuvable : l'image a disparu de son site.",
 };
