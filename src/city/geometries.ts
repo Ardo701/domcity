@@ -1,39 +1,30 @@
 /**
  * Les formes de base de la ville, toutes à l'échelle 1 :
  * emprise de -0.5 à 0.5 en x et z, base à y = 0, sommet à y = 1.
- * Chaque instance est ensuite étirée à la taille de son lot.
+ * Chaque instance est ensuite étirée (et parfois tournée) à sa taille.
  *
- * Les formes à plusieurs teintes (maison et toit, arbre et tronc…) portent des
- * couleurs de sommets, multipliées par la couleur de l'instance : le blanc
- * prend la couleur du genre, le reste garde sa teinte.
+ * Les formes de décor à plusieurs teintes (arbre, voiture, lampadaire) portent des
+ * couleurs de sommets, multipliées par la couleur de l'instance.
  */
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { ROOF_COLOR, TREE_COLOR } from "@/format/taxonomy";
-
-const WHITE = new THREE.Color("#ffffff");
 
 /** Prépare une forme pour la fusion : sans index, sans UV, avec une couleur unie. */
-function part(geometry: THREE.BufferGeometry, color: THREE.Color = WHITE): THREE.BufferGeometry {
+function part(geometry: THREE.BufferGeometry, color = "#ffffff"): THREE.BufferGeometry {
   const flat = geometry.index ? geometry.toNonIndexed() : geometry;
   flat.deleteAttribute("uv");
+  const c = new THREE.Color(color);
   const count = flat.getAttribute("position").count;
   const colors = new Float32Array(count * 3);
   for (let i = 0; i < count; i += 1) {
-    colors[i * 3] = color.r;
-    colors[i * 3 + 1] = color.g;
-    colors[i * 3 + 2] = color.b;
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
   }
   flat.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   if (!flat.getAttribute("normal")) flat.computeVertexNormals();
   return flat;
-}
-
-function box(w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(w, h, d);
-  g.translate(x, y + h / 2, z);
-  return g;
 }
 
 function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
@@ -44,99 +35,123 @@ function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return merged;
 }
 
-/** Boîte simple : socles, immeubles, habitations, champs, rivières. */
-export function blockGeometry(): THREE.BufferGeometry {
-  return box(1, 1, 1);
+function boxAt(w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.BufferGeometry {
+  const g = new THREE.BoxGeometry(w, h, d);
+  g.translate(x, y + h / 2, z);
+  return g;
 }
 
-/** Maison : murs (blanc → couleur du genre) et toit à deux pans en terre cuite. */
-export function houseGeometry(): THREE.BufferGeometry {
-  const eave = 0.62;
-  const walls = part(box(1, eave, 1));
+/** Boîte : façades, socles, trottoirs, chaussées, eau, équipements. */
+export function boxGeometry(): THREE.BufferGeometry {
+  return boxAt(1, 1, 1);
+}
 
-  const roof = new THREE.BufferGeometry();
-  const o = 0.54; // léger débord du toit
-  const r = 1.0;
-  // prisme : faîtage le long de x, à z = 0
+/** Toit à deux pans, faîtage le long de x. */
+export function gableGeometry(): THREE.BufferGeometry {
+  const o = 0.5;
   const v = [
-    // pan nord
-    -o, eave, -o, o, eave, -o, o, r, 0,
-    -o, eave, -o, o, r, 0, -o, r, 0,
-    // pan sud
-    -o, eave, o, -o, r, 0, o, r, 0,
-    -o, eave, o, o, r, 0, o, eave, o,
+    // pans
+    -o, 0, -o, o, 1, 0, o, 0, -o,
+    -o, 0, -o, -o, 1, 0, o, 1, 0,
+    -o, 0, o, o, 0, o, o, 1, 0,
+    -o, 0, o, o, 1, 0, -o, 1, 0,
     // pignons
-    -o, eave, -o, -o, r, 0, -o, eave, o,
-    o, eave, -o, o, eave, o, o, r, 0,
+    -o, 0, -o, -o, 0, o, -o, 1, 0,
+    o, 0, -o, o, 1, 0, o, 0, o,
   ];
-  // Sommets listés dans le sens horaire : on inverse chaque triangle pour que les faces regardent dehors.
-  for (let t = 0; t < v.length; t += 9) {
-    for (let k = 0; k < 3; k += 1) [v[t + 3 + k], v[t + 6 + k]] = [v[t + 6 + k], v[t + 3 + k]];
-  }
-  roof.setAttribute("position", new THREE.Float32BufferAttribute(v, 3));
-  roof.computeVertexNormals();
-  return merge([walls, part(roof, new THREE.Color(ROOF_COLOR))]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(v, 3));
+  g.computeVertexNormals();
+  return g;
 }
 
-/** Obélisque : socle sombre, fût effilé, pointe. */
-export function obeliskGeometry(): THREE.BufferGeometry {
-  const base = part(box(1, 0.06, 1), new THREE.Color("#8d8a84"));
-  const shaft = new THREE.CylinderGeometry(0.24, 0.36, 0.84, 4, 1);
-  shaft.rotateY(Math.PI / 4);
-  shaft.translate(0, 0.06 + 0.42, 0);
-  const tip = new THREE.ConeGeometry(0.24, 0.1, 4);
-  tip.rotateY(Math.PI / 4);
-  tip.translate(0, 0.9 + 0.05, 0);
-  return merge([base, part(shaft), part(tip)]);
+/** Pyramide à base carrée : flèches, toits de beffroi. */
+export function pyramidGeometry(): THREE.BufferGeometry {
+  const g = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1);
+  g.rotateY(Math.PI / 4);
+  g.translate(0, 0.5, 0);
+  return g.toNonIndexed();
 }
 
-/** Beffroi : tour carrée, bandeau d'horloge, flèche pointue. */
-export function belfryGeometry(): THREE.BufferGeometry {
-  const tower = part(box(0.7, 0.66, 0.7));
-  const band = part(box(0.76, 0.08, 0.76, 0, 0.56, 0), new THREE.Color("#f4efe4"));
-  const spire = new THREE.ConeGeometry(0.5, 0.34, 4);
-  spire.rotateY(Math.PI / 4);
-  spire.translate(0, 0.66 + 0.17, 0);
-  return merge([tower, band, part(spire, new THREE.Color("#8d8a84"))]);
+export function cylinderGeometry(segments = 14): THREE.BufferGeometry {
+  const g = new THREE.CylinderGeometry(0.5, 0.5, 1, segments, 1);
+  g.translate(0, 0.5, 0);
+  return g;
 }
 
-/** Kiosque : pavillon hexagonal et son toit. */
-export function kioskGeometry(): THREE.BufferGeometry {
-  const body = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 6, 1);
-  body.translate(0, 0.25, 0);
-  const roof = new THREE.ConeGeometry(0.56, 0.5, 6);
-  roof.translate(0, 0.75, 0);
-  return merge([part(body, new THREE.Color("#f4efe4")), part(roof)]);
+export function coneGeometry(segments = 14): THREE.BufferGeometry {
+  const g = new THREE.ConeGeometry(0.5, 1, segments, 1);
+  g.translate(0, 0.5, 0);
+  return g;
 }
 
-/** Borne : petit cylindre. */
-export function bollardGeometry(): THREE.BufferGeometry {
-  const post = new THREE.CylinderGeometry(0.4, 0.46, 1, 8, 1);
-  post.translate(0, 0.5, 0);
-  return merge([part(post)]);
+/** Coupole : une demi-sphère étirée sur toute la hauteur. */
+export function domeGeometry(): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  g.scale(1, 2, 1);
+  return g;
 }
 
-/** Ambassade : bâtiment, mât et drapeau à la couleur du genre. */
-export function embassyGeometry(): THREE.BufferGeometry {
-  const hall = part(box(1, 0.62, 1), new THREE.Color("#ece7dc"));
-  const pole = part(box(0.04, 0.4, 0.04, 0.3, 0.62, 0.3), new THREE.Color("#55555c"));
-  const flag = part(box(0.26, 0.14, 0.02, 0.43, 0.86, 0.3));
-  return merge([hall, pole, flag]);
+export function ballGeometry(): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(0.5, 14, 10);
+  g.translate(0, 0.5, 0);
+  return g;
 }
 
-/** Sculpture : un polyèdre sur un socle. */
-export function sculptureGeometry(): THREE.BufferGeometry {
-  const plinth = part(box(0.6, 0.2, 0.6), new THREE.Color("#ece7dc"));
-  const gem = new THREE.IcosahedronGeometry(0.4, 0);
-  gem.translate(0, 0.6, 0);
-  return merge([plinth, part(gem)]);
+/** Sculpture abstraite : un nœud, ramené dans la boîte unité. */
+export function knotGeometry(): THREE.BufferGeometry {
+  const g = new THREE.TorusKnotGeometry(0.3, 0.1, 96, 10, 2, 3);
+  g.computeBoundingBox();
+  const box = g.boundingBox!;
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  g.translate(0, -box.min.y, 0);
+  g.scale(1 / size.x, 1 / size.y, 1 / size.z);
+  return g;
 }
 
-/** Arbre : tronc et houppier. */
+/** Arbre feuillu : tronc et trois touffes. */
 export function treeGeometry(): THREE.BufferGeometry {
-  const trunk = new THREE.CylinderGeometry(0.07, 0.09, 0.3, 5, 1);
-  trunk.translate(0, 0.15, 0);
-  const crown = new THREE.ConeGeometry(0.42, 0.78, 7);
-  crown.translate(0, 0.3 + 0.39, 0);
-  return merge([part(trunk, new THREE.Color("#7a5b3c")), part(crown, new THREE.Color(TREE_COLOR))]);
+  const trunk = new THREE.CylinderGeometry(0.05, 0.07, 0.42, 5, 1);
+  trunk.translate(0, 0.21, 0);
+  const blob = (r: number, x: number, y: number, z: number, color: string) => {
+    const g = new THREE.IcosahedronGeometry(r, 0);
+    g.translate(x, y, z);
+    return part(g, color);
+  };
+  return merge([
+    part(trunk, "#6e5034"),
+    blob(0.3, 0, 0.66, 0, "#6f9a4c"),
+    blob(0.22, 0.14, 0.56, 0.08, "#628c43"),
+    blob(0.2, -0.12, 0.58, -0.1, "#7aa656"),
+  ]);
+}
+
+/** Arbre en fuseau (peuplier, cyprès), pour varier les alignements. */
+export function poplarGeometry(): THREE.BufferGeometry {
+  const trunk = new THREE.CylinderGeometry(0.04, 0.06, 0.2, 5, 1);
+  trunk.translate(0, 0.1, 0);
+  const crown = new THREE.SphereGeometry(0.22, 8, 6);
+  crown.scale(1, 2.1, 1);
+  crown.translate(0, 0.58, 0);
+  return merge([part(trunk, "#6e5034"), part(crown, "#557f3d")]);
+}
+
+/** Voiture, longue d'une unité le long de x : caisse (couleur de l'instance), vitres, roues. */
+export function carGeometry(): THREE.BufferGeometry {
+  const body = boxAt(1, 0.2, 0.44, 0, 0.1);
+  const cabin = boxAt(0.52, 0.15, 0.4, -0.06, 0.3);
+  const roof = boxAt(0.46, 0.02, 0.36, -0.06, 0.45);
+  // Roues : deux essieux en boîtes sombres, bien assez vus d'en haut.
+  const wheels = [-0.32, 0.32].map((x) => part(boxAt(0.2, 0.18, 0.48, x, 0.01), "#1e1e22"));
+  return merge([part(body), part(cabin, "#2b333b"), part(roof), ...wheels]);
+}
+
+/** Lampadaire : mât, crosse, lanterne. */
+export function lampGeometry(): THREE.BufferGeometry {
+  const pole = new THREE.CylinderGeometry(0.035, 0.05, 1, 6, 1);
+  pole.translate(0, 0.5, 0);
+  const arm = boxAt(0.32, 0.03, 0.03, 0.14, 0.97);
+  const head = boxAt(0.14, 0.05, 0.09, 0.28, 0.93);
+  return merge([part(pole, "#3b3d42"), part(arm, "#3b3d42"), part(head, "#f3e7c4")]);
 }

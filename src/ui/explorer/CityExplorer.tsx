@@ -127,6 +127,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           onImageStatus: (id, s) => setImageStatus((prev) => ({ ...prev, [id]: s })),
         });
         viewRef.current = view;
+        // En développement : la vue est joignable depuis la console (essais de rendu, captures).
+        if (process.env.NODE_ENV !== "production") (window as unknown as { __domcity?: CityView }).__domcity = view;
         setStatus({ phase: "loading", step: 3 });
         await nextFrame();
         if (!cancelled) setStatus({ phase: "ready" });

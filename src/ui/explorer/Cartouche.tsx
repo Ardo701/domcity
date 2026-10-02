@@ -59,8 +59,8 @@ export function Cartouche({
     ["Monuments", stats.monuments],
     ["Panneaux", stats.billboards],
   ];
-  if (stats.rivers > 0) figures.push(["Rivières", stats.rivers]);
-  if (stats.vacant > 0) figures.push(["Terrains vagues", stats.vacant]);
+  if (stats.rivers > 0) figures.push(["Canaux", stats.rivers]);
+  if (stats.vacant > 0) figures.push(["Chantiers", stats.vacant]);
   const facts = pageFacts(page);
 
   return (

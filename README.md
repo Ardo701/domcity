@@ -28,17 +28,19 @@
 
 | Balise | Dans la ville |
 |---|---|
-| `body` | Terrain |
-| `section`, `article`, `main` | Quartier (plus c'est imbriqué, plus ça monte) |
-| `div` avec enfants / sans enfants | Îlot / Immeuble (hauteur selon le texte) |
-| `div` vide | Terrain vague |
-| `p`, `blockquote`, `pre` | Habitation |
+| `body` | Terrain, entouré d'un périphérique |
+| `section`, `article`, `main` | Quartier, séparé des autres par de grandes avenues |
+| `div` avec enfants / avec texte | Îlot bordé de rues / Immeuble de bureaux (tour de verre si beaucoup de texte) |
+| `div` vide | Chantier, parfois avec sa grue |
+| `p`, `blockquote`, `pre` | Immeuble d'habitation |
 | `ul`, `ol` / `li` | Lotissement / Maison |
-| `h1` / `h2` / `h3` | Monument / Beffroi / Kiosque, avec le titre gravé |
+| `h1` / `h2` / `h3` | Tour Art déco / Beffroi à horloge / Kiosque, avec le titre gravé |
 | `img` | Panneau avec la vraie image |
-| `hr` | Rivière qui coupe le quartier |
-| `nav`, `header`, `footer`, `aside` | Périphérique, Porte de la ville, Port, Parc |
-| `table`, `form`, `iframe`, `svg`, `video` | Champs, Mairie, Ambassade, Sculpture, Écran géant |
+| `hr` | Canal entre deux quais |
+| `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville, Port, Parc |
+| `table`, `form`, `iframe`, `svg`, `video` | Champs, Place de la mairie, Ambassade, Sculpture, Écran géant |
+
+Rues, trottoirs, arbres, lampadaires et voitures sont du décor : les rues séparent les blocs de la page et découpent les longs pâtés.
 
 La liste complète et les couleurs sont dans [`src/format/taxonomy.ts`](src/format/taxonomy.ts).
 

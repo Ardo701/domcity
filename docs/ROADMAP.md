@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 2 octobre 2026 (fin de l'étape 3).
+> À lire avant de reprendre le travail. Dernière mise à jour : 2 octobre 2026 (refonte du rendu, avant l'étape 4).
 
 ## 1. Le concept
 
@@ -25,6 +25,7 @@
 | Comptes Supabase | **Jamais le compte connecté dans Claude** | Le projet est sur un autre compte : on livre des migrations SQL que l'utilisateur applique |
 | Dépôt | **Un seul dépôt Next.js** (pas de monorepo) | Une seule chose à déployer ; le bookmarklet est compilé depuis le même code |
 | Anti-DDoS | Vercel (inclus, tous plans) pour le site ; Cloudflare pour les fichiers | Vercel déconseille un proxy Cloudflare devant lui (il perd la visibilité du trafic) |
+| Rendu de la ville | **Ville plate et réaliste** : rues, trottoirs, pâtés denses, bâtiments composés, mobilier urbain (et non plus des socles empilés par profondeur) | Demande de l'utilisateur : l'ancien rendu faisait « compartimenté, très cubique, pas une grande ville ». Les rues n'ont pas à correspondre à un élément de la page : elles séparent les blocs et découpent les longs pâtés, parfois pour le seul décor |
 
 ### Principe clé : les données ne changent pas, le moteur si
 
@@ -63,7 +64,7 @@ Identité retenue : **« planche d'urbanisme »**.
 - Orange chantier `#ff4b12` : actions principales et monuments. Jaune balise `#ffd23f` : surbrillance, survol, sélection.
 - Polices : **Big Shoulders** (titres, capitales), **Instrument Sans** (texte), **Martian Mono** (étiquettes techniques).
 - Motifs : cartouche d'architecte, flèche « Nord : haut de page », dessins axonométriques cernés d'encre (générés par le vrai moteur), repères de planche A à F.
-- Couleurs de la ville façon plan de zonage ; socles en teintes d'altitude (plus c'est imbriqué, plus c'est haut).
+- La ville elle-même est une **maquette posée sur la planche** : matériaux réels (béton, brique, enduit, verre, gazon, asphalte), ciel reflété dans les vitres, ombres d'un soleil d'ouest. L'orange chantier reste réservé au monument (h1) et aux accents ; le jaune balise au survol et à la sélection.
 
 ## 4. Architecture du code
 
@@ -88,7 +89,15 @@ supabase/migrations/             schéma SQL (à appliquer dans Supabase, jamais
 docs/ROADMAP.md                  ce document
 ```
 
-Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) → `layoutCity` (lots) → `CityView` (Three.js).
+Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) → `layoutCity` (lots, rues, trottoirs, décors) → `buildCityScene` (instances Three.js) → `CityView`.
+
+Le rendu (`src/city/`) :
+- `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
+- `palette.ts` : couleurs partagées par la 3D et le dessin de l'accueil (`src/ui/IsoCity.tsx`).
+- `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, arbres, voiture, lampadaire).
+- `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
+- `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
+- `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection.
 Flux d'un partage Wikipédia : le navigateur envoie langue + titre + miniature JPEG → le serveur **relève lui-même l'article** (linkedom) pour ne pas faire confiance au JSON envoyé → gzip → R2 → ligne Supabase visible.
 Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic compte comme geste) → relevé de la page affichée (`live: true`) → `/nouveau` appelle « pret » → le favori répond avec la ville, adressée à l'origine de DOMCity seulement → `/nouveau` vérifie (zod, et que la ville vient bien du site qu'elle décrit) → « recu ». **Plan B** si l'onglet n'a pas pu s'ouvrir ou si le site coupe le lien entre fenêtres (en-tête COOP) : la ville compressée part dans l'ancre `#ville=…` et s'ouvre dans le même onglet. Partage : la ville est envoyée telle quelle (`source: "bookmarklet"`), le serveur la valide mais ne peut pas la vérifier.
 
@@ -113,20 +122,20 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 
 | Balise | Dans la ville |
 |---|---|
-| `body` | Terrain |
-| `section`, `article`, `main` | Quartier (socle qui monte avec l'imbrication) |
-| `div` avec enfants / sans enfants / vide | Îlot / Immeuble (hauteur selon le texte, étages dessinés) / Terrain vague |
-| `p`, `blockquote`, `pre` | Habitation |
-| `ul`, `ol` / `li` | Lotissement / Maison à toit rouge |
-| `h1` / `h2` / `h3` / `h4-h6` | Monument (obélisque) / Beffroi / Kiosque / Borne, avec plaque gravée |
+| `body` | Terrain : le socle de la maquette, son périphérique et sa ceinture verte |
+| `section`, `article`, `main` | Quartier, séparé des autres par de grandes avenues |
+| `div` avec enfants / avec texte / vide | Îlot bordé de rues / Immeuble de bureaux (tour de verre si beaucoup de texte) / Chantier, parfois avec sa grue |
+| `p`, `blockquote`, `pre` | Immeuble d'habitation (béton, brique ou enduit, commerces au rez-de-chaussée) |
+| `ul`, `ol` / `li` | Lotissement sur pelouse / Maison à toit et cheminée |
+| `h1` / `h2` / `h3` / `h4-h6` | Tour Art déco qui domine la ville / Beffroi à horloge / Kiosque à coupole / Statue, avec plaque gravée pour h1 à h3 |
 | `img` | Panneau avec la vraie image (icônes < 48 px : panneau simple) |
 | `video`, `canvas` | Écran géant |
-| `iframe` | Ambassade |
-| `svg` | Sculpture |
-| `form` / `button`, `input`… | Mairie / Guichet |
-| `table` | Champs |
-| `hr` | Rivière qui traverse le quartier |
-| `nav`, `header`, `footer`, `aside` | Périphérique, Porte de la ville, Port, Parc arboré |
+| `iframe` | Ambassade à colonnes, sous son drapeau |
+| `svg` | Sculpture abstraite |
+| `form` / `button`, `input`… | Place de la mairie (pavés, fontaine) / Guichet à auvent |
+| `table` | Champs cultivés |
+| `hr` | Canal entre deux quais, avec ses ponts |
+| `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo), Parc arboré |
 
 Le texte écrit directement dans un conteneur devient un bâtiment de plus. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
 
@@ -175,6 +184,11 @@ Vérifié : 27 tests (capture, urbanisme, fichiers piégés, partage de bout en 
 Vérifié : 45 tests (favori compilé à jour et assez court, échange de messages simulé des deux côtés, plan B, origine vérifiée, relevé live avec shadow DOM, `display: contents`, couleurs et scripts tiers, pages locales refusées), TypeScript, ESLint, compilation de production. Dans le navigateur : page Installer (bureau et mobile 375 px sans débordement), animation, clic d'essai (plan B, ville construite), favori lancé sur github.com/vercel/next.js (ville construite, publiée avec un titre modifié, page partagée « Relevé par un visiteur », inspecteur avec fond réel et position).
 **Non vérifié** : le chemin principal par messages entre onglets dans un vrai navigateur (le navigateur de test bloque les nouveaux onglets : seul le plan B a tourné pour de vrai, le chemin principal est couvert par les tests) ; le glisser dans une vraie barre de favoris (Chrome, Firefox, Safari) ; le clic depuis la barre sur un site à CSP stricte ou Trusted Types (YouTube) ; l'installation à la main sur téléphone.
 
+### Refonte du rendu : une vraie ville (avant l'étape 4)
+Demandée par l'utilisateur après l'étape 3. Ville plate, rues hiérarchisées avec marquages et passages piétons, trottoirs, pâtés denses, bâtiments composés, places publiques, mobilier urbain, reflets du ciel, ombres visibles. Monument toujours plus haut que la plus haute tour. Le dessin de l'accueil suit le même moteur. Wikipédia « Paris » : 2 664 éléments, 954 tronçons de rue, environ 850 000 triangles, 2 ms par image sur ce poste.
+Vérifié : tests de l'urbanisme (aucun bâtiment sur une rue, rues entre conteneurs voisins, périphérique, monument dominant), captures Paris, Tour Eiffel, GitHub, compilation de production.
+**Non vérifié** : un ordinateur peu puissant ou un téléphone ; la promenade au niveau de la rue en interaction réelle.
+
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
 1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
@@ -198,6 +212,8 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ## 11. En réserve (idées et limites connues)
 
 - Promenade : pas encore de collisions avec les bâtiments.
+- Rendu : niveaux de détail par page (arbres et voitures masqués au loin) si une mégalopole devient lourde ; immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
+- Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
@@ -220,5 +236,7 @@ npm run bookmarklet  # recompile le favori après une modification de src/captur
 ```
 
 Le favori compilé (`src/bookmarklet/generated.ts`) est versionné ; un test échoue s'il n'est pas à jour, et `npm run build` le recompile toujours avant de construire.
+
+Essais de rendu (développement seulement) : la vue 3D est joignable dans la console (`window.__domcity`) ; `lookFrom([x, y, z], [cx, cy, cz])` place la caméra, `capture()` donne l'image, et `POST /api/dev-shot?name=…` l'enregistre dans `.data/shots/`. Utile quand l'onglet est en arrière-plan et ne se redessine plus.
 
 Conventions : textes en français, commentaires en français, aucun tiret cadratin, un commit par étape sur `main`, migrations SQL nouvelles plutôt que modifiées.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CityDoc, CityNode } from "@/format/types";
-import { layoutCity, stripLayout, type Lot } from "./layout";
+import { layoutCity, stripLayout, type Lot, type Rect } from "./layout";
 
 function doc(root: CityNode): CityDoc {
   return {
@@ -38,13 +38,13 @@ const SAMPLE = doc({
   ],
 });
 
-const inside = (child: Lot, parent: Lot) =>
+const inside = (child: Rect, parent: Rect) =>
   child.x >= parent.x - 1e-6 &&
   child.z >= parent.z - 1e-6 &&
   child.x + child.w <= parent.x + parent.w + 1e-6 &&
   child.z + child.d <= parent.z + parent.d + 1e-6;
 
-const overlaps = (a: Lot, b: Lot) =>
+const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.w - 1e-6 && b.x < a.x + a.w - 1e-6 && a.z < b.z + b.d - 1e-6 && b.z < a.z + a.d - 1e-6;
 
 describe("stripLayout", () => {
@@ -76,12 +76,31 @@ describe("layoutCity", () => {
     }
   });
 
-  it("garde chaque lot dans son parent, posé sur son socle", () => {
+  it("garde chaque lot dans son parent, posé sur son sol", () => {
     for (const lot of lots) {
       if (lot.parent < 0) continue;
       const parent = lots[lot.parent];
       expect(inside(lot, parent)).toBe(true);
-      expect(lot.y).toBeCloseTo(parent.y + parent.h, 6);
+      expect(lot.y).toBeGreaterThanOrEqual(parent.y + parent.h - 1e-6);
+    }
+  });
+
+  it("entoure la ville d'un périphérique et sépare les conteneurs voisins par une rue", () => {
+    expect(layout.roads.filter((r) => r.style === "ring")).toHaveLength(4);
+    const section = lots.find((l) => l.kind === "district")!;
+    const block = lots.find((l) => l.parent === 0 && l.kind === "block")!;
+    const between = layout.roads.filter((r) => r.owner === 0 && r.style === "street");
+    expect(between.length).toBeGreaterThan(0);
+    for (const road of between) {
+      expect(overlaps(road, section)).toBe(false);
+      expect(overlaps(road, block)).toBe(false);
+    }
+  });
+
+  it("ne bâtit jamais sur une rue", () => {
+    for (const lot of lots) {
+      if (lot.container) continue;
+      for (const road of layout.roads) expect(overlaps(lot, road)).toBe(false);
     }
   });
 
@@ -114,13 +133,14 @@ describe("layoutCity", () => {
     expect(after.z).toBeGreaterThanOrEqual(river.z + river.d - 1e-6);
   });
 
-  it("monte avec la profondeur et grandit avec le texte", () => {
-    const deep = lots.find((l) => l.kind === "residence" && l.node.text === 10)!;
-    const shallow = lots.find((l) => l.kind === "residence" && l.node.text === 50)!;
-    expect(deep.y).toBeGreaterThan(shallow.y);
+  it("grandit avec le texte, et le monument domine", () => {
     const short = lots.find((l) => l.node.text === 50)!;
     const tall = lots.find((l) => l.node.text === 900)!;
     expect(tall.h).toBeGreaterThan(short.h);
+    const highest = Math.max(...lots.filter((l) => l.kind === "tower" || l.kind === "residence").map((l) => l.h));
+    const h1 = layoutCity(doc({ tag: "body", children: [{ tag: "h1", text: 4, heading: "Titre" }, ...SAMPLE.root.children!] }))
+      .lots.find((l) => l.kind === "monument")!;
+    expect(h1.h).toBeGreaterThan(highest);
   });
 
   it("donne aux panneaux les proportions de l'image", () => {

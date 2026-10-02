@@ -2,7 +2,7 @@
 
 import { KINDS, type Kind } from "@/format/taxonomy";
 import type { CityImage, CityLinks } from "@/format/types";
-import type { CityLayout, Lot } from "./layout";
+import { FLOOR, type CityLayout, type Lot } from "./layout";
 
 export interface LotStep {
   id: number;
@@ -32,10 +32,12 @@ export interface LotInfo {
   /** Position sur la page réelle [x, y, largeur, hauteur]. */
   rect?: [number, number, number, number];
   depth: number;
-  altitude: number;
-  height: number;
+  /** Étages d'un bâtiment (pas d'un conteneur ni d'un équipement). */
+  floors?: number;
   path: LotStep[];
 }
+
+const STOREYED = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "embassy"]);
 
 export function selectorOf(lot: Lot): string {
   return `${lot.node.tag}${lot.node.label ?? ""}`;
@@ -84,8 +86,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
     background,
     rect: lot.ownText ? undefined : lot.node.rect,
     depth: lot.depth,
-    altitude: lot.y,
-    height: lot.h,
+    floors: STOREYED.has(lot.kind) ? Math.max(1, Math.round(lot.h / FLOOR)) : undefined,
     path,
   };
 }

@@ -86,40 +86,34 @@ export interface KindInfo {
 }
 
 export const KINDS: Record<Kind, KindInfo> = {
-  terrain:   { name: "Terrain",            tags: "body",                group: "Quartiers",        color: "#E3DDD0", blurb: "Le sol de la ville. Tout le reste est bâti dessus." },
-  district:  { name: "Quartier",           tags: "section · article · main", group: "Quartiers", color: "#D6CDB9", blurb: "Une partie de la page. Plus on s'enfonce dans la page, plus le quartier monte." },
-  block:     { name: "Îlot",               tags: "div (avec enfants)",  group: "Quartiers",        color: "#DAD2C1", blurb: "Un bloc qui regroupe d'autres éléments." },
-  boulevard: { name: "Périphérique",       tags: "nav",                 group: "Nature et réseaux", color: "#3B3B42", blurb: "Le menu de navigation, en asphalte." },
-  gate:      { name: "Porte de la ville",  tags: "header",              group: "Quartiers",        color: "#B7AC96", blurb: "L'en-tête, par où l'on entre." },
-  port:      { name: "Port",               tags: "footer",              group: "Quartiers",        color: "#9DB0C2", blurb: "Le pied de page, au bord de l'eau." },
-  park:      { name: "Parc",               tags: "aside",               group: "Nature et réseaux", color: "#9DBE7E", blurb: "Le contenu secondaire, planté d'arbres." },
-  estate:    { name: "Lotissement",        tags: "ul · ol",             group: "Quartiers",        color: "#CBD5A6", blurb: "Une liste : des maisons alignées." },
-  townhall:  { name: "Mairie",             tags: "form",                group: "Équipements",      color: "#B9C4EA", blurb: "Un formulaire, là où l'on remplit des papiers." },
-  fields:    { name: "Champs",             tags: "table",               group: "Nature et réseaux", color: "#C9CF6E", blurb: "Un tableau, cultivé en rangées." },
-  tower:     { name: "Immeuble",           tags: "div",                 group: "Bâtiments",        color: "#D3D1CB", blurb: "Un bloc de contenu. Sa hauteur suit la quantité de texte." },
-  vacant:    { name: "Terrain vague",      tags: "div (vide)",          group: "Bâtiments",        color: "#ECE4D3", blurb: "Un élément sans texte ni enfant. Du balisage pour rien." },
-  residence: { name: "Habitation",         tags: "p · blockquote · pre", group: "Bâtiments",       color: "#E8C891", blurb: "Un paragraphe. Plus il est long, plus il a d'étages." },
-  house:     { name: "Maison",             tags: "li",                  group: "Bâtiments",        color: "#EFE6D6", blurb: "Un élément de liste, avec son toit." },
-  monument:  { name: "Monument",           tags: "h1",                  group: "Monuments",        color: "#FF4B12", blurb: "Le titre principal, gravé au sommet." },
-  belfry:    { name: "Beffroi",            tags: "h2",                  group: "Monuments",        color: "#FF7B47", blurb: "Un titre de partie. Il nomme son quartier." },
-  kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#F5A26F", blurb: "Un sous-titre, plus modeste." },
-  bollard:   { name: "Borne",              tags: "h4 · h5 · h6",        group: "Monuments",        color: "#EDB896", blurb: "Un petit titre." },
+  terrain:   { name: "Terrain",            tags: "body",                group: "Quartiers",        color: "#4A4B51", blurb: "Le socle de la ville, ceinturé par le périphérique et une bande verte." },
+  district:  { name: "Quartier",           tags: "section · article · main", group: "Quartiers", color: "#CDC7BA", blurb: "Une partie de la page : un quartier, séparé des autres par de grandes avenues." },
+  block:     { name: "Îlot",               tags: "div (avec enfants)",  group: "Quartiers",        color: "#D6D0C3", blurb: "Un bloc qui en regroupe d'autres : un pâté de maisons, bordé de ses rues." },
+  boulevard: { name: "Allée",              tags: "nav",                 group: "Nature et réseaux", color: "#DDD5C3", blurb: "Le menu de navigation : une place pavée, plantée d'arbres." },
+  gate:      { name: "Porte de la ville",  tags: "header",              group: "Quartiers",        color: "#D8CCB0", blurb: "L'en-tête : la place d'entrée, avec son arc monumental." },
+  port:      { name: "Port",               tags: "footer",              group: "Quartiers",        color: "#4F88A6", blurb: "Le pied de page : les quais, les grues, un cargo à quai." },
+  park:      { name: "Parc",               tags: "aside",               group: "Nature et réseaux", color: "#7C9D57", blurb: "Le contenu secondaire : un parc planté d'arbres, traversé d'allées." },
+  estate:    { name: "Lotissement",        tags: "ul · ol",             group: "Quartiers",        color: "#91B264", blurb: "Une liste : des maisons sur gazon, desservies par de petites rues." },
+  townhall:  { name: "Place de la mairie", tags: "form",                group: "Équipements",      color: "#C9C1AE", blurb: "Un formulaire : une place pavée, ses guichets et sa fontaine." },
+  fields:    { name: "Champs",             tags: "table",               group: "Nature et réseaux", color: "#B8B25F", blurb: "Un tableau : des champs cultivés en rangées." },
+  tower:     { name: "Immeuble",           tags: "div",                 group: "Bâtiments",        color: "#7F9BAB", blurb: "Un bloc de texte : un immeuble de bureaux. Avec beaucoup de texte, une tour de verre." },
+  vacant:    { name: "Chantier",           tags: "div (vide)",          group: "Bâtiments",        color: "#A88F6B", blurb: "Un élément vide : un chantier clôturé, parfois avec sa grue. Du balisage pour rien." },
+  residence: { name: "Habitation",         tags: "p · blockquote · pre", group: "Bâtiments",       color: "#E3C9A6", blurb: "Un paragraphe : un immeuble d'habitation. Plus il est long, plus il a d'étages." },
+  house:     { name: "Maison",             tags: "li",                  group: "Bâtiments",        color: "#F0E2C4", blurb: "Un élément de liste : une maison, son toit et sa cheminée." },
+  monument:  { name: "Monument",           tags: "h1",                  group: "Monuments",        color: "#FF4B12", blurb: "Le titre principal : la tour Art déco qui domine la ville, son nom gravé au sommet." },
+  belfry:    { name: "Beffroi",            tags: "h2",                  group: "Monuments",        color: "#5C8F80", blurb: "Un titre de partie : un beffroi à horloge, qui nomme son quartier." },
+  kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#C4683F", blurb: "Un sous-titre : un pavillon à coupole." },
+  bollard:   { name: "Statue",             tags: "h4 · h5 · h6",        group: "Monuments",        color: "#6D5D45", blurb: "Un petit titre : une statue de bronze sur son socle." },
   billboard: { name: "Panneau",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, affichée sur un panneau." },
   screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin." },
-  embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#6C55D1", blurb: "Un autre site, enclavé dans celui-ci." },
-  sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle." },
-  counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir." },
-  river:     { name: "Rivière",            tags: "hr",                  group: "Nature et réseaux", color: "#2F6BFF", blurb: "Une ligne de séparation. Elle coupe le quartier en deux." },
+  embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#EFE8DA", blurb: "Un autre site, enclavé dans celui-ci : un édifice à colonnes, sous son drapeau." },
+  sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },
+  counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir : un petit kiosque à auvent." },
+  river:     { name: "Canal",              tags: "hr",                  group: "Nature et réseaux", color: "#4F88A6", blurb: "Une ligne de séparation : un canal entre deux quais, franchi par des ponts." },
 };
 
-/** Teintes hypsométriques : les socles changent de couleur avec l'altitude (la profondeur dans la page). */
-export const ALTITUDE_TINTS = [
-  "#E0D9CA", "#D6CDB9", "#CCC0A6", "#C3B293", "#BBA383",
-  "#B39475", "#A9856A", "#9E7862", "#E9E4DA", "#F3F0E8",
-];
-
-export const ROOF_COLOR = "#C65A3E";
-export const TREE_COLOR = "#4F7D3A";
+/** Toits des maisons, dans le dessin et les vignettes de la légende. */
+export const ROOF_COLOR = "#A8503A";
 export const HIGHLIGHT_COLOR = "#FFD23F";
 
 export const LEGEND_GROUPS: KindInfo["group"][] = [

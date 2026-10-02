@@ -26,7 +26,7 @@ const STEPS = [
   {
     n: "02",
     title: "Urbanisme",
-    text: "Chaque élément reçoit une parcelle, rangée dans l'ordre de la page, du nord au sud. Plus un élément est imbriqué, plus son quartier prend de la hauteur.",
+    text: "Chaque élément reçoit sa parcelle, dans l'ordre de la page, du nord au sud. De grandes avenues séparent les parties de la page ; les éléments simples se serrent en pâtés de maisons.",
   },
   {
     n: "03",
@@ -124,7 +124,7 @@ export default async function Home() {
                 { match: (l) => l.kind === "belfry", tag: "h2", name: "Beffroi" },
                 { match: (l) => l.kind === "tower" && l.node.text === 5200, tag: "div", name: "Immeuble" },
                 { match: (l) => l.kind === "billboard" && l.node.img?.w === 420, tag: "img", name: "Panneau" },
-                { match: (l) => l.kind === "river", tag: "hr", name: "Rivière" },
+                { match: (l) => l.kind === "river", tag: "hr", name: "Canal" },
                 { match: (l) => l.kind === "estate", tag: "ul", name: "Lotissement" },
                 { match: (l) => l.kind === "park", tag: "aside", name: "Parc" },
                 { match: (l) => l.kind === "port", tag: "footer", name: "Port" },
@@ -223,7 +223,7 @@ export default async function Home() {
         </div>
         <div>
           <span className="mono-caps">Échelle</span>
-          <p>1 étage ≈ 1,6 m · hauteur logarithmique</p>
+          <p>1 étage ≈ 3 m · hauteur logarithmique</p>
         </div>
       </footer>
     </div>

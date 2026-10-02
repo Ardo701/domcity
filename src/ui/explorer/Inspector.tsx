@@ -35,9 +35,8 @@ export function Inspector({
     ["Texte en tout", formatChars(info.textTotal)],
     ["Éléments dedans", info.children > 0 ? `${formatCount(info.children)} directs, ${formatCount(info.descendants)} en tout` : "aucun"],
     ["Profondeur", `niveau ${info.depth}`],
-    ["Altitude", `${info.altitude.toFixed(1).replace(".", ",")} m`],
-    ["Hauteur", `${info.height.toFixed(1).replace(".", ",")} m`],
   ];
+  if (info.floors) rows.push(["Hauteur", `${formatCount(info.floors)} étage${info.floors > 1 ? "s" : ""}`]);
   if (info.links) {
     rows.splice(3, 0, ["Liens", `${formatCount(info.links.internal)} internes · ${formatCount(info.links.external)} externes`]);
   }

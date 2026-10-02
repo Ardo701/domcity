@@ -39,6 +39,8 @@ export interface ViewEvents {
 
 const PAPER = "#EEEAE1";
 const GROUND = "#E7E2D7";
+/** Hauteur des yeux du promeneur. */
+const EYE = 1.9;
 const HOVER = new THREE.Color(HIGHLIGHT_COLOR);
 const MOVE_KEYS = new Set([
   "KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
@@ -75,6 +77,7 @@ export class CityView {
   private readonly keys = new Set<string>();
   private readonly velocity = new THREE.Vector3();
   private readonly reducedMotion: boolean;
+  private environment: THREE.Texture | null = null;
 
   private mode: ViewMode = "aerial";
   private walking: WalkState = "off";
@@ -125,6 +128,7 @@ export class CityView {
     this.scene.add(this.city.group);
     this.addGround();
     this.addLights();
+    this.addSky();
 
     // Contrôles
     this.aerial = new MapControls(this.camera, this.renderer.domElement);
@@ -132,7 +136,7 @@ export class CityView {
     this.aerial.dampingFactor = 0.09;
     this.aerial.screenSpacePanning = false;
     this.aerial.maxPolarAngle = 1.38;
-    this.aerial.minDistance = 6;
+    this.aerial.minDistance = 2.5;
     this.aerial.maxDistance = this.size * 3;
     this.aerial.zoomToCursor = true;
     this.aerial.addEventListener("change", this.invalidate);
@@ -178,10 +182,10 @@ export class CityView {
     if (mode === "walk") {
       this.savedAerial = { position: this.camera.position.clone(), target: this.aerial.target.clone() };
       this.aerial.enabled = false;
-      // On pose le promeneur au sud de la ville, à hauteur d'immeuble, face au nord (le haut de la page).
+      // On pose le promeneur sur le périphérique sud, à hauteur d'homme, face au nord (le haut de la page).
       const { bounds } = this.layout;
-      this.camera.position.set(this.center.x, 9, bounds.maxZ + 8);
-      this.camera.lookAt(this.center.x, 6, this.center.z);
+      this.camera.position.set(this.center.x, EYE, bounds.maxZ - 10);
+      this.camera.lookAt(this.center.x, EYE + 1.5, this.center.z);
       this.setHover(null, null);
     } else {
       if (this.isLocked()) document.exitPointerLock();
@@ -318,6 +322,31 @@ export class CityView {
     return new Promise((resolve) => out.toBlob(resolve, "image/jpeg", 0.86));
   }
 
+  /** Dessine tout de suite, même si l'onglet est caché (essais, captures). */
+  renderNow() {
+    this.aerial.update();
+    this.updateLabels();
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /** L'image de la vue telle qu'elle est (essais de rendu). */
+  capture(): Promise<Blob | null> {
+    this.renderNow();
+    // Copie dans la même tâche que le rendu : le tampon WebGL est encore plein.
+    const source = this.renderer.domElement;
+    const copy = document.createElement("canvas");
+    copy.width = source.width;
+    copy.height = source.height;
+    copy.getContext("2d")?.drawImage(source, 0, 0);
+    return new Promise((resolve) => copy.toBlob(resolve, "image/jpeg", 0.88));
+  }
+
+  /** Place la caméra (vue aérienne), sans animation. */
+  lookFrom(position: [number, number, number], target: [number, number, number]) {
+    this.flyTo(new THREE.Vector3(...position), new THREE.Vector3(...target), false);
+    this.renderNow();
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -354,6 +383,7 @@ export class CityView {
       });
     }
     this.materials.dispose();
+    this.environment?.dispose();
     this.renderer.dispose();
     canvas.remove();
   }
@@ -364,7 +394,7 @@ export class CityView {
 
   private addGround() {
     const extent = this.size * 8;
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(extent, extent), this.materials.ground);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(extent, extent), this.materials.paper);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(this.center.x, -0.02, this.center.z);
     ground.receiveShadow = true;
@@ -392,12 +422,52 @@ export class CityView {
     this.extras.push(major);
   }
 
+  /**
+   * Un ciel de fin de matinée, rendu une fois en carte d'environnement :
+   * les vitres et l'eau le reflètent. L'arrière-plan reste le papier de la planche.
+   */
+  private addSky() {
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    const sky = new THREE.Scene();
+    const geometry = new THREE.SphereGeometry(10, 32, 16);
+    const material = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      vertexShader: /* glsl */ `
+        varying vec3 vDir;
+        void main() {
+          vDir = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        varying vec3 vDir;
+        void main() {
+          float h = vDir.y;
+          vec3 zenith = vec3(0.36, 0.52, 0.74);
+          vec3 horizon = vec3(0.93, 0.91, 0.86);
+          vec3 below = vec3(0.36, 0.35, 0.33);
+          vec3 c = h > 0.0 ? mix(horizon, zenith, pow(h, 0.55)) : mix(horizon, below, pow(-h, 0.4));
+          vec3 sun = normalize(vec3(-0.6, 0.8, 0.32));
+          c += vec3(1.0, 0.88, 0.68) * pow(max(dot(vDir, sun), 0.0), 48.0) * 3.0;
+          gl_FragColor = vec4(c, 1.0);
+        }`,
+    });
+    sky.add(new THREE.Mesh(geometry, material));
+    this.environment = pmrem.fromScene(sky, 0.015).texture;
+    this.scene.environment = this.environment;
+    this.scene.environmentIntensity = 0.5;
+    geometry.dispose();
+    material.dispose();
+    pmrem.dispose();
+  }
+
   private addLights() {
-    const sky = new THREE.HemisphereLight("#FFF7EA", "#BFB49C", 1.4);
+    const sky = new THREE.HemisphereLight("#FFF7EA", "#B9AE98", 0.7);
     this.scene.add(sky);
 
-    const sun = new THREE.DirectionalLight("#FFF0DA", 2.9);
-    sun.position.set(this.center.x + this.size * 0.45, this.size * 0.85, this.center.z + this.size * 0.6);
+    const sun = new THREE.DirectionalLight("#FFF0DA", 3.1);
+    // Soleil à l'ouest, un peu au sud : les ombres s'allongent vers l'est, du côté où l'on regarde.
+    sun.position.set(this.center.x - this.size * 0.6, this.size * 0.8, this.center.z + this.size * 0.32);
     sun.target.position.copy(this.center);
     sun.castShadow = true;
     const half = this.size * 0.62;
@@ -609,7 +679,7 @@ export class CityView {
     const right = new THREE.Vector3().crossVectors(forward, this.camera.up).normalize();
     this.camera.position.addScaledVector(forward, this.velocity.z * delta);
     this.camera.position.addScaledVector(right, this.velocity.x * delta);
-    this.camera.position.y = Math.max(1.2, this.camera.position.y + this.velocity.y * delta);
+    this.camera.position.y = Math.max(EYE * 0.7, this.camera.position.y + this.velocity.y * delta);
     this.dirty = true;
   }
 

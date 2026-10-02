@@ -27,7 +27,9 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
           </ul>
         </div>
       ))}
-      <p className={`${styles.legendNote} mono-caps`}>Les socles changent de teinte avec l&apos;altitude.</p>
+      <p className={`${styles.legendNote} mono-caps`}>
+        Rues, voitures et arbres sont du décor. Survolez une rue : elle désigne le bloc de la page qu&apos;elle dessert.
+      </p>
     </section>
   );
 }

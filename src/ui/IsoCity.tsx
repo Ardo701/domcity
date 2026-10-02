@@ -1,5 +1,6 @@
 import { layoutCity, type Lot } from "@/city/layout";
-import { ALTITUDE_TINTS, KINDS, ROOF_COLOR } from "@/format/taxonomy";
+import { BRICK, CONCRETE, COPPER, GLASS, GROUND_COLORS, HOUSES, ROOFS, STUCCO, WATER, pick, rand } from "@/city/palette";
+import { KINDS } from "@/format/taxonomy";
 import type { CityDoc } from "@/format/types";
 import { isoBox, project, type IsoFace } from "./iso";
 
@@ -9,15 +10,36 @@ export interface IsoAnnotation {
   name: string;
 }
 
-function colorOf(lot: Lot): string {
-  if (lot.container && (lot.kind === "district" || lot.kind === "block" || lot.kind === "terrain")) {
-    return lot.depth === 0 ? KINDS.terrain.color : ALTITUDE_TINTS[Math.min(lot.depth, ALTITUDE_TINTS.length - 1)];
+const CONTAINER_GROUND: Partial<Record<Lot["kind"], keyof typeof GROUND_COLORS>> = {
+  park: "grass", estate: "lawn", townhall: "plaza", gate: "plaza", boulevard: "plaza", fields: "crops", port: "wharf",
+};
+
+/** La couleur dominante d'un bâtiment, tirée comme dans la 3D. */
+function buildingColor(lot: Lot): string {
+  switch (lot.kind) {
+    case "tower":
+      return lot.h >= 20 ? pick(GLASS, rand(lot.id, 2)) : rand(lot.id, 2) < 0.5 ? pick(CONCRETE, rand(lot.id, 3)) : pick(BRICK, rand(lot.id, 3));
+    case "residence":
+      return rand(lot.id, 2) < 0.38 ? pick(BRICK, rand(lot.id, 3)) : pick(STUCCO, rand(lot.id, 3));
+    case "house":
+      return pick(HOUSES, rand(lot.id, 2));
+    case "monument":
+    case "embassy":
+      return "#e6ddc9";
+    case "belfry":
+      return "#d8cbb0";
+    default:
+      return KINDS[lot.kind].color;
   }
-  return KINDS[lot.kind].color;
 }
 
 function facesOf(lot: Lot): IsoFace[] {
-  const color = colorOf(lot);
+  if (lot.container) {
+    if (lot.depth === 0) return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, GROUND_COLORS.base);
+    const ground = CONTAINER_GROUND[lot.kind];
+    return ground && lot.h > 0 ? isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, GROUND_COLORS[ground]) : [];
+  }
+  if (lot.kind === "river") return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, WATER);
   if (lot.panel) {
     const { width, height, lift } = lot.panel;
     const cx = lot.x + lot.w / 2;
@@ -28,9 +50,22 @@ function facesOf(lot: Lot): IsoFace[] {
       ...isoBox(lot.x, lot.y + lift, lot.z, width, height, lot.d, "#2b2b31"),
     ];
   }
-  return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, color, {
-    top: lot.kind === "house" ? ROOF_COLOR : undefined,
-  });
+  const color = buildingColor(lot);
+  if (lot.kind === "house") {
+    return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, color, { top: pick(ROOFS, rand(lot.id, 3)) });
+  }
+  if (lot.kind === "monument") {
+    const s = lot.w;
+    return [
+      ...isoBox(lot.x, lot.y, lot.z, s, lot.h * 0.62, s, color),
+      ...isoBox(lot.x + s * 0.2, lot.y + lot.h * 0.62, lot.z + s * 0.2, s * 0.6, lot.h * 0.26, s * 0.6, color),
+      ...isoBox(lot.x + s * 0.33, lot.y + lot.h * 0.88, lot.z + s * 0.33, s * 0.34, lot.h * 0.12, s * 0.34, "#ff4b12"),
+    ];
+  }
+  if (lot.kind === "belfry") {
+    return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, color, { top: COPPER });
+  }
+  return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, color);
 }
 
 /** Empile les étiquettes de haut en bas, sans chevauchement. */
@@ -60,11 +95,15 @@ export function IsoCity({
   className?: string;
   title: string;
 }) {
-  const { lots } = layoutCity(doc);
-  const depthOf = (lot: Lot) => lot.x + lot.w / 2 + lot.z + lot.d / 2;
-  const slabs = lots.filter((l) => l.container).sort((a, b) => a.y - b.y || depthOf(a) - depthOf(b));
-  const leaves = lots.filter((l) => !l.container).sort((a, b) => depthOf(a) - depthOf(b) || a.y - b.y);
-  const faces = [...slabs, ...leaves].flatMap(facesOf);
+  const { lots, plates } = layoutCity(doc);
+  const depthOf = (r: { x: number; z: number; w: number; d: number }) => r.x + r.w / 2 + r.z + r.d / 2;
+  // Le sol d'abord (socle, places, trottoirs, eau), puis les bâtiments du fond vers l'avant.
+  const grounds = [
+    ...lots.filter((l) => l.container || l.kind === "river").map((lot) => ({ y: lot.y, depth: depthOf(lot), faces: facesOf(lot) })),
+    ...plates.map((p) => ({ y: p.y, depth: depthOf(p), faces: isoBox(p.x, p.y, p.z, p.w, p.h, p.d, GROUND_COLORS[p.style]) })),
+  ].sort((a, b) => a.y - b.y || a.depth - b.depth);
+  const leaves = lots.filter((l) => !l.container && l.kind !== "river").sort((a, b) => depthOf(a) - depthOf(b) || a.y - b.y);
+  const faces = [...grounds.flatMap((g) => g.faces), ...leaves.flatMap(facesOf)];
 
   let minX = Infinity;
   let maxX = -Infinity;
