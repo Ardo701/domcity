@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 2 octobre 2026 (refonte du rendu, avant l'étape 4).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches de la ville : rues alignées, ports ouverts, aéroport ; étape 4 pas encore commencée).
 
 ## 1. Le concept
 
@@ -213,6 +213,7 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 ## 10. Étapes suivantes
 
 ### Étape 4 : la mégalopole
+En attente : l'utilisateur donnera le feu vert avant qu'on la commence.
 Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées (branchées sur les coins du périphérique de chaque ville : ouvrir un côté vers l'extérieur d'un `Joint` en fait un carrefour, le moteur le dessine déjà), niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Vols entre les aéroports des sites liés (validé par l'utilisateur) : il faudra relever les domaines des liens externes (aujourd'hui seulement leur nombre), donc une évolution du favori et du format. Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
 
 ### Étape 5 : machine à remonter le temps et ambiance
