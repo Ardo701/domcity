@@ -20,6 +20,7 @@ import { Inspector } from "./Inspector";
 import { LegendPanel } from "./LegendPanel";
 import { LoadingPanel } from "./LoadingPanel";
 import { NorthArrow } from "./NorthArrow";
+import { PerfMeter } from "./PerfMeter";
 import { ReportPanel } from "./ReportPanel";
 import { SharePanel } from "./SharePanel";
 import { Tooltip } from "./Tooltip";
@@ -57,6 +58,16 @@ const subscribePointer = (onChange: () => void) => {
 };
 const hasFinePointer = () => !matchMedia(COARSE).matches;
 
+/** Le compteur FPS reste affiché d'une ville à l'autre, dans ce navigateur. */
+const PERF_KEY = "domcity:fps";
+function readPerf(): boolean {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(PERF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** Une instance par ville (voir la clé dans les pages) : l'état repart de zéro à chaque relevé. */
 export function CityExplorer({ source, canShare = false }: { source: CitySource; canShare?: boolean }) {
   const router = useRouter();
@@ -74,6 +85,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const [viewing, setViewing] = useState<number | null>(null);
   const [panel, setPanel] = useState<"share" | "report" | null>(null);
   const [copied, setCopied] = useState(false);
+  const [measuring, setMeasuring] = useState(readPerf);
   const canWalk = useSyncExternalStore(subscribePointer, hasFinePointer, () => true);
 
   const shared = source.kind === "shared" ? source : null;
@@ -127,6 +139,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           onImageStatus: (id, s) => setImageStatus((prev) => ({ ...prev, [id]: s })),
         });
         viewRef.current = view;
+        view.setMeasuring(readPerf());
         // En développement : la vue est joignable depuis la console (essais de rendu, captures).
         if (process.env.NODE_ENV !== "production") (window as unknown as { __domcity?: CityView }).__domcity = view;
         setStatus({ phase: "loading", step: 3 });
@@ -180,6 +193,16 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   );
 
   const select = useCallback((id: number | null, focus = false) => viewRef.current?.select(id, focus), []);
+  const toggleMeasuring = () => {
+    const next = !measuring;
+    setMeasuring(next);
+    viewRef.current?.setMeasuring(next);
+    try {
+      localStorage.setItem(PERF_KEY, next ? "1" : "0");
+    } catch {
+      // stockage refusé : le réglage vaut pour cette visite seulement
+    }
+  };
   const switchMode = (next: ViewMode) => {
     setLegendOpen(false);
     viewRef.current?.setMode(next);
@@ -267,6 +290,15 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           >
             Légende
           </button>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-pressed={measuring}
+            onClick={toggleMeasuring}
+            title="Afficher les images par seconde"
+          >
+            FPS
+          </button>
           {shareable && mode === "aerial" && (
             <button type="button" className={`${styles.tool} ${styles.toolAccent}`} onClick={() => setPanel("share")}>
               Partager
@@ -315,6 +347,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       )}
 
       {ready && <NorthArrow />}
+
+      {ready && measuring && <PerfMeter viewRef={viewRef} shifted={selectedInfo !== null} />}
 
       {ready && mode === "aerial" && (
         <p className={`${styles.hint} mono-caps`}>

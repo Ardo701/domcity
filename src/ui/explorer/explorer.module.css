@@ -1115,6 +1115,79 @@
   font-size: 13px;
 }
 
+/* ---------- Compteur FPS ---------- */
+
+.tool[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.perf {
+  composes: panel;
+  position: absolute;
+  z-index: 3;
+  right: 14px;
+  bottom: 92px;
+  width: 196px;
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+/* L'inspecteur occupe le bord droit : le compteur se pose à côté. */
+.perfShifted {
+  right: 388px;
+}
+
+.perfFps {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.perfFps strong {
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 0.9;
+}
+
+.perfFps span {
+  color: var(--ink-3);
+}
+
+.perfFps[data-grade="moyen"] strong {
+  background: var(--beacon);
+  padding: 0 4px;
+}
+
+.perfFps[data-grade="lent"] strong {
+  background: var(--signal);
+  padding: 0 4px;
+}
+
+.perfFacts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  border-top: 1px solid var(--rule);
+  padding-top: 8px;
+}
+
+.perfFacts dt {
+  font-size: 8.5px;
+  color: var(--ink-3);
+}
+
+.perfFacts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
 /* ---------- Favori : réception, relevé non publié ---------- */
 
 .waitingText {
@@ -1271,10 +1344,22 @@
   .tools {
     top: 60px;
     right: 8px;
+    left: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
   }
 
   .notice {
     top: 106px;
+  }
+
+  .perf,
+  .perfShifted {
+    top: 158px;
+    right: 8px;
+    bottom: auto;
+    width: 168px;
   }
 
   .legend {

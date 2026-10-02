@@ -29,6 +29,18 @@ export type ViewMode = "aerial" | "walk";
 /** off : on lit le mode d'emploi · locked : souris capturée · free : on regarde en glissant. */
 export type WalkState = "off" | "locked" | "free";
 
+/** Mesure du rendu, pour le compteur FPS. */
+export interface ViewStats {
+  /** Images dessinées pendant la dernière seconde. */
+  fps: number;
+  /** Intervalle moyen entre deux images (ms). */
+  frameMs: number;
+  /** Temps moyen passé à préparer une image côté processeur (ms). */
+  renderMs: number;
+  triangles: number;
+  calls: number;
+}
+
 export interface ViewEvents {
   onHover?: (lotId: number | null, screen: { x: number; y: number } | null) => void;
   onSelect?: (lotId: number | null) => void;
@@ -84,6 +96,11 @@ export class CityView {
   private look: { x: number; y: number; moved: number } | null = null;
   private frame = 0;
   private dirty = true;
+  /** Compteur FPS affiché : on redessine à chaque image pour mesurer vraiment. */
+  private measuring = false;
+  private renderTimes: number[] = [];
+  private renderCosts: number[] = [];
+  private lastInfo = { triangles: 0, calls: 0 };
   private pointerInside = false;
   private pointerMoved = false;
   private pointerDown: { x: number; y: number; button: number } | null = null;
@@ -320,6 +337,28 @@ export class CityView {
     ctx.fillText(place, x + 20, y + 104, boxWidth - 40);
 
     return new Promise((resolve) => out.toBlob(resolve, "image/jpeg", 0.86));
+  }
+
+  /**
+   * Compteur FPS : tant qu'il est affiché, la ville est redessinée à chaque image
+   * (au repos, elle ne l'est que quand quelque chose bouge, et le compteur tomberait à zéro).
+   */
+  setMeasuring(on: boolean) {
+    this.measuring = on;
+    this.renderTimes = [];
+    this.renderCosts = [];
+    this.invalidate();
+  }
+
+  stats(): ViewStats {
+    const now = performance.now();
+    let first = this.renderTimes.length;
+    while (first > 0 && now - this.renderTimes[first - 1] <= 1000) first -= 1;
+    const recent = this.renderTimes.slice(first);
+    const costs = this.renderCosts.slice(first);
+    const frameMs = recent.length > 1 ? (recent[recent.length - 1] - recent[0]) / (recent.length - 1) : 0;
+    const renderMs = costs.length > 0 ? costs.reduce((sum, c) => sum + c, 0) / costs.length : 0;
+    return { fps: recent.length, frameMs, renderMs, ...this.lastInfo };
   }
 
   /** Dessine tout de suite, même si l'onglet est caché (essais, captures). */
@@ -624,11 +663,22 @@ export class CityView {
       this.pick(this.pointer, true);
     }
 
+    if (this.measuring) this.dirty = true;
     if (!this.dirty) return;
     this.dirty = false;
     this.updateLabels();
     if (this.walking === "locked") this.pick(new THREE.Vector2(0, 0), false);
+    const start = performance.now();
     this.renderer.render(this.scene, this.camera);
+    const end = performance.now();
+    this.renderTimes.push(end);
+    this.renderCosts.push(end - start);
+    if (this.renderTimes.length > 240) {
+      this.renderTimes.splice(0, this.renderTimes.length - 240);
+      this.renderCosts.splice(0, this.renderCosts.length - 240);
+    }
+    const info = this.renderer.info.render;
+    this.lastInfo = { triangles: info.triangles, calls: info.calls };
   };
 
   private stepFlight() {

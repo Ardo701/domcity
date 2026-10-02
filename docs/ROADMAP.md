@@ -188,6 +188,7 @@ Vérifié : 45 tests (favori compilé à jour et assez court, échange de messag
 Demandée par l'utilisateur après l'étape 3. Ville plate, rues hiérarchisées avec marquages et passages piétons, trottoirs, pâtés denses, bâtiments composés, places publiques, mobilier urbain, reflets du ciel, ombres visibles. Monument toujours plus haut que la plus haute tour. Le dessin de l'accueil suit le même moteur. Wikipédia « Paris » : 2 664 éléments, 954 tronçons de rue, environ 850 000 triangles, 2 ms par image sur ce poste.
 Vérifié : tests de l'urbanisme (aucun bâtiment sur une rue, rues entre conteneurs voisins, périphérique, monument dominant), captures Paris, Tour Eiffel, GitHub, compilation de production.
 **Non vérifié** : un ordinateur peu puissant ou un téléphone ; la promenade au niveau de la rue en interaction réelle.
+Compteur **FPS** (bouton « FPS » de la barre d'outils, mémorisé dans le navigateur) : images par seconde, temps entre deux images, temps de calcul, triangles et appels de dessin. Tant qu'il est affiché, la ville est redessinée à chaque image (sinon elle ne l'est que quand quelque chose bouge). Chiffre à l'encre au-delà de 50 (fluide), sur fond jaune au-delà de 30, sur fond orange en dessous.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
