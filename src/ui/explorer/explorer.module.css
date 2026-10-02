@@ -123,9 +123,12 @@
   background: var(--paper-sunk);
 }
 
+/* Le fond et le cadre du panneau, que la règle commune ci-dessus effaçait : sans eux, le texte se perd dans la ville. */
 .tool {
   composes: panel;
   padding: 9px 14px;
+  background: var(--paper-raised);
+  border: 1px solid var(--ink);
 }
 
 .tool:hover,
