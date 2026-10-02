@@ -1,0 +1,37 @@
+.wrap {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.card {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 28px;
+  background: var(--paper-raised);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.card > p:nth-of-type(1) {
+  color: var(--signal-deep);
+}
+
+.card h1 {
+  font-size: 64px;
+  text-transform: uppercase;
+}
+
+.card a {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--signal);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
