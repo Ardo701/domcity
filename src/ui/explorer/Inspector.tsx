@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { formatChars, formatCount, type LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
 import { KindSwatch } from "@/ui/KindSwatch";
+import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
 
 const IMAGE_STATUS: Record<ImageStatus, string> = {
@@ -76,8 +77,7 @@ export function Inspector({
         <div className={styles.imageBlock}>
           {info.img.src ? (
             <button type="button" className={styles.imagePreview} onClick={onViewImage} aria-label="Voir l'image">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={info.img.src} alt={info.img.alt ?? ""} referrerPolicy="no-referrer" loading="lazy" />
+              <FitImage src={info.img.src} alt={info.img.alt ?? ""} minSide={160} lazy />
             </button>
           ) : (
             <p className={styles.imageMissing}>Pas d&apos;adresse d&apos;image.</p>

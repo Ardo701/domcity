@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { CityImage } from "@/format/types";
+import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
 
 /**
@@ -18,8 +19,7 @@ export function ImageViewer({ image, onClose }: { image: CityImage; onClose: () 
   return (
     <div className={styles.viewer} role="dialog" aria-modal="true" aria-label="Image" onClick={onClose}>
       <figure onClick={(event) => event.stopPropagation()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image.src} alt={image.alt ?? ""} referrerPolicy="no-referrer" />
+        <FitImage src={image.src} alt={image.alt ?? ""} minSide={240} />
         <figcaption>
           <span>{image.alt || "Sans texte alternatif"}</span>
           <a href={image.src} target="_blank" rel="noreferrer" className="mono-caps">

@@ -194,6 +194,7 @@ Scintillement de loin corrigé (affiches rayées par leur cadre, chaussées, cha
 Boutons Recadrer, Légende et FPS sur fond de papier encadré (ils se perdaient dans la ville).
 Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « menaient nulle part ») : chaque coin est une **case de raccord** (`Joint` dans `layout.ts`) qui dit par quels côtés la chaussée sort. Deux côtés voisins donnent un virage (quart de disque, marquage qui suit la courbe, bas-côté gazonné, arbres le long de l'arrondi) ; deux côtés opposés une ligne droite ; trois ou quatre un carrefour.
 Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
+Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fois dans la fenêtre « voir l'image » (jusqu'à 240 px de côté) et dans l'aperçu de l'inspecteur (160 px) ; au-delà de ×4 ses pixels restent nets plutôt que flous (`src/ui/explorer/FitImage.tsx`). Les images SVG restent vectorielles.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -236,7 +237,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 50 tests
+npm test           # 53 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
