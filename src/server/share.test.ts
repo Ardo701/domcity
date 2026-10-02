@@ -49,6 +49,12 @@ describe("fichiers envoyés", () => {
     expect(() => readUploadedCity(new Uint8Array(gzipSync(JSON.stringify(bad))))).toThrow(/Ville invalide/);
   });
 
+  it("refuse de publier une page locale ou d'intranet", async () => {
+    for (const url of ["http://localhost:3000/admin", "http://192.168.1.20/", "https://nas.local/photos"]) {
+      await expect(shareCity({ ...DOC, url }, null)).rejects.toThrow(/locales/);
+    }
+  });
+
   it("n'accepte que des miniatures JPEG", () => {
     expect(readThumbnail(JPEG)).toBe(JPEG);
     expect(() => readThumbnail(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toThrow(/JPEG/);

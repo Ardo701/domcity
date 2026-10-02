@@ -7,6 +7,9 @@ const httpUrl = z
   .max(LIMITS.maxUrl)
   .refine((value) => /^https?:\/\//i.test(value), "URL http(s) attendue");
 
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/);
+const count = z.number().int().min(0).max(1_000_000_000);
+
 const cityNodeSchema: z.ZodType<CityNode> = z.lazy(() =>
   z.strictObject({
     tag: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/),
@@ -28,6 +31,7 @@ const cityNodeSchema: z.ZodType<CityNode> = z.lazy(() =>
       })
       .optional(),
     rect: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+    bg: hexColor.optional(),
     children: z.array(cityNodeSchema).optional(),
   }),
 );
@@ -39,6 +43,22 @@ export const cityDocSchema = z.strictObject({
   title: z.string().max(300),
   capturedAt: z.iso.datetime(),
   lang: z.string().max(16).optional(),
+  page: z
+    .strictObject({
+      domSize: count.optional(),
+      scripts: count.optional(),
+      comments: count.optional(),
+      resources: count.optional(),
+      bytes: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+      thirdParty: z
+        .array(z.string().regex(/^[a-z0-9.-]{1,253}$/))
+        .max(LIMITS.maxThirdParty)
+        .optional(),
+      colors: z
+        .strictObject({ background: hexColor.optional(), text: hexColor.optional(), link: hexColor.optional() })
+        .optional(),
+    })
+    .optional(),
   root: cityNodeSchema,
 });
 

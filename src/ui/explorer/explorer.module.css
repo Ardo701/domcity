@@ -1115,6 +1115,116 @@
   font-size: 13px;
 }
 
+/* ---------- Favori : réception, relevé non publié ---------- */
+
+.waitingText {
+  color: var(--ink-2);
+}
+
+/* Barre d'attente sans durée connue : un tronçon orange qui va et vient. */
+.progressWaiting span {
+  width: 30%;
+  animation: shuttle 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes shuttle {
+  from {
+    transform: translateX(-10%);
+  }
+  to {
+    transform: translateX(245%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressWaiting span {
+    animation: none;
+    width: 100%;
+  }
+}
+
+.notice {
+  position: absolute;
+  z-index: 3;
+  top: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 28px));
+  margin: 0;
+  padding: 9px 12px;
+  background: var(--beacon);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-size: 14px;
+  box-shadow: var(--shadow);
+}
+
+.kickerNote {
+  cursor: help;
+  color: var(--signal-deep);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.cartoucheFacts {
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 9.5px;
+  color: var(--ink-2);
+  background: var(--paper);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.colorValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.colorChip {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+}
+
+.titleField {
+  display: grid;
+  gap: 6px;
+}
+
+.titleField span {
+  color: var(--ink-3);
+}
+
+.titleField input {
+  padding: 9px 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.privacy {
+  padding: 9px 12px;
+  border-left: 4px solid var(--signal);
+  background: var(--paper);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.privacy strong {
+  color: var(--ink);
+}
+
+.address {
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
 /* ---------- Écrans moyens et petits ---------- */
 
 @media (max-width: 1100px) {
@@ -1161,6 +1271,10 @@
   .tools {
     top: 60px;
     right: 8px;
+  }
+
+  .notice {
+    top: 106px;
   }
 
   .legend {

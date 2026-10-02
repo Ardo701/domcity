@@ -63,6 +63,7 @@ export default async function Home() {
           <Wordmark />
         </Link>
         <nav className={styles.nav} aria-label="Sections">
+          <Link href="/installer">Le favori</Link>
           {sharing && <a href="#villes">Les villes</a>}
           <a href="#legende">La légende</a>
           <a href="#methode">La méthode</a>
@@ -83,8 +84,9 @@ export default async function Home() {
               est une <em>ville.</em>
             </h1>
             <p className={styles.lead}>
-              Donnez un article, DOMCity en relève le plan et le construit en 3D. Les sections deviennent des
-              quartiers, les paragraphes des habitations, les titres des monuments. Ensuite, on s&apos;y promène.
+              Donnez un article, ou relevez n&apos;importe quel site avec le favori : DOMCity en relève le plan et
+              le construit en 3D. Les sections deviennent des quartiers, les paragraphes des habitations, les titres
+              des monuments. Ensuite, on s&apos;y promène.
             </p>
 
             <WikiSearch />
@@ -103,9 +105,13 @@ export default async function Home() {
               </ul>
             </div>
 
-            <p className={`${styles.note} mono-caps`}>
-              Pour l&apos;instant : Wikipédia. Bientôt : n&apos;importe quel site, depuis vos favoris.
-            </p>
+            <Link href="/installer" className={styles.bookmarkletCta}>
+              <span className="mono-caps">N&apos;importe quel site</span>
+              <strong>Installer le favori DOMCity</strong>
+              <span aria-hidden className={styles.ctaArrow}>
+                →
+              </span>
+            </Link>
           </div>
 
           <figure className={styles.figure}>
@@ -203,7 +209,7 @@ export default async function Home() {
         </div>
         <div>
           <span className="mono-caps">Relevé</span>
-          <p>Dans votre navigateur. Rien n&apos;est envoyé à nos serveurs.</p>
+          <p>Dans votre navigateur. Rien ne part sans votre clic sur « Publier ».</p>
         </div>
         <div>
           <span className="mono-caps">Sources</span>

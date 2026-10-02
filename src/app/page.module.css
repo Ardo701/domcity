@@ -158,8 +158,49 @@
   color: var(--ink-3);
 }
 
-.note {
+/* Lien vers le favori : une étiquette de planche, pas un bouton de plus. */
+.bookmarkletCta {
+  align-self: flex-start;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 18px;
+  padding: 10px 14px 10px 14px;
+  border: 1px solid var(--ink);
+  border-left: 6px solid var(--signal);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.bookmarkletCta span:first-child {
+  grid-column: 1;
   color: var(--ink-3);
+}
+
+.bookmarkletCta strong {
+  grid-column: 1;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.ctaArrow {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-size: 24px;
+  transition: transform 0.12s ease;
+}
+
+.bookmarkletCta:hover {
+  background: var(--beacon);
+}
+
+.bookmarkletCta:hover .ctaArrow {
+  transform: translateX(3px);
 }
 
 .figure {

@@ -10,6 +10,7 @@ import type { ImageStatus } from "@/city/textures";
 import type { CityView, ViewMode, WalkState } from "@/city/view";
 import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
+import { isPublicHost, siteHost } from "@/format/url";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
 import { WikiSearch } from "@/ui/WikiSearch";
@@ -25,9 +26,10 @@ import { Tooltip } from "./Tooltip";
 import { WalkOverlay } from "./WalkOverlay";
 import styles from "./explorer.module.css";
 
-/** D'où vient la ville : un article relevé à l'instant, ou une ville déjà partagée. */
+/** D'où vient la ville : un article relevé à l'instant, une page relevée par le favori, ou une ville déjà partagée. */
 export type CitySource =
   | { kind: "wikipedia"; lang: WikiLang; title: string }
+  | { kind: "capture"; city: CityDoc; outdated: boolean }
   | { kind: "shared"; city: SharedCity; fileUrl: string; versions: CityVersion[] };
 
 type Status =
@@ -37,6 +39,7 @@ type Status =
 
 const WIKI_STEPS = ["Relevé de l'article sur Wikipédia", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
 const SHARED_STEPS = ["Ouverture de la ville partagée", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
+const CAPTURE_STEPS = ["Lecture du relevé", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
 
 /** Laisse le navigateur afficher l'étape en cours. Le minuteur prend le relais dans un onglet en arrière-plan, où requestAnimationFrame est suspendu. */
 const nextFrame = () =>
@@ -75,8 +78,13 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
   const shared = source.kind === "shared" ? source : null;
   const wiki = source.kind === "wikipedia" ? source : null;
+  const capture = source.kind === "capture" ? source : null;
   // Clé stable du relevé : on ne recharge que si la ville demandée change.
-  const sourceKey = shared ? `c/${shared.city.slug}` : `w/${wiki!.lang}/${wiki!.title}`;
+  const sourceKey = shared
+    ? `c/${shared.city.slug}`
+    : capture
+      ? `n/${capture.city.url}/${capture.city.capturedAt}`
+      : `w/${wiki!.lang}/${wiki!.title}`;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,6 +96,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         let cityDoc: CityDoc;
         if (source.kind === "shared") {
           cityDoc = await loadSharedCity(source.fileUrl, controller.signal);
+        } else if (source.kind === "capture") {
+          cityDoc = source.city;
         } else {
           const result = await fetchWikipediaCity(source.lang, source.title, controller.signal);
           if (result.title !== source.title) {
@@ -131,6 +141,12 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             phase: "error",
             title: "Ville inaccessible",
             message: "Le fichier de cette ville n'a pas pu être chargé. Réessayez dans un instant.",
+          });
+        } else if (source.kind === "capture") {
+          setStatus({
+            phase: "error",
+            title: "Construction impossible",
+            message: "Ce relevé n'a pas pu être bâti. Relancez le favori depuis la page, ou essayez une autre page.",
           });
         } else {
           setStatus({
@@ -181,9 +197,22 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   };
 
   const ready = status.phase === "ready";
-  const host = shared ? shared.city.domain : `${wiki!.lang}.wikipedia.org`;
-  const displayTitle = doc?.title ?? (shared ? shared.city.title : wiki!.title);
+  const host = shared
+    ? shared.city.domain
+    : capture
+      ? siteHost(new URL(capture.city.url).hostname)
+      : `${wiki!.lang}.wikipedia.org`;
+  const displayTitle = doc?.title ?? (shared ? shared.city.title : capture ? capture.city.title : wiki!.title);
   const sourceUrl = doc?.url ?? (shared ? `https://${shared.city.domain}${shared.city.path}` : "");
+  // Une page locale (localhost, intranet…) se visite, mais ne se publie pas.
+  const shareable = canShare && (wiki !== null || (capture !== null && isPublicHost(host)));
+  const kicker = shared
+    ? shared.city.source === "bookmarklet"
+      ? "Relevé par un visiteur"
+      : "Ville partagée"
+    : capture
+      ? "Votre relevé · non publié"
+      : "DOMCity · Planche";
 
   return (
     <div className={styles.shell}>
@@ -236,7 +265,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           >
             Légende
           </button>
-          {wiki && canShare && mode === "aerial" && (
+          {shareable && mode === "aerial" && (
             <button type="button" className={`${styles.tool} ${styles.toolAccent}`} onClick={() => setPanel("share")}>
               Partager
             </button>
@@ -256,12 +285,26 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
       {ready && legendOpen && <LegendPanel onClose={() => setLegendOpen(false)} />}
 
+      {ready && capture?.outdated && (
+        <p className={styles.notice} role="status">
+          Votre favori date d&apos;une version précédente. <Link href="/installer">Réinstallez-le</Link> pour
+          profiter des derniers relevés.
+        </p>
+      )}
+
       {ready && layout && doc && mode === "aerial" && (
         <Cartouche
           title={doc.title}
           url={sourceUrl}
           capturedAt={doc.capturedAt}
           stats={layout.stats}
+          page={doc.page}
+          kicker={kicker}
+          kickerNote={
+            shared?.city.source === "bookmarklet"
+              ? "Relevé avec le favori DOMCity par un visiteur : DOMCity ne peut pas vérifier qu'il est fidèle à la page."
+              : undefined
+          }
           shared={shared ? { views: shared.city.views } : undefined}
           versions={shared && shared.versions.length > 1 ? shared.versions : undefined}
           currentSlug={shared?.city.slug}
@@ -305,8 +348,13 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         <ImageViewer image={layout.lots[viewing].node.img!} onClose={() => setViewing(null)} />
       )}
 
-      {panel === "share" && wiki && doc && (
-        <SharePanel doc={doc} lang={wiki.lang} title={doc.title} takeSnapshot={takeSnapshot} onClose={() => setPanel(null)} />
+      {panel === "share" && (wiki || capture) && doc && (
+        <SharePanel
+          doc={doc}
+          source={wiki ? { kind: "wikipedia", lang: wiki.lang } : { kind: "bookmarklet" }}
+          takeSnapshot={takeSnapshot}
+          onClose={() => setPanel(null)}
+        />
       )}
 
       {panel === "report" && shared && <ReportPanel slug={shared.city.slug} onClose={() => setPanel(null)} />}
@@ -316,7 +364,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           title={displayTitle}
           step={status.step}
           count={layout?.lots.length}
-          steps={shared ? SHARED_STEPS : WIKI_STEPS}
+          steps={shared ? SHARED_STEPS : capture ? CAPTURE_STEPS : WIKI_STEPS}
         />
       )}
 

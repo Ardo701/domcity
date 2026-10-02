@@ -1,6 +1,8 @@
 import type { CityStats } from "@/city/layout";
-import { formatCount } from "@/city/describe";
+import { formatBytes, formatCount } from "@/city/describe";
 import type { CityVersion } from "@/format/shared";
+import type { CityPage } from "@/format/types";
+import { LIMITS } from "@/format/limits";
 import styles from "./explorer.module.css";
 
 const shortDate = (iso: string) =>
@@ -9,12 +11,30 @@ const shortDate = (iso: string) =>
 const longDate = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
+const plural = (n: number, word: string) => `${formatCount(n)} ${word}${n > 1 ? "s" : ""}`;
+
+/** Ce que le favori a appris de la page entière : scripts, sites tiers, poids. */
+function pageFacts(page: CityPage | undefined): string[] {
+  if (!page) return [];
+  const facts: string[] = [];
+  if (page.scripts !== undefined) facts.push(plural(page.scripts, "script"));
+  if (page.thirdParty?.length) {
+    const more = page.thirdParty.length >= LIMITS.maxThirdParty ? "+" : "";
+    facts.push(`${formatCount(page.thirdParty.length)}${more} site${page.thirdParty.length > 1 ? "s" : ""} tiers`);
+  }
+  if (page.bytes) facts.push(`${formatBytes(page.bytes)} chargés`);
+  return facts;
+}
+
 /** Le cartouche de la planche : titre, source, date du relevé et chiffres de la ville. */
 export function Cartouche({
   title,
   url,
   capturedAt,
   stats,
+  page,
+  kicker,
+  kickerNote,
   shared,
   versions,
   currentSlug,
@@ -24,6 +44,10 @@ export function Cartouche({
   url: string;
   capturedAt: string;
   stats: CityStats;
+  page?: CityPage;
+  kicker: string;
+  /** Précision au survol de la mention du haut (ville relevée par un visiteur…). */
+  kickerNote?: string;
   shared?: { views: number };
   versions?: CityVersion[];
   currentSlug?: string;
@@ -37,11 +61,14 @@ export function Cartouche({
   ];
   if (stats.rivers > 0) figures.push(["Rivières", stats.rivers]);
   if (stats.vacant > 0) figures.push(["Terrains vagues", stats.vacant]);
+  const facts = pageFacts(page);
 
   return (
     <section className={styles.cartouche} aria-label="Cartouche">
       <div className={styles.cartoucheRow}>
-        <span className="mono-caps">{shared ? "Ville partagée" : "DOMCity · Planche"}</span>
+        <span className={`mono-caps ${kickerNote ? styles.kickerNote : ""}`} title={kickerNote}>
+          {kicker}
+        </span>
         <span className="mono-caps">Relevé du {shortDate(capturedAt)}</span>
       </div>
       <h2 className={styles.cartoucheTitle}>{title}</h2>
@@ -79,6 +106,11 @@ export function Cartouche({
           </div>
         )}
       </dl>
+      {facts.length > 0 && (
+        <p className={`${styles.cartoucheFacts} mono-caps`} title="Mesuré sur la page affichée, au moment du relevé">
+          {facts.join(" · ")}
+        </p>
+      )}
     </section>
   );
 }

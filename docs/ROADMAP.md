@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 2 octobre 2026 (fin de l'étape 2).
+> À lire avant de reprendre le travail. Dernière mise à jour : 2 octobre 2026 (fin de l'étape 3).
 
 ## 1. Le concept
 
@@ -39,6 +39,7 @@ Une ville stockée est une **description** de la page (JSON), jamais un dessin. 
 - Les adresses sont nettoyées : pas de `?query` ni de `#ancre`, `www.` retiré.
 - Le lien secret de suppression contient un jeton après le `#` (jamais envoyé au serveur dans l'adresse). La base ne garde que son empreinte SHA-256.
 - Rien ne quitte le navigateur tant que l'utilisateur ne clique pas sur « Publier ».
+- Le favori ne fait que lire : jamais le texte des paragraphes, ni ce qui est tapé dans les formulaires, ni les cookies. Avant publication d'un relevé, il montre l'adresse publiée, les titres, et laisse modifier le titre.
 
 ### Images
 
@@ -69,22 +70,27 @@ Identité retenue : **« planche d'urbanisme »**.
 ```
 src/
 ├── app/                         Next.js 16 (App Router)
-│   ├── page.tsx                 accueil : recherche Wikipédia, villes partagées, légende, méthode
+│   ├── page.tsx                 accueil : recherche Wikipédia, lien vers le favori, villes partagées, légende, méthode
+│   ├── installer/               page « Installer le favori » (bouton à glisser, animation, installation à la main)
+│   ├── nouveau/                 reçoit la ville envoyée par le favori (non publiée tant qu'on ne clique pas)
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
 │   ├── c/[slug]/                ville partagée (+ supprimer/ : lien secret)
 │   ├── s/[domain]/              pages d'un site
 │   └── api/                     captures (POST), captures/[slug] (DELETE), report, view, search, dev-files
 ├── format/                      format de ville (types, zod, limites, adresses, dictionnaire HTML → ville)
-├── capture/                     page web → ville (sans dépendance, réutilisé par le bookmarklet) ; Wikipédia
+├── capture/                     page web → ville (sans dépendance, compilé dans le favori) ; Wikipédia
+├── bookmarklet/                 le favori : main.ts (point d'entrée), protocol.ts (échange avec /nouveau), href.ts, generated.ts (compilé)
 ├── city/                        urbanisme (layout), scène Three.js, vue et contrôles, miniature
 ├── server/                      config, base (Supabase ou locale), fichiers (R2 ou locaux), sécurité, partage
-└── ui/                          interface (recherche, explorateur, inspecteur, cartouche, partage…)
+└── ui/                          interface (recherche, explorateur, inspecteur, cartouche, partage, réception du favori…)
+scripts/build-bookmarklet.mts    compile le favori avec esbuild (npm run bookmarklet, lancé aussi avant chaque build)
 supabase/migrations/             schéma SQL (à appliquer dans Supabase, jamais via le compte connecté à Claude)
 docs/ROADMAP.md                  ce document
 ```
 
 Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) → `layoutCity` (lots) → `CityView` (Three.js).
-Flux d'un partage : le navigateur envoie langue + titre + miniature JPEG → le serveur **relève lui-même l'article** (linkedom) pour ne pas faire confiance au JSON envoyé → gzip → R2 → ligne Supabase visible.
+Flux d'un partage Wikipédia : le navigateur envoie langue + titre + miniature JPEG → le serveur **relève lui-même l'article** (linkedom) pour ne pas faire confiance au JSON envoyé → gzip → R2 → ligne Supabase visible.
+Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic compte comme geste) → relevé de la page affichée (`live: true`) → `/nouveau` appelle « pret » → le favori répond avec la ville, adressée à l'origine de DOMCity seulement → `/nouveau` vérifie (zod, et que la ville vient bien du site qu'elle décrit) → « recu ». **Plan B** si l'onglet n'a pas pu s'ouvrir ou si le site coupe le lien entre fenêtres (en-tête COOP) : la ville compressée part dans l'ancre `#ville=…` et s'ouvre dans le même onglet. Partage : la ville est envoyée telle quelle (`source: "bookmarklet"`), le serveur la valide mais ne peut pas la vérifier.
 
 ### Modes de stockage (`src/server/config.ts`)
 
@@ -94,11 +100,14 @@ Flux d'un partage : le navigateur envoie langue + titre + miniature JPEG → le 
 
 ## 5. Le format de ville (v1)
 
-`CityDoc` : `{ format: 1, source: "wikipedia" | "bookmarklet", url, title, capturedAt, lang?, root }`.
-Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1 à h3), `label` (id lisible ou 1re classe), `img` (`src`, `alt`, `w`, `h`), `links` (`internal`, `external`), `rect` (position réelle, bookmarklet), `children`.
+`CityDoc` : `{ format: 1, source: "wikipedia" | "bookmarklet", url, title, capturedAt, lang?, page?, root }`.
+Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1 à h3), `label` (id lisible ou 1re classe), `img` (`src`, `alt`, `w`, `h`), `links` (`internal`, `external`), `rect` (position réelle, favori), `bg` (couleur de fond réelle `#rrggbb`, notée seulement là où elle change, favori), `children`.
+`page` (favori seulement) : `domSize` (éléments du DOM), `scripts`, `comments` (commentaires HTML), `resources`, `bytes` (octets transférés connus, minimum), `thirdParty` (hôtes tiers, 60 au plus, du plus sollicité au moins sollicité), `colors` (`background`, `text`, `link`). Ces ajouts sont facultatifs : les villes déjà stockées restent valides, le format reste en v1.
 Limites : 30 000 éléments, profondeur 64, 2 Mo compressé. Validation zod dans `src/format/schema.ts`.
 
-Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés.
+Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés. Avec le favori, github.com/vercel/next.js : 3 244 éléments relevés en 13 ms, 24 Ko de JSON, 6 Ko compressés.
+
+Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (avec les `<slot>`), `display: contents` traversé, éléments masqués ignorés, enveloppes sans surface rendues transparentes, images en chargement différé (`data-src`…) retrouvées, texte des titres lu tel qu'affiché (`innerText`).
 
 ## 6. Le dictionnaire HTML → ville
 
@@ -135,7 +144,7 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 
 | Route | Rôle | Protections |
 |---|---|---|
-| `POST /api/captures` | Partager (multipart : `source`, `lang` + `title` ou `city` gzip, `thumbnail` JPEG) | Même origine, 10 partages / heure / IP, gzip borné, zod, JPEG vérifié |
+| `POST /api/captures` | Partager (multipart : `source`, `lang` + `title` ou `city` gzip, `thumbnail` JPEG) | Même origine, 10 partages / heure / IP, gzip borné, zod, JPEG vérifié, pages locales ou d'intranet refusées |
 | `DELETE /api/captures/[slug]` | Supprimer avec `{ token }` | Même origine, 30 / heure |
 | `POST /api/captures/[slug]/report` | Signaler `{ reason, details? }` | Même origine, 20 / heure, un seul par IP et par ville |
 | `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur |
@@ -147,14 +156,28 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 ### Étape 1 : ville 3D et mode Wikipédia ✅ (commit `5775dbc`)
 Accueil, recherche Wikipédia (fr, en, de, es, it), relevé, urbanisme, rendu Three.js instancié (ombres, étages, toits, monuments, panneaux avec images), vue aérienne, promenade (souris capturée ou regard en glissant si le navigateur refuse), survol, inspecteur, cartouche, légende, version mobile.
 
-### Étape 2 : partage ✅
+### Étape 2 : partage ✅ (commit `473157e`)
 Bouton « Partager » (aperçu de ce qui sera publié + miniature 1200 × 630 marquée DOMCity), lien public `/c/[slug]` et lien secret `/c/[slug]/supprimer#jeton`, « Vos villes » mémorisées dans le navigateur, page de ville partagée (copier le lien, signaler, choix de version), page de site `/s/[domain]`, recherche et galerie sur l'accueil, aperçus Open Graph et Twitter, mode local complet.
 
 Vérifié : 27 tests (capture, urbanisme, fichiers piégés, partage de bout en bout sur la base locale), TypeScript, ESLint, compilation de production, parcours complet dans le navigateur (partager, rouvrir, rechercher, versions, supprimer).
 **Non vérifié** : le mode cloud contre un vrai Supabase et un vrai R2 (aucun compte branché) ; la capture de la souris dans un navigateur normal ; un vrai téléphone ; un ordinateur peu puissant.
 
-### Pour activer le partage en production (à faire par l'utilisateur, guidé à l'étape 6)
-1. Créer le projet Supabase, appliquer les deux migrations dans l'ordre (SQL Editor).
+### Étape 3 : le favori (bookmarklet) ✅
+- **Le favori** (`src/bookmarklet/main.ts`, ~9 Ko minifiés, ~13,5 Ko encodés) : tout le code est dans le lien, rien n'est chargé ni injecté dans la page. Il ouvre `/nouveau`, relève la page affichée, et n'envoie la ville qu'à l'origine de DOMCity. Plan B dans l'ancre de l'adresse (popup bloquée, site qui isole ses fenêtres). L'adresse de DOMCity est inscrite dans le lien au moment de l'installation (`bookmarkletHref(window.location.origin)`) : un favori installé depuis localhost pointe vers localhost, depuis domcity.app vers domcity.app.
+- **`/nouveau`** : attend la ville (« Réception du relevé »), la vérifie, la garde en mémoire de session (un rechargement ne la perd pas), puis la construit. Mention « Votre relevé · non publié ». Si le favori date d'une version précédente (`BOOKMARKLET_VERSION`), un bandeau propose de le réinstaller.
+- **Partage d'un relevé** : titre publié modifiable, adresse publiée affichée, avertissement « page privée ? ne la publiez pas », liste de ce qui part (positions, couleurs, scripts, sites tiers). Les pages locales ou d'intranet (localhost, IP, `.local`…) ne se partagent pas (refus côté serveur aussi).
+- **Ville partagée par le favori** : mention « Relevé par un visiteur » (avec explication au survol).
+- **`/installer`** : bouton orange à glisser, animation du geste en trois temps (glisser, cliquer, visiter), « ce qui est relevé / jamais relevé », installation à la main sur téléphone (copier le code), limites. Un clic sur le bouton essaie le favori sur la page même.
+- **Relevé enrichi** (pour l'étape 5) : couleurs de fond réelles, scripts, commentaires HTML, ressources, poids, hôtes tiers ; affichés dans le cartouche (« 10 scripts · 3 sites tiers · 2,1 Mo chargés ») et l'inspecteur (position sur la page, fond réel).
+- Accueil : lien « Installer le favori », menu « Le favori ». Correction au passage : le champ de recherche faisait déborder l'accueil sur mobile.
+- Aucune nouvelle migration SQL : l'API acceptait déjà `source: "bookmarklet"`.
+
+Vérifié : 45 tests (favori compilé à jour et assez court, échange de messages simulé des deux côtés, plan B, origine vérifiée, relevé live avec shadow DOM, `display: contents`, couleurs et scripts tiers, pages locales refusées), TypeScript, ESLint, compilation de production. Dans le navigateur : page Installer (bureau et mobile 375 px sans débordement), animation, clic d'essai (plan B, ville construite), favori lancé sur github.com/vercel/next.js (ville construite, publiée avec un titre modifié, page partagée « Relevé par un visiteur », inspecteur avec fond réel et position).
+**Non vérifié** : le chemin principal par messages entre onglets dans un vrai navigateur (le navigateur de test bloque les nouveaux onglets : seul le plan B a tourné pour de vrai, le chemin principal est couvert par les tests) ; le glisser dans une vraie barre de favoris (Chrome, Firefox, Safari) ; le clic depuis la barre sur un site à CSP stricte ou Trusted Types (YouTube) ; l'installation à la main sur téléphone.
+
+### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
+L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
+1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
 2. Créer le bucket R2 `domcity-villes`, un jeton API « Object Read & Write », brancher le domaine `files.domcity.app` (nuage orange), et la règle CORS :
    ```json
    [{ "AllowedOrigins": ["https://domcity.app", "http://localhost:3000"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }]
@@ -163,19 +186,11 @@ Vérifié : 27 tests (capture, urbanisme, fichiers piégés, partage de bout en 
 
 ## 10. Étapes suivantes
 
-### Étape 3 : le bookmarklet
-- `scripts/build-bookmarklet.ts` : compile `src/capture` (sans dépendance) en une ligne `javascript:`.
-- Capture de la page affichée avec `withLayout: true` (positions réelles, éléments masqués ignorés), puis ouverture de `domcity.app/nouveau` et transfert des données par `postMessage` (pas d'injection de script : compatible avec les sites stricts comme GitHub ou X).
-- Page `/nouveau` : affiche la ville, aperçu avant partage, envoi via `source: "bookmarklet"` (déjà accepté par l'API).
-- Page « Installer » : bouton à glisser dans les favoris, animation d'explication.
-- À ajouter au relevé : nombre de scripts et domaines des traqueurs, couleurs réelles (pour l'étape 5).
-- Mention « relevé par un visiteur » : un JSON de bookmarklet ne peut pas être vérifié par le serveur (risque de fausses villes, d'où les signalements).
-
 ### Étape 4 : la mégalopole
-Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées, niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Fonction SQL déjà prête : `site_city(domain, as_of)`.
+Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées, niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
 
 ### Étape 5 : machine à remonter le temps et ambiance
-Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6.
+Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6. Les données sont déjà relevées par le favori : `page.scripts` (usines), `page.thirdParty` à comparer à une liste de traqueurs tenue par le moteur (caméras), `page.bytes` et `page.domSize` (météo), `page.comments` (graffitis), `bg` et `page.colors` (vraies couleurs).
 
 ### Étape 6 : mise en ligne
 Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** pour `domcity.app` vers Vercel, **nuage orange** pour `files.domcity.app` vers R2), projet Vercel relié au dépôt, variables d'environnement, règles du pare-feu Vercel (limite sur `/api/captures`), Attack Mode en cas d'attaque, purge du cache Cloudflare à la suppression (jeton facultatif).
@@ -186,6 +201,10 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
+- Favori : utiliser `rect` pour ranger la ville selon la mise en page réelle (ordre visuel plutôt qu'ordre du code) ; lire les cadres (`iframe`) du même site ; les shadow DOM fermés restent invisibles.
+- Favori : les adresses d'images peuvent contenir des paramètres signés (CDN privés) ; envisager de retirer les paramètres de signature connus avant publication.
+- Favori : le navigateur ne garde que ~250 ressources dans sa mesure (`resources` et `bytes` sont des minimums).
+- Le domaine racine (`rootDomain`) est approché sans la liste officielle des suffixes : github.githubassets.com compte comme site tiers de github.com.
 - Plan Vercel Hobby : usage non commercial uniquement (les dons sont permis).
 - Projet Supabase gratuit mis en pause après une semaine sans activité.
 
@@ -194,9 +213,12 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 27 tests
+npm test           # 45 tests
 npm run lint
 npm run typecheck
+npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
 ```
+
+Le favori compilé (`src/bookmarklet/generated.ts`) est versionné ; un test échoue s'il n'est pas à jour, et `npm run build` le recompile toujours avant de construire.
 
 Conventions : textes en français, commentaires en français, aucun tiret cadratin, un commit par étape sur `main`, migrations SQL nouvelles plutôt que modifiées.

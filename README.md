@@ -18,6 +18,12 @@
 - Production : Supabase (base) + Cloudflare R2 (fichiers), variables dans [`.env.example`](.env.example).
 - Développement : sans aucune configuration, tout tourne en **mode local** (base Postgres embarquée PGlite avec les vraies migrations, fichiers dans `.data/`).
 
+### Étape 3 : le favori
+- Page `/installer` : un bouton à glisser dans la barre de favoris. Sur n'importe quel site, un clic relève la page telle qu'elle s'affiche (composants web compris) et l'ouvre en ville dans DOMCity (`/nouveau`).
+- Tout le code tient dans le favori : rien n'est chargé ni injecté dans la page, il marche aussi sur les sites stricts. La ville passe d'un onglet à l'autre par messages, ou par l'ancre de l'adresse quand le site isole ses fenêtres.
+- Le relevé note aussi les vraies couleurs de fond, les scripts, les sites tiers contactés et le poids de la page (pour l'ambiance de l'étape 5).
+- Publication possible, avec titre modifiable et mention « relevé par un visiteur ». Les pages locales ou d'intranet ne se publient pas.
+
 ## Le dictionnaire HTML → ville
 
 | Balise | Dans la ville |
@@ -41,31 +47,34 @@ La liste complète et les couleurs sont dans [`src/format/taxonomy.ts`](src/form
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm test           # capture, urbanisme, partage de bout en bout (base locale)
+npm test           # capture, favori, urbanisme, partage de bout en bout (base locale)
 npm run lint
 npm run typecheck
+npm run bookmarklet  # recompile le favori (src/bookmarklet/generated.ts)
 ```
 
 ## Organisation
 
 ```
 src/
-├── app/                Next.js : accueil (/), visite d'un article (/w/[lang]/[title])
+├── app/                Next.js : accueil, article (/w/…), favori (/installer, /nouveau), partage (/c/…, /s/…)
 ├── format/             le format de la ville (types, validation zod, limites, adresses)
 ├── capture/            page web → ville (JSON) ; mode Wikipédia
+├── bookmarklet/        le favori : point d'entrée, échange avec /nouveau, version compilée
 ├── city/               ville → 3D : urbanisme (layout), scène Three.js, vue et contrôles
 ├── server/             partage : base (Supabase ou locale), fichiers (R2 ou locaux), sécurité
 └── ui/                 composants d'interface (recherche, inspecteur, cartouche, partage…)
 supabase/migrations/    schéma de la base, à appliquer dans Supabase (dans l'ordre)
+scripts/                compilation du favori (esbuild)
 ```
 
-`src/capture` n'a aucune dépendance : il sera compilé tel quel dans le bookmarklet (étape 3).
+`src/capture` n'a aucune dépendance : il est compilé tel quel dans le favori.
 
 ## Feuille de route
 
 1. **Ville 3D + mode Wikipédia** ✅
 2. **Partage** : API, Supabase et R2, lien public et lien secret de suppression ✅
-3. Bookmarklet : n'importe quel site devient une ville
+3. **Favori (bookmarklet)** : n'importe quel site devient une ville ✅
 4. Mégalopole : toutes les pages d'un site, à cocher et décocher
 5. Machine à remonter le temps et ambiance (usines, caméras, météo…)
 6. Mise en ligne sur Vercel, domaine `domcity.app`

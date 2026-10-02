@@ -39,7 +39,27 @@ export interface CityNode {
   links?: CityLinks;
   /** Position sur la page réelle [x, y, largeur, hauteur], quand on la connaît (bookmarklet). */
   rect?: [number, number, number, number];
+  /** Couleur de fond réelle (#rrggbb), seulement quand elle change par rapport au parent (bookmarklet). */
+  bg?: string;
   children?: CityNode[];
+}
+
+/** Ce que l'on sait de la page entière quand elle est relevée dans le navigateur (bookmarklet). */
+export interface CityPage {
+  /** Nombre d'éléments HTML du document, avant tri : le vrai poids du DOM. */
+  domSize?: number;
+  /** Balises <script>. */
+  scripts?: number;
+  /** Commentaires laissés dans le HTML. */
+  comments?: number;
+  /** Ressources chargées (images, scripts, requêtes…), au moins : le navigateur n'en retient qu'une partie. */
+  resources?: number;
+  /** Octets transférés connus, au moins : les autres sites cachent souvent la taille de leurs fichiers. */
+  bytes?: number;
+  /** Hôtes des ressources venues d'autres sites, du plus sollicité au moins sollicité. */
+  thirdParty?: string[];
+  /** Couleurs réelles de la page (#rrggbb). */
+  colors?: { background?: string; text?: string; link?: string };
 }
 
 export interface CityDoc {
@@ -51,5 +71,7 @@ export interface CityDoc {
   /** Date ISO du relevé. */
   capturedAt: string;
   lang?: string;
+  /** Faits sur la page entière (bookmarklet). */
+  page?: CityPage;
   root: CityNode;
 }

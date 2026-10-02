@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { WikiLang } from "@/capture/wikipedia";
 import type { CityDoc, CityNode } from "@/format/types";
+import { normalizePageUrl } from "@/format/url";
+import { gzipCity } from "@/ui/loadShared";
 import { rememberCity } from "@/ui/savedCities";
 import { CopyField } from "./CopyField";
 import styles from "./explorer.module.css";
@@ -25,23 +27,28 @@ function headingsOf(root: CityNode): string[] {
   return out;
 }
 
+/** Wikipédia : le serveur relève l'article lui-même. Favori : la ville part telle quelle. */
+export type ShareSource = { kind: "wikipedia"; lang: WikiLang } | { kind: "bookmarklet" };
+
 /** Aperçu de ce qui sera publié, puis les deux liens : public et secret. */
 export function SharePanel({
   doc,
-  lang,
-  title,
+  source,
   takeSnapshot,
   onClose,
 }: {
   doc: CityDoc;
-  lang: WikiLang;
-  title: string;
+  source: ShareSource;
   takeSnapshot: () => Promise<Blob | null>;
   onClose: () => void;
 }) {
   const [state, setState] = useState<State>({ step: "preview" });
   const [thumb, setThumb] = useState<{ blob: Blob; url: string } | null>(null);
+  const [title, setTitle] = useState(doc.title);
   const headings = useMemo(() => headingsOf(doc.root), [doc]);
+  const address = useMemo(() => normalizePageUrl(doc.url), [doc]);
+  const bookmarklet = source.kind === "bookmarklet";
+  const thirdParty = doc.page?.thirdParty?.length ?? 0;
 
   useEffect(() => {
     let url: string | null = null;
@@ -67,19 +74,32 @@ export function SharePanel({
 
   const publish = async () => {
     setState({ step: "sending" });
+    const publishedTitle = title.replace(/\s+/g, " ").trim() || doc.title;
     const form = new FormData();
-    form.set("source", "wikipedia");
-    form.set("lang", lang);
-    form.set("title", title);
-    if (thumb) form.set("thumbnail", thumb.blob, "miniature.jpg");
     try {
+      if (source.kind === "wikipedia") {
+        form.set("source", "wikipedia");
+        form.set("lang", source.lang);
+        form.set("title", doc.title);
+      } else {
+        form.set("source", "bookmarklet");
+        form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "ville.json.gz");
+      }
+      if (thumb) form.set("thumbnail", thumb.blob, "miniature.jpg");
       const response = await fetch("/api/captures", { method: "POST", body: form });
-      const data = (await response.json()) as { slug?: string; url?: string; deleteUrl?: string; token?: string; error?: string };
+      const data = (await response.json()) as {
+        slug?: string;
+        title?: string;
+        url?: string;
+        deleteUrl?: string;
+        token?: string;
+        error?: string;
+      };
       if (!response.ok || !data.slug || !data.url || !data.deleteUrl || !data.token) {
         setState({ step: "error", message: data.error ?? "Le partage a échoué." });
         return;
       }
-      rememberCity({ slug: data.slug, title: doc.title, token: data.token, sharedAt: new Date().toISOString() });
+      rememberCity({ slug: data.slug, title: data.title ?? publishedTitle, token: data.token, sharedAt: new Date().toISOString() });
       setState({ step: "done", slug: data.slug, url: data.url, deleteUrl: data.deleteUrl });
     } catch {
       setState({ step: "error", message: "Connexion impossible. Réessayez dans un instant." });
@@ -92,7 +112,7 @@ export function SharePanel({
         <div className={styles.modalHead}>
           <div>
             <p className="mono-caps">{state.step === "done" ? "Ville publiée" : "Partager la ville"}</p>
-            <h2 id="share-title">{doc.title}</h2>
+            <h2 id="share-title">{bookmarklet ? title || doc.title : doc.title}</h2>
           </div>
           {state.step !== "sending" && (
             <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">
@@ -132,11 +152,41 @@ export function SharePanel({
               La miniature reprend votre vue actuelle. Pour en changer, fermez, recadrez, puis revenez.
             </p>
 
+            {bookmarklet && (
+              <>
+                <label className={styles.titleField}>
+                  <span className="mono-caps">Titre publié</span>
+                  <input
+                    value={title}
+                    maxLength={300}
+                    onChange={(e) => setTitle(e.target.value)}
+                    disabled={state.step === "sending"}
+                  />
+                </label>
+                <p className={styles.privacy}>
+                  <strong>Page privée ? Ne la publiez pas.</strong> Messagerie, compte client, document interne : sa
+                  structure et ses titres deviendraient visibles de tous. La ville portera la mention « relevé par un
+                  visiteur ».
+                </p>
+              </>
+            )}
+
             <div className={styles.published}>
               <p className="mono-caps">Ce qui sera publié</p>
               <ul>
+                {address && (
+                  <li>
+                    L&apos;adresse de la page, sans ses paramètres : <code className={styles.address}>{address.domain}{address.path}</code>
+                  </li>
+                )}
                 <li>La structure de la page : les balises, leur imbrication, la quantité de texte.</li>
                 <li>Les adresses des images, pas les images elles-mêmes.</li>
+                {bookmarklet && (
+                  <li>
+                    La position et la couleur de fond de chaque élément
+                    {thirdParty > 0 ? `, le nombre de scripts et les ${thirdParty} sites tiers contactés par la page` : ""}.
+                  </li>
+                )}
                 <li>
                   Le texte des titres, et lui seulement ({headings.length} titre{headings.length > 1 ? "s" : ""}) :
                 </li>

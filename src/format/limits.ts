@@ -9,4 +9,5 @@ export const LIMITS = {
   maxHeading: 160,
   maxLabel: 60,
   maxUrl: 2_048,
+  maxThirdParty: 60,
 } as const;

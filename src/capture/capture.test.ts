@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { validateCityDoc } from "@/format/schema";
 import type { CityNode } from "@/format/types";
+import { mimicBrowserLayout } from "@/test/layout";
 import { captureDocument } from "./capture";
 
 const PAGE = `<!doctype html><html><head><title>Croissant</title>
@@ -106,9 +107,34 @@ describe("captureDocument", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("trouve la vraie image d'un chargement différé", () => {
+    const city = capture(`<body><img src="data:image/gif;base64,R0lGOD" data-src="/vraie.jpg" width="300" height="200"></body>`);
+    expect(city.root.children![0].img?.src).toBe("https://fr.wikipedia.org/vraie.jpg");
+  });
+
   it("résiste à un DOM très profond", () => {
     const deep = `<body>${"<div>".repeat(5000)}fond${"</div>".repeat(5000)}</body>`;
     const city = capture(deep);
     expect(validateCityDoc(city).ok).toBe(true);
+  });
+});
+
+describe("captureDocument sur la page affichée (live)", () => {
+  it("traverse display: contents et les enveloppes sans surface, ignore ce qui est masqué", () => {
+    document.body.innerHTML = `
+      <div id="enveloppe" style="display: contents"><section id="dedans"><p>Bonjour tout le monde</p></section></div>
+      <div id="vide"><p>Dans une boîte sans surface</p></div>
+      <div id="cache" style="display: none"><p>caché</p></div>`;
+    const restore = mimicBrowserLayout((el) =>
+      el.id === "vide" ? { left: 0, top: 0, width: 0, height: 0 } : { left: 0, top: 0, width: 200, height: 30 },
+    );
+    try {
+      const city = captureDocument(document, { source: "bookmarklet", url: "https://exemple.org/", live: true });
+      expect(city.root.children?.map((n) => `${n.tag}${n.label ?? ""}`)).toEqual(["section#dedans", "p"]);
+      expect(JSON.stringify(city)).not.toContain("#cache");
+      expect(city.page?.domSize).toBeGreaterThan(0);
+    } finally {
+      restore();
+    }
   });
 });

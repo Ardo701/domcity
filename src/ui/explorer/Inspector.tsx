@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatChars, formatCount, type LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
 import { KindSwatch } from "@/ui/KindSwatch";
@@ -29,7 +30,7 @@ export function Inspector({
   onViewImage: () => void;
 }) {
   const parent = info.path.length > 1 ? info.path[info.path.length - (info.ownText ? 1 : 2)] : null;
-  const rows: Array<[string, string]> = [
+  const rows: Array<[string, ReactNode]> = [
     ["Texte propre", formatChars(info.text)],
     ["Texte en tout", formatChars(info.textTotal)],
     ["Éléments dedans", info.children > 0 ? `${formatCount(info.children)} directs, ${formatCount(info.descendants)} en tout` : "aucun"],
@@ -39,6 +40,19 @@ export function Inspector({
   ];
   if (info.links) {
     rows.splice(3, 0, ["Liens", `${formatCount(info.links.internal)} internes · ${formatCount(info.links.external)} externes`]);
+  }
+  if (info.rect) {
+    const [, y, w, h] = info.rect.map(formatCount);
+    rows.push(["Sur la page", `${w} × ${h} px, à ${y} px du haut`]);
+  }
+  if (info.background) {
+    rows.push([
+      "Fond réel",
+      <span key="fond" className={styles.colorValue}>
+        <span className={styles.colorChip} style={{ background: info.background }} aria-hidden />
+        {info.background}
+      </span>,
+    ]);
   }
 
   return (
