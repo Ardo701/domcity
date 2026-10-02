@@ -11,7 +11,7 @@
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
-import type { CityLayout, Lot, RoadStyle } from "./layout";
+import type { Airport, CityLayout, Lot, RoadStyle } from "./layout";
 import { createMaterials, type CityMaterials } from "./materials";
 import { buildCityScene, type CityScene, type InstanceRef, type LabelSlot } from "./scene";
 import {
@@ -45,9 +45,9 @@ export interface ViewStats {
 
 /**
  * Ce que désigne le survol quand ce n'est pas le lot lui-même : une rue qu'il a fait tracer,
- * ou l'aéroport (qui n'est pas un lot : son numéro suit le dernier).
+ * ou un aéroport, un aérodrome (qui ne sont pas des lots : leurs numéros suivent le dernier).
  */
-export type HoverPart = { kind: "road"; style: RoadStyle } | { kind: "airport" } | null;
+export type HoverPart = { kind: "road"; style: RoadStyle } | { kind: "airport"; airport: Airport } | null;
 
 export interface ViewEvents {
   onHover?: (lotId: number | null, screen: { x: number; y: number } | null, part: HoverPart) => void;
@@ -55,8 +55,8 @@ export interface ViewEvents {
   onModeChange?: (mode: ViewMode) => void;
   onWalkChange?: (state: WalkState) => void;
   onImageStatus?: (lotId: number, status: ImageStatus) => void;
-  /** Clic sur l'aéroport (qui n'a pas de fiche d'élément) : le tableau des départs. */
-  onAirport?: () => void;
+  /** Clic sur un aéroport ou un aérodrome (qui n'a pas de fiche d'élément) : le tableau des départs. */
+  onAirport?: (airport: Airport) => void;
 }
 
 const PAPER = "#EEEAE1";
@@ -907,6 +907,12 @@ export class CityView {
     this.dirty = true;
   }
 
+  /** L'aéroport ou l'aérodrome qui porte ce numéro. */
+  private airportOf(id: number): Airport | undefined {
+    if (id === this.layout.airport?.id) return this.layout.airport;
+    return this.world.aerodromes.find((entry) => entry.airport.id === id)?.airport;
+  }
+
   private pick(ndc: THREE.Vector2, fromPointer: boolean) {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.pickables, false);
@@ -922,7 +928,8 @@ export class CityView {
       if (lotId !== null) {
         const style = object.userData.part === "road" ? this.roadAt(lotId, hit.point) : null;
         if (style) part = { kind: "road", style };
-        if (lotId === this.layout.airport?.id) part = { kind: "airport" };
+        const airport = this.airportOf(lotId);
+        if (airport) part = { kind: "airport", airport };
         break;
       }
     }
@@ -1031,7 +1038,8 @@ export class CityView {
     }
     this.toNdc(event);
     this.pick(this.pointer, true);
-    if (this.hovered !== null && this.hovered === this.layout.airport?.id) this.events.onAirport?.();
+    const airport = this.hovered === null ? undefined : this.airportOf(this.hovered);
+    if (airport) this.events.onAirport?.(airport);
     this.select(this.hovered);
   };
 

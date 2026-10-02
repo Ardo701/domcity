@@ -161,8 +161,11 @@ export interface Bridge extends Rect {
 /**
  * L'aéroport : les liens de la page vers d'autres sites. Il n'est pas un élément de la page :
  * il est hors les murs, à l'est de la ville, sur une extension du socle, relié au périphérique.
+ * Dans la mégalopole, chaque ville garde un petit aérodrome (une piste, un hangar) et le site a
+ * son grand aéroport commun.
  */
 export interface Airport extends Rect {
+  kind: "airport" | "aerodrome";
   /** Numéro de survol : juste après le dernier lot (ce n'est pas un lot). */
   id: number;
   /** Niveau des pistes et du tarmac. */
@@ -173,9 +176,11 @@ export interface Airport extends Rect {
   /** Voies de circulation des avions : la grande, parallèle aux pistes, et ses bretelles. */
   taxiways: Array<Rect & { axis: "x" | "z" }>;
   apron: Rect;
+  /** Le terminal (le hangar d'un aérodrome). */
   terminal: Rect;
+  /** La tour de contrôle (la manche à air d'un aérodrome). */
   tower: Rect;
-  /** Avions aux portes du terminal. */
+  /** Avions aux portes du terminal (devant le hangar). */
   planes: number;
   /** Sites visés par les liens, du plus visé au moins visé (relevés récents seulement). */
   destinations: Array<[domain: string, links: number]>;
@@ -661,8 +666,11 @@ interface Edge {
 const EDGE: Edge = { side: "edge", width: 0 };
 
 export interface LayoutOptions {
-  /** Faux dans la mégalopole : un seul aéroport pour tout le site, pas un par page. */
-  airport?: boolean;
+  /**
+   * « aerodrome » dans la mégalopole : le grand aéroport est commun au site, chaque ville garde
+   * une petite piste (si elle a assez de liens vers d'autres sites). « none » : rien hors les murs.
+   */
+  airport?: "airport" | "aerodrome" | "none";
 }
 
 /** Côté du socle d'une page, sans la construire : la mégalopole range ses villes avant de les bâtir. */
@@ -676,12 +684,14 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
   const side = Math.sqrt(rootPlot.area);
   const edge = { x: -side / 2, z: -side / 2, w: side, d: side };
   place(rootPlot, edge, 0, -1, ctx, { streets: "street" });
-  if (options.airport !== false) {
+  const kind = options.airport ?? "airport";
+  if (kind !== "none") {
     const site: AirportSite = {
       x0: edge.x + edge.w, z: edge.z, d: edge.d, center: edge.z + edge.d / 2,
       access: edge.x + edge.w - BELT, owner: 0, y: BASE,
     };
-    ctx.airport = planAirport(ctx, site, externalLinks(doc.root), doc.linksTo?.sites ?? []);
+    const plan = kind === "aerodrome" ? planAerodrome : planAirport;
+    ctx.airport = plan(ctx, site, externalLinks(doc.root), doc.linksTo?.sites ?? []);
   }
   openHarbors(ctx, ctx.airport ? { ...edge, w: ctx.airport.x + ctx.airport.w - edge.x } : edge);
   const { lots } = ctx;
@@ -841,6 +851,7 @@ export function planAirport(
   });
 
   return {
+    kind: "airport",
     id: ctx.lots.length,
     x: x0, z: site.z, w: x - x0, d: site.d,
     y: BASE + CURB,
@@ -853,6 +864,70 @@ export function planAirport(
     planes,
     destinations: sites,
     flights,
+  };
+}
+
+/** Dans la mégalopole, une ville a son aérodrome dès ce nombre de liens vers d'autres sites. */
+export const AERODROME_MIN = 20;
+/** Largeur de l'aérodrome, à l'est du socle : la mégalopole lui réserve cette place. */
+export const AERODROME = 18;
+const STRIP_WIDTH = 3.4;
+
+/** Une ville de la mégalopole a-t-elle son aérodrome ? (avant de la construire, pour la placer) */
+export function hasAerodrome(doc: CityDoc): boolean {
+  return externalLinks(doc.root) >= AERODROME_MIN;
+}
+
+/**
+ * L'aérodrome d'une ville de la mégalopole : un hangar au bout d'une rue qui traverse la
+ * ceinture verte, un ou trois petits avions devant, une piste courte et sa manche à air. Pas de
+ * vols : ils partent du grand aéroport du site. Il tient dans la bande de AERODROME de large.
+ */
+export function planAerodrome(
+  ctx: Pick<Ctx, "lots" | "roads" | "plates">,
+  site: AirportSite,
+  external: number,
+  sites: Array<[string, number]>,
+): Airport | undefined {
+  if (external < AERODROME_MIN) return undefined;
+  const { x0 } = site;
+  const length = clamp(site.d - 14, 22, 46);
+  const top = clamp(site.center - length / 2, site.z + 4, site.z + site.d - 4 - length);
+  const planes = clamp(Math.round(Math.sqrt(external) / 7), 1, 3);
+  const gate = PLANE * 0.62;
+  const apronD = planes * gate + 3;
+
+  const terminal = { x: x0 + 1.5, z: site.center - 3.2, w: 4.4, d: 6.4 };
+  const apron = { x: terminal.x + terminal.w, z: site.center - apronD / 2, w: 5, d: apronD };
+  const strip = { x: x0 + AERODROME - 2 - STRIP_WIDTH, z: top, w: STRIP_WIDTH, d: length };
+  const taxiway = {
+    x: apron.x + apron.w, z: site.center - 0.8, w: strip.x - apron.x - apron.w, d: 1.6, axis: "x" as const,
+  };
+
+  // La rue d'accès, du périphérique au hangar : elle coupe la ceinture verte.
+  const street = roadWidth("street", 2);
+  const access: Road = {
+    x: site.access, z: site.center - street / 2, w: terminal.x - site.access, d: street,
+    axis: "x", style: "street", owner: site.owner, y: site.y,
+  };
+  ctx.plates = ctx.plates.flatMap((plate) => cutRect(plate, access).map((piece) => ({ ...plate, ...piece })));
+  ctx.roads.push(access);
+
+  return {
+    kind: "aerodrome",
+    id: ctx.lots.length,
+    x: x0, z: site.z, w: AERODROME, d: site.d,
+    y: BASE + CURB,
+    external,
+    runways: [strip],
+    taxiways: [taxiway],
+    apron,
+    terminal,
+    // La manche à air, au bout nord de la piste, côté hangar.
+    tower: { x: strip.x - 1.6, z: top + 1, w: 0.4, d: 0.4 },
+    planes,
+    destinations: sites,
+    flights: [],
   };
 }
 

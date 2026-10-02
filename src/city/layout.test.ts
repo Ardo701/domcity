@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CityDoc, CityNode } from "@/format/types";
-import { emblemOf, externalLinks, gridLines, layoutCity, runwaysFor, stripLayout, type Lot, type Rect } from "./layout";
+import { AERODROME, AERODROME_MIN, emblemOf, externalLinks, gridLines, layoutCity, runwaysFor, stripLayout, type Lot, type Rect } from "./layout";
 
 function doc(root: CityNode): CityDoc {
   return {
@@ -309,6 +309,23 @@ describe("layoutCity", () => {
     for (const plate of city.plates) expect(overlaps(plate, access)).toBe(false);
     // le chenal du port ne passe pas par l'aéroport
     for (const channel of city.channels) expect(overlaps(channel, airport)).toBe(false);
+
+    // Dans la mégalopole : un petit aérodrome dans sa bande, sans vols, dès AERODROME_MIN liens.
+    expect(layoutCity(page(AERODROME_MIN - 1), { airport: "aerodrome" }).airport).toBeUndefined();
+    expect(layoutCity(page(320), { airport: "none" }).airport).toBeUndefined();
+    const small = layoutCity(page(320), { airport: "aerodrome" });
+    const field = small.airport!;
+    expect(field.kind).toBe("aerodrome");
+    expect(field.runways).toHaveLength(1);
+    expect(field.flights).toEqual([]);
+    expect(field.x).toBeCloseTo(socle.x + socle.w, 6);
+    expect(field.w).toBe(AERODROME);
+    for (const rect of [...field.runways, ...field.taxiways, field.apron, field.terminal, field.tower]) {
+      expect(inside(rect, field)).toBe(true);
+    }
+    const street = small.roads.find((road) => road.x < field.x && road.x + road.w > field.x)!;
+    expect(street.x + street.w).toBeCloseTo(field.terminal.x, 6);
+    for (const plate of small.plates) expect(overlaps(plate, street)).toBe(false);
   });
 
   it("compte la ville", () => {

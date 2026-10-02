@@ -376,7 +376,6 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         <Tooltip
           info={hoverInfo}
           part={hover.part}
-          airport={layout?.airport}
           x={hover.x}
           y={hover.y}
           centered={walking === "locked"}

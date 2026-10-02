@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { linkKey } from "@/format/links";
 import type { CityDoc, CityNode } from "@/format/types";
-import { citySide, externalLinks, layoutCity, type Rect } from "./layout";
+import { AERODROME, citySide, externalLinks, hasAerodrome, layoutCity, type Rect } from "./layout";
 import { CORRIDOR, buildMegalopolis, comparePaths, placePages, type MegaCity } from "./megalopolis";
 
 function page(path: string, size: number, links: string[] = [], external = 0): CityDoc {
@@ -24,11 +24,11 @@ const overlap = (a: Rect, b: Rect, pad = 0) =>
 
 function megalopolis(docs: CityDoc[], shown = docs.map((_, i) => i)) {
   const paths = docs.map((d) => new URL(d.url).pathname);
-  const placement = placePages(docs.map((d, i) => ({ path: paths[i], side: citySide(d) })));
+  const placement = placePages(docs.map((d, i) => ({ path: paths[i], side: citySide(d), aerodrome: hasAerodrome(d) })));
   const cities: MegaCity[] = shown.map((i) => ({
     page: i,
     path: paths[i],
-    layout: layoutCity(docs[i], { airport: false }),
+    layout: layoutCity(docs[i], { airport: "aerodrome" }),
     linksTo: docs[i].linksTo?.pages ?? [],
     external: externalLinks(docs[i].root),
     sites: docs[i].linksTo?.sites ?? [],
@@ -52,11 +52,14 @@ describe("mégalopole", () => {
     expect(placement.order).toEqual([0, 1, 4, 2, 3]);
     // La racine en haut à gauche, comme le début d'une page.
     expect(placement.origins[0]).toEqual({ x: CORRIDOR, z: CORRIDOR });
-    const socles = placement.origins.map((o, i) => ({ ...o, w: placement.sides[i], d: placement.sides[i] }));
-    for (let a = 0; a < socles.length; a += 1) {
-      for (let b = a + 1; b < socles.length; b += 1) expect(overlap(socles[a], socles[b])).toBe(false);
-      expect(socles[a].x).toBeGreaterThanOrEqual(0);
-      expect(socles[a].x + socles[a].w).toBeLessThanOrEqual(placement.width);
+    // La place de l'accueil comprend son aérodrome (40 liens vers d'autres sites).
+    expect(placement.widths[0]).toBe(placement.sides[0] + AERODROME);
+    expect(placement.widths[1]).toBe(placement.sides[1]);
+    const slots = placement.origins.map((o, i) => ({ ...o, w: placement.widths[i], d: placement.sides[i] }));
+    for (let a = 0; a < slots.length; a += 1) {
+      for (let b = a + 1; b < slots.length; b += 1) expect(overlap(slots[a], slots[b])).toBe(false);
+      expect(slots[a].x).toBeGreaterThanOrEqual(0);
+      expect(slots[a].x + slots[a].w).toBeLessThanOrEqual(placement.width);
     }
   });
 
@@ -98,7 +101,7 @@ describe("mégalopole", () => {
     expect(fields.length + woods.length).toBeGreaterThan(0);
   });
 
-  it("pose un seul aéroport à l'est, relié par l'autoroute, avec ses vols", () => {
+  it("pose le grand aéroport du site à l'est, relié par l'autoroute, avec ses vols", () => {
     const { placement, mega } = megalopolis(SITE);
     const airport = mega.land.airport!;
     expect(airport.x).toBeGreaterThanOrEqual(placement.width);
@@ -109,6 +112,35 @@ describe("mégalopole", () => {
     const hub = mega.land.joints.find((j) => Math.abs(j.x + j.w - access.x) < 0.01 && j.open.east);
     expect(hub).toBeDefined();
     expect(mega.land.bounds.maxX).toBeGreaterThanOrEqual(airport.x + airport.w);
+  });
+
+  it("garde à chaque ville assez ouverte son aérodrome, à l'est de son socle, à l'écart des autoroutes", () => {
+    const docs = [page("/", 14, ["/a", "/b"], 40), page("/a", 9, ["/", "/b"], 25), page("/b", 6, ["/"], 3)];
+    const { placement, mega } = megalopolis(docs);
+    const aerodromes = mega.parts.map((part) => part.city.layout.airport);
+    expect(aerodromes.map((a) => a?.kind)).toEqual(["aerodrome", "aerodrome", undefined]);
+    expect(aerodromes[0]!.destinations).toEqual([["github.com", 40]]);
+    expect(aerodromes[0]!.flights).toEqual([]);
+    const highways = [...mega.land.roads.filter((road) => road.style !== "avenue"), ...mega.land.joints];
+    mega.parts.forEach((part, i) => {
+      const a = aerodromes[i];
+      if (!a) return;
+      const { origins, sides, widths } = placement;
+      const page = part.city.page;
+      // En coordonnées du monde : juste à l'est du socle, dans la place réservée.
+      const strip = { x: a.x + part.offset.x, z: a.z + part.offset.z, w: a.w, d: a.d };
+      expect(strip.x).toBeCloseTo(origins[page].x + sides[page]);
+      expect(strip.x + strip.w).toBeLessThanOrEqual(origins[page].x + widths[page] + 0.01);
+      // Ni autoroute, ni carrefour, ni bretelle (aucune ne part vers l'est) sur l'aérodrome.
+      for (const way of highways) expect(overlap(way, strip)).toBe(false);
+      // Ses pistes, son hangar et ses avions restent dans sa bande.
+      for (const r of [...a.runways, a.apron, a.terminal]) expect(overlap(r, a)).toBe(true);
+      expect(a.runways[0].x + a.runways[0].w).toBeLessThanOrEqual(a.x + a.w);
+    });
+    // Masquée, sa place (aérodrome compris) devient campagne.
+    const hidden = megalopolis(docs, [1, 2]);
+    const slot = { ...placement.origins[0], w: placement.widths[0], d: placement.sides[0] };
+    expect(hidden.mega.land.plates.some((plate) => plate.style === "base" && overlap(plate, slot))).toBe(true);
   });
 
   it("empile les petites villes sous les grandes, sans chevauchement", () => {

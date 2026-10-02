@@ -133,6 +133,9 @@ const tmpEuler = new THREE.Euler(0, 0, 0, "YXZ");
  * Base au centre (cx, y, cz), taille (w, h, d), rotation autour de la verticale puis de x ;
  * `rotZ` cabre une forme tournée vers +x (un avion qui décolle).
  */
+/** Les petits avions d'un aérodrome. */
+const SMALL_PLANE = PLANE * 0.48;
+
 function at(cx: number, y: number, cz: number, w: number, h: number, d: number, rotY = 0, rotX = 0, rotZ = 0): THREE.Matrix4 {
   tmpQuaternion.setFromEuler(tmpEuler.set(rotX, rotY, rotZ));
   return tmpMatrix.compose(tmpPosition.set(cx, y, cz), tmpQuaternion, tmpScale.set(w, h, d));
@@ -632,7 +635,48 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     obstacles.add(channel, 0.6);
   }
   for (const span of layout.bridges) bridge(span);
-  if (layout.airport) airfield(layout.airport);
+  if (layout.airport?.kind === "aerodrome") aerodrome(layout.airport);
+  else if (layout.airport) airfield(layout.airport);
+
+  /**
+   * L'aérodrome d'une ville de la mégalopole : un hangar au bout de sa rue, de petits avions
+   * devant, une piste courte et sa manche à air. Les vols partent du grand aéroport du site.
+   */
+  function aerodrome(a: Airport) {
+    const { id } = a;
+    ground(id, a, 0, BASE, "base");
+    let lawn: Rect[] = [a];
+    for (const road of layout.roads) lawn = lawn.flatMap((piece) => cutRect(piece, road));
+    for (const piece of lawn) ground(id, piece, BASE, CURB, "grass");
+    ground(id, a.apron, a.y, 0.03, "sidewalk");
+    const [strip] = a.runways;
+    kit.road.add(id, at(strip.x + strip.w / 2, a.y, strip.z + strip.d / 2, strip.w, 0.03, strip.d), "#3b3c41", [ROAD.runway, 1, 0, 0]);
+    for (const way of a.taxiways) {
+      kit.road.add(id, at(way.x + way.w / 2, a.y, way.z + way.d / 2, way.w, 0.03, way.d), "#4a4b50", [ROAD.taxiway, way.axis === "x" ? 0 : 1, 0, 0]);
+    }
+
+    // Le hangar : murs de tôle, toit à deux pans, grande porte ouverte vers les avions.
+    const h = a.terminal;
+    const hcx = h.x + h.w / 2;
+    const hcz = h.z + h.d / 2;
+    box(id, hcx, a.y, hcz, h.w, 2.2, h.d, "#b9bdb8");
+    kit.gable.add(id, at(hcx, a.y + 2.2, hcz, h.w + 0.3, 1.1, h.d + 0.3), "#8d969b");
+    box(id, h.x + h.w + 0.02, a.y, hcz, 0.06, 1.8, h.d * 0.7, "#2f3236");
+    obstacles.add(h, 0.6);
+
+    // Les avions devant le hangar, nez vers lui.
+    const gate = a.apron.d / a.planes;
+    for (let i = 0; i < a.planes; i += 1) {
+      planeAt(id, a.apron.x + a.apron.w / 2 + 0.3, a.y, a.apron.z + gate * (i + 0.5), Math.PI, i, 0, SMALL_PLANE);
+    }
+
+    // La manche à air, rayée, gonflée par le vent d'ouest.
+    const pole = a.tower;
+    const px = pole.x + pole.w / 2;
+    const pz = pole.z + pole.d / 2;
+    box(id, px, a.y, pz, 0.08, 2.4, 0.08, "#d8d4ca");
+    kit.cone.add(id, at(px, a.y + 2.3, pz, 0.36, 1.3, 0.36, 0.3, 0, -Math.PI / 2 - 0.12), "#ff4b12");
+  }
 
   /**
    * L'aéroport, hors les murs : le socle s'agrandit pour lui. Terminal vitré et tour de contrôle
@@ -693,11 +737,11 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   }
 
   /** Un avion (nez vers +x avant rotation) et sa dérive aux couleurs d'une compagnie. */
-  function planeAt(id: number, x: number, y: number, z: number, heading: number, salt: number, pitch = 0) {
-    kit.plane.add(id, at(x, y, z, PLANE, PLANE, PLANE, heading, 0, pitch), "#ffffff");
-    const fin = new THREE.Vector3(-0.43 * PLANE, 0.15 * PLANE, 0).applyEuler(new THREE.Euler(0, heading, pitch, "YXZ"));
+  function planeAt(id: number, x: number, y: number, z: number, heading: number, salt: number, pitch = 0, size = PLANE) {
+    kit.plane.add(id, at(x, y, z, size, size, size, heading, 0, pitch), "#ffffff");
+    const fin = new THREE.Vector3(-0.43 * size, 0.15 * size, 0).applyEuler(new THREE.Euler(0, heading, pitch, "YXZ"));
     const livery = pick(["#ff4b12", "#2346d8", "#2f8f6b", "#c4462e", "#d9a21b", "#22324a"], rand(id, 500 + salt));
-    kit.plain.add(id, at(x + fin.x, y + fin.y, z + fin.z, 0.12 * PLANE, 0.16 * PLANE, 0.014 * PLANE, heading, 0, pitch), livery);
+    kit.plain.add(id, at(x + fin.x, y + fin.y, z + fin.z, 0.12 * size, 0.16 * size, 0.014 * size, heading, 0, pitch), livery);
   }
 
   /** Le pont d'une rue sur un chenal : un tablier juste au-dessus de l'eau, et ses parapets. */

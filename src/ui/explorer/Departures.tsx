@@ -10,12 +10,14 @@ import styles from "./explorer.module.css";
 
 /**
  * Le tableau des départs : les sites que visent les liens de la page (ou de tout le site, dans
- * la mégalopole), du plus visé au moins visé. Ceux qui ont des villes sur DOMCity s'ouvrent.
+ * la mégalopole ; ou d'une seule page, pour un aérodrome), du plus visé au moins visé. Ceux qui
+ * ont des villes sur DOMCity s'ouvrent.
  */
 export function Departures({ airport, scope, onClose }: { airport: Airport; scope: string; onClose: () => void }) {
   const [known, setKnown] = useState<Map<string, number>>(new Map());
   const destinations = airport.destinations;
   const flying = new Set(airport.flights.map((flight) => flight.domain));
+  const small = airport.kind === "aerodrome";
 
   useEffect(() => {
     if (destinations.length === 0) return;
@@ -41,7 +43,9 @@ export function Departures({ airport, scope, onClose }: { airport: Airport; scop
       <div className={styles.inspectorHead}>
         <KindSwatch kind="airport" size={40} />
         <div>
-          <p className={`${styles.inspectorKicker} mono-caps`}>Hors les murs · {scope}</p>
+          <p className={`${styles.inspectorKicker} mono-caps`}>
+            {small ? "Aérodrome" : "Hors les murs"} · {scope}
+          </p>
           <h2>Départs</h2>
         </div>
         <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer le tableau des départs">
@@ -49,8 +53,9 @@ export function Departures({ airport, scope, onClose }: { airport: Airport; scop
         </button>
       </div>
       <p className={styles.blurb}>
-        {formatCount(airport.external)} liens mènent vers d&apos;autres sites. Chaque destination est un site visé ;
-        les premières ont leur avion en vol.
+        {small
+          ? `${formatCount(airport.external)} liens de cette page mènent vers d'autres sites. Ses longs courriers partent du grand aéroport du site, à l'est.`
+          : `${formatCount(airport.external)} liens mènent vers d'autres sites. Chaque destination est un site visé ; les premières ont leur avion en vol.`}
       </p>
       {destinations.length === 0 ? (
         <p className={styles.blurb}>

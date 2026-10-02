@@ -1,5 +1,4 @@
 import { formatChars, formatCount, ROAD_NAMES, type LotInfo } from "@/city/describe";
-import type { Airport } from "@/city/layout";
 import type { HoverPart } from "@/city/view";
 import { KindSwatch, RoadSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
@@ -7,12 +6,12 @@ import styles from "./explorer.module.css";
 /**
  * Bulle de survol : ce qu'était ce bâtiment dans la page. Sur une rue, `info` est la fiche
  * du conteneur qui l'a fait tracer : la bulle nomme la rue, puis ce conteneur. L'aéroport
- * n'est pas un élément : sa bulle compte les liens de toute la page vers d'autres sites.
+ * n'est pas un élément : sa bulle compte les liens de toute la page (ou de tout le site, dans
+ * la mégalopole) vers d'autres sites ; celle d'un aérodrome, ceux de sa page.
  */
 export function Tooltip({
   info,
   part,
-  airport,
   page,
   scope = "toute la page",
   x,
@@ -21,8 +20,7 @@ export function Tooltip({
 }: {
   info: LotInfo | null;
   part: HoverPart;
-  airport?: Airport;
-  /** Dans la mégalopole : la page dont fait partie l'élément survolé. */
+  /** Dans la mégalopole : la page dont fait partie l'élément (ou l'aérodrome) survolé. */
   page?: string;
   /** Ce que dessert l'aéroport : la page, ou tout le site. */
   scope?: string;
@@ -34,22 +32,27 @@ export function Tooltip({
   const left = centered ? window.innerWidth / 2 + 28 : Math.min(x + 18, window.innerWidth - width - 12);
   const top = centered ? window.innerHeight / 2 + 28 : y + 18 > window.innerHeight - 190 ? y - 170 : y + 18;
 
-  if (part?.kind === "airport" && airport) {
+  if (part?.kind === "airport") {
+    const { airport } = part;
+    const small = airport.kind === "aerodrome";
     const runways = airport.runways.length;
     const first = airport.destinations.slice(0, 3).map(([domain]) => domain);
     return (
       <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+        {small && page && <p className={`${styles.tooltipPage} mono-caps`}>{page}</p>}
         <div className={styles.tooltipHead}>
           <KindSwatch kind="airport" size={26} />
           <div>
-            <p className={styles.tooltipName}>Aéroport</p>
-            <p className={styles.tooltipSelector}>hors les murs · {scope}</p>
+            <p className={styles.tooltipName}>{small ? "Aérodrome" : "Aéroport"}</p>
+            <p className={styles.tooltipSelector}>hors les murs · {small ? "cette page" : scope}</p>
           </div>
         </div>
         <ul className={styles.tooltipFacts}>
           <li>{formatCount(airport.external)} liens vers d&apos;autres sites</li>
           <li>
-            {runways} piste{runways > 1 ? "s" : ""} · {airport.planes} avion{airport.planes > 1 ? "s" : ""} aux portes
+            {small
+              ? `1 piste courte · ${airport.planes} petit${airport.planes > 1 ? "s" : ""} avion${airport.planes > 1 ? "s" : ""}`
+              : `${runways} piste${runways > 1 ? "s" : ""} · ${airport.planes} avion${airport.planes > 1 ? "s" : ""} aux portes`}
           </li>
           {first.length > 0 && (
             <li>
@@ -57,7 +60,7 @@ export function Tooltip({
               {airport.destinations.length > first.length ? "…" : ""}
             </li>
           )}
-          <li>Clic : le tableau des départs</li>
+          <li>{small ? "Clic : les départs de cette page" : "Clic : le tableau des départs"}</li>
         </ul>
       </div>
     );

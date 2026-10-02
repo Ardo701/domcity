@@ -112,7 +112,7 @@ export const KINDS: Record<Kind, KindInfo> = {
   sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },
   counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir : un petit kiosque à auvent." },
   river:     { name: "Canal",              tags: "hr",                  group: "Nature et réseaux", color: "#4F88A6", blurb: "Une ligne de séparation : un canal entre deux quais, franchi par des ponts." },
-  airport:   { name: "Aéroport",           tags: "liens externes",      group: "Nature et réseaux", color: "#8E9197", blurb: "Les liens vers d'autres sites : un aéroport hors les murs, à l'est. Plus il y en a, plus il a de pistes et d'avions." },
+  airport:   { name: "Aéroport",           tags: "liens externes",      group: "Nature et réseaux", color: "#8E9197", blurb: "Les liens vers d'autres sites : un aéroport hors les murs, à l'est. Plus il y en a, plus il a de pistes et d'avions. Dans une mégalopole, le site a un grand aéroport et chaque ville son petit aérodrome." },
 };
 
 /** Toits des maisons, dans le dessin et les vignettes de la légende. */

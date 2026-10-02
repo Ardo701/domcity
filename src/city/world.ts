@@ -24,18 +24,33 @@ export interface World {
   /** Le plan commun : lots, rues et aéroport en coordonnées du monde, numéros décalés. */
   layout: CityLayout;
   parts: WorldPart[];
+  /** Les aérodromes des villes (mégalopole), en coordonnées du monde, et la partie de chacun. */
+  aerodromes: Array<{ airport: Airport; part: number }>;
 }
 
 /** Une ville seule : le plan commun est le sien. */
 export function singleWorld(layout: CityLayout): World {
-  return { layout, parts: [{ layout, offset: { x: 0, z: 0 }, base: 0, city: false }] };
+  return { layout, parts: [{ layout, offset: { x: 0, z: 0 }, base: 0, city: false }], aerodromes: [] };
 }
 
 const shift = <T extends { x: number; z: number }>(item: T, dx: number, dz: number): T => ({ ...item, x: item.x + dx, z: item.z + dz });
 
+/** Un aéroport déplacé, avec tout ce qu'il contient. */
+const shiftAirport = (a: Airport, dx: number, dz: number, id: number): Airport => ({
+  ...shift(a, dx, dz),
+  id,
+  runways: a.runways.map((r) => shift(r, dx, dz)),
+  taxiways: a.taxiways.map((t) => shift(t, dx, dz)),
+  apron: shift(a.apron, dx, dz),
+  terminal: shift(a.terminal, dx, dz),
+  tower: shift(a.tower, dx, dz),
+  flights: a.flights.map((f) => shift(f, dx, dz)),
+});
+
 /**
  * Assemble les villes (à leur place) et le pays qui les relie (déjà en coordonnées du monde,
- * sans lots : l'aéroport y prend le numéro qui suit le dernier lot).
+ * sans lots). Ni l'aéroport ni les aérodromes ne sont des lots : ils prennent les numéros qui
+ * suivent le dernier lot, l'aéroport du pays d'abord.
  */
 export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: number; z: number } }>, land: CityLayout): World {
   const lots: Lot[] = [];
@@ -85,8 +100,20 @@ export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: n
     land.airport = airport;
     merged.airport = airport;
   }
+  // Puis les aérodromes, dans l'ordre des villes. La scène d'une ville ajoute sa base aux
+  // numéros : celui de son aérodrome est donc noté moins sa base.
+  const aerodromes: World["aerodromes"] = [];
+  let next = lots.length + 1;
+  parts.forEach((part, i) => {
+    const local = part.layout.airport;
+    if (!local) return;
+    const id = next;
+    next += 1;
+    part.layout.airport = { ...local, id: id - part.base };
+    aerodromes.push({ airport: shiftAirport(local, part.offset.x, part.offset.z, id), part: i });
+  });
   parts.push({ layout: land, offset: { x: 0, z: 0 }, base: 0, city: false });
-  return { layout: merged, parts };
+  return { layout: merged, parts, aerodromes };
 }
 
 /** La partie (ville) d'un lot du plan commun, ou -1. */
