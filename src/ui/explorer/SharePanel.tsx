@@ -49,6 +49,18 @@ export function SharePanel({
   const address = useMemo(() => normalizePageUrl(doc.url), [doc]);
   const bookmarklet = source.kind === "bookmarklet";
   const thirdParty = doc.page?.thirdParty?.length ?? 0;
+  const linkTargets = useMemo(() => {
+    const pages = doc.linksTo?.pages?.length ?? 0;
+    const sites = doc.linksTo?.sites?.map(([domain]) => domain) ?? [];
+    const out: string[] = [];
+    if (pages > 0) {
+      out.push(`${pages} autre${pages > 1 ? "s" : ""} page${pages > 1 ? "s" : ""} du site (une empreinte de chaque adresse, pas l'adresse)`);
+    }
+    if (sites.length > 0) {
+      out.push(`${sites.length} site${sites.length > 1 ? "s" : ""} (${sites.slice(0, 6).join(", ")}${sites.length > 6 ? "…" : ""})`);
+    }
+    return out;
+  }, [doc]);
 
   useEffect(() => {
     let url: string | null = null;
@@ -187,6 +199,7 @@ export function SharePanel({
                     {thirdParty > 0 ? `, le nombre de scripts et les ${thirdParty} sites tiers contactés par la page` : ""}.
                   </li>
                 )}
+                {linkTargets.length > 0 && <li>Où mènent ses liens : {linkTargets.join(", et ")}.</li>}
                 <li>
                   Le texte des titres, et lui seulement ({headings.length} titre{headings.length > 1 ? "s" : ""}) :
                 </li>

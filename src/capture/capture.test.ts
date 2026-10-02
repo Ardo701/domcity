@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
+import { linkKey } from "@/format/links";
 import { validateCityDoc } from "@/format/schema";
 import type { CityNode } from "@/format/types";
 import { mimicBrowserLayout } from "@/test/layout";
@@ -91,6 +92,21 @@ describe("captureDocument", () => {
     expect(find(city.root, (n) => n.tag === "p")?.links).toEqual({ internal: 1, external: 0 });
     const paris = find(city.root, (n) => n.tag === "li" && (n.text ?? 0) > 6)!;
     expect(paris.links).toEqual({ internal: 0, external: 1 });
+  });
+
+  it("note où mènent les liens : l'empreinte des pages du site, le domaine des autres sites", () => {
+    expect(capture().linksTo).toEqual({ pages: [linkKey("/wiki/Viennoiserie")], sites: [["example.com", 1]] });
+
+    const city = capture(`<body>
+      <a href="./Croissant">soi-même</a> <a href="#haut">ancre</a>
+      <a href="./Pain_au_chocolat">a</a> <a href="/wiki/Pain_au_chocolat/?x=1#y">b</a> <a href="./Champs-%C3%89lys%C3%A9es">c</a>
+      <a href="https://www.github.com/a">d</a> <a href="https://github.com/b">e</a> <a href="https://doi.org/1">f</a>
+      <a href="http://192.168.1.2/admin">g</a> <a href="http://nas.local/">h</a>
+    </body>`);
+    expect(city.linksTo?.pages).toEqual([linkKey("/wiki/Pain_au_chocolat"), linkKey("/wiki/Champs-Élysées")]);
+    expect(city.linksTo?.sites).toEqual([["github.com", 2], ["doi.org", 1]]);
+    expect(JSON.stringify(city)).not.toContain("Pain_au_chocolat");
+    expect(validateCityDoc(city).ok).toBe(true);
   });
 
   it("saute les identifiants générés", () => {

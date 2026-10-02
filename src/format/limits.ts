@@ -10,4 +10,7 @@ export const LIMITS = {
   maxLabel: 60,
   maxUrl: 2_048,
   maxThirdParty: 60,
+  /** Pages du même site visées par les liens (empreintes), et sites visés. */
+  maxLinkedPages: 1_000,
+  maxLinkedSites: 60,
 } as const;

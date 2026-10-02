@@ -62,6 +62,17 @@ export interface CityPage {
   colors?: { background?: string; text?: string; link?: string };
 }
 
+/**
+ * Où mènent les liens de la page entière : les autoroutes et les vols de la mégalopole.
+ * Facultatif : les villes relevées avant ne le savent pas.
+ */
+export interface CityLinksTo {
+  /** Empreintes des pages du même site visées (voir format/links.ts), jamais leurs adresses. */
+  pages?: string[];
+  /** Sites visés et nombre de liens vers chacun, du plus visé au moins visé. */
+  sites?: Array<[domain: string, links: number]>;
+}
+
 export interface CityDoc {
   format: typeof FORMAT_VERSION;
   source: CaptureSource;
@@ -73,5 +84,7 @@ export interface CityDoc {
   lang?: string;
   /** Faits sur la page entière (bookmarklet). */
   page?: CityPage;
+  /** Pages et sites visés par les liens de la page. */
+  linksTo?: CityLinksTo;
   root: CityNode;
 }

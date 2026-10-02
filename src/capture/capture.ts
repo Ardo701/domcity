@@ -7,9 +7,17 @@
  */
 
 import { LIMITS } from "@/format/limits";
+import { linkKey } from "@/format/links";
 import { HEADING_TEXT_TAGS, KEPT_TAGS, LEAF_TAGS, SKIPPED_TAGS } from "@/format/taxonomy";
-import { FORMAT_VERSION, type CaptureSource, type CityDoc, type CityNode, type CityPage } from "@/format/types";
-import { isSameSite, normalizePageUrl, rootDomain } from "@/format/url";
+import {
+  FORMAT_VERSION,
+  type CaptureSource,
+  type CityDoc,
+  type CityLinksTo,
+  type CityNode,
+  type CityPage,
+} from "@/format/types";
+import { isPublicHost, isSameSite, normalizePageUrl, rootDomain, siteHost } from "@/format/url";
 
 export interface CaptureOptions {
   source: CaptureSource;
@@ -32,6 +40,13 @@ const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const SHOW_COMMENT = 0x80;
 
+/** Où mènent les liens : empreintes des pages du site, domaines des autres sites, avec leur nombre. */
+interface LinkTally {
+  self: string;
+  pages: Map<string, number>;
+  sites: Map<string, number>;
+}
+
 interface Frame {
   node: Node;
   parent: CityNode;
@@ -50,6 +65,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
   const root: CityNode = { tag: "body" };
   let budget = LIMITS.maxNodes - 1;
   let pageBg: string | undefined;
+  const tally: LinkTally = { self: linkKey(address?.path ?? "/"), pages: new Map(), sites: new Map() };
 
   const body = doc.body;
   if (body) {
@@ -93,7 +109,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
         }
       }
 
-      if (tag === "a") countLink(parent, el.getAttribute("href"), options.url, pageHost);
+      if (tag === "a") countLink(parent, el.getAttribute("href"), options.url, pageHost, tally);
 
       let keep =
         KEPT_TAGS.has(tag) &&
@@ -149,7 +165,21 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
   };
   if (options.lang) result.lang = options.lang.slice(0, 16);
   if (view && colors) result.page = pageFacts(doc, view, options.url, pageHost, colors, pageBg);
+  const linksTo = linksOf(tally);
+  if (linksTo) result.linksTo = linksTo;
   return result;
+}
+
+/** Les plus visés d'abord, puis par ordre alphabétique : le même relevé donne toujours le même fichier. */
+function ranked(counts: Map<string, number>, max: number): Array<[string, number]> {
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, max);
+}
+
+function linksOf(tally: LinkTally): CityLinksTo | undefined {
+  const linksTo: CityLinksTo = {};
+  if (tally.pages.size > 0) linksTo.pages = ranked(tally.pages, LIMITS.maxLinkedPages).map(([key]) => key);
+  if (tally.sites.size > 0) linksTo.sites = ranked(tally.sites, LIMITS.maxLinkedSites);
+  return linksTo.pages || linksTo.sites ? linksTo : undefined;
 }
 
 function pushChildren(stack: Frame[], el: Node, parent: CityNode, depth: number, inTable: boolean, bg?: string) {
@@ -245,7 +275,7 @@ function imageUrl(raw: string, base: string): string {
   }
 }
 
-function countLink(parent: CityNode, href: string | null, pageUrl: string, pageHost: string) {
+function countLink(parent: CityNode, href: string | null, pageUrl: string, pageHost: string, tally: LinkTally) {
   if (!href) return;
   const value = href.trim();
   if (!value || value.startsWith("#") || /^(javascript|mailto|tel|data):/i.test(value)) return;
@@ -257,8 +287,16 @@ function countLink(parent: CityNode, href: string | null, pageUrl: string, pageH
   }
   if (target.protocol !== "http:" && target.protocol !== "https:") return;
   const links = (parent.links ??= { internal: 0, external: 0 });
-  if (isSameSite(pageHost, target.hostname)) links.internal += 1;
-  else links.external += 1;
+  if (isSameSite(pageHost, target.hostname)) {
+    links.internal += 1;
+    const key = linkKey(target.pathname);
+    if (key !== tally.self) tally.pages.set(key, (tally.pages.get(key) ?? 0) + 1);
+  } else {
+    links.external += 1;
+    // Un intranet ou une machine locale ne se nomme pas dans une ville partagée.
+    const host = siteHost(target.hostname);
+    if (isPublicHost(host) && /^[a-z0-9.-]{1,253}$/.test(host)) tally.sites.set(host, (tally.sites.get(host) ?? 0) + 1);
+  }
 }
 
 /** Masqué (display: none, visibility: hidden…), sans boîte à lui (display: contents), ou visible. */

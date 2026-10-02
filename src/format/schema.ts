@@ -8,6 +8,7 @@ const httpUrl = z
   .refine((value) => /^https?:\/\//i.test(value), "URL http(s) attendue");
 
 const hexColor = z.string().regex(/^#[0-9a-f]{6}$/);
+const domain = z.string().regex(/^[a-z0-9.-]{1,253}$/);
 const count = z.number().int().min(0).max(1_000_000_000);
 
 const cityNodeSchema: z.ZodType<CityNode> = z.lazy(() =>
@@ -51,11 +52,23 @@ export const cityDocSchema = z.strictObject({
       resources: count.optional(),
       bytes: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
       thirdParty: z
-        .array(z.string().regex(/^[a-z0-9.-]{1,253}$/))
+        .array(domain)
         .max(LIMITS.maxThirdParty)
         .optional(),
       colors: z
         .strictObject({ background: hexColor.optional(), text: hexColor.optional(), link: hexColor.optional() })
+        .optional(),
+    })
+    .optional(),
+  linksTo: z
+    .strictObject({
+      pages: z
+        .array(z.string().regex(/^[0-9a-f]{8}$/))
+        .max(LIMITS.maxLinkedPages)
+        .optional(),
+      sites: z
+        .array(z.tuple([domain, z.number().int().min(1).max(1_000_000)]))
+        .max(LIMITS.maxLinkedSites)
         .optional(),
     })
     .optional(),

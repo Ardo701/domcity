@@ -124,8 +124,8 @@ describe("plan B : la ville dans l'ancre de l'adresse", () => {
 
   it("fait l'aller-retour sans perte, en caractères sûrs pour une adresse", async () => {
     const packed = await packCity(city);
-    expect(packed).toMatch(/^1\.[A-Za-z0-9_-]+$/);
-    expect(await unpackCity(packed)).toEqual({ version: 1, data: city });
+    expect(packed).toMatch(new RegExp(`^${BOOKMARKLET_VERSION}\\.[A-Za-z0-9_-]+$`));
+    expect(await unpackCity(packed)).toEqual({ version: BOOKMARKLET_VERSION, data: city });
   });
 
   it("refuse une ancre illisible", async () => {

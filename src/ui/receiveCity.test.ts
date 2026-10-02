@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MESSAGES, packCity } from "@/bookmarklet/protocol";
+import { BOOKMARKLET_VERSION, MESSAGES, packCity } from "@/bookmarklet/protocol";
 import type { CityDoc } from "@/format/types";
 
 const CITY: CityDoc = {
@@ -42,8 +42,8 @@ describe("réception d'une ville dans /nouveau", () => {
     const pending = (await freshReceive())();
     expect(opener.postMessage).toHaveBeenCalledWith({ type: MESSAGES.ready }, "*");
 
-    reply({ postMessage: vi.fn() }, { type: MESSAGES.city, version: 1, city: CITY }, "https://exemple.org");
-    reply(opener, { type: MESSAGES.city, version: 1, city: CITY }, "https://www.exemple.org");
+    reply({ postMessage: vi.fn() }, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city: CITY }, "https://exemple.org");
+    reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city: CITY }, "https://www.exemple.org");
     const received = await pending;
 
     expect(received).toEqual({ doc: CITY, outdated: false });
@@ -55,7 +55,7 @@ describe("réception d'une ville dans /nouveau", () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
     const pending = (await freshReceive())();
-    reply(opener, { type: MESSAGES.city, version: 1, city: CITY }, "https://intrus.example");
+    reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city: CITY }, "https://intrus.example");
     await expect(pending).rejects.toThrow(/ne vient pas/);
   });
 
@@ -63,7 +63,7 @@ describe("réception d'une ville dans /nouveau", () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
     const pending = (await freshReceive())();
-    reply(opener, { type: MESSAGES.city, version: 0, city: CITY }, "https://exemple.org");
+    reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION - 1, city: CITY }, "https://exemple.org");
     expect((await pending).outdated).toBe(true);
   });
 
