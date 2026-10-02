@@ -13,6 +13,8 @@ export function Tooltip({
   info,
   part,
   airport,
+  page,
+  scope = "toute la page",
   x,
   y,
   centered,
@@ -20,6 +22,10 @@ export function Tooltip({
   info: LotInfo | null;
   part: HoverPart;
   airport?: Airport;
+  /** Dans la mégalopole : la page dont fait partie l'élément survolé. */
+  page?: string;
+  /** Ce que dessert l'aéroport : la page, ou tout le site. */
+  scope?: string;
   x: number;
   y: number;
   centered: boolean;
@@ -30,13 +36,14 @@ export function Tooltip({
 
   if (part?.kind === "airport" && airport) {
     const runways = airport.runways.length;
+    const first = airport.destinations.slice(0, 3).map(([domain]) => domain);
     return (
       <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
         <div className={styles.tooltipHead}>
           <KindSwatch kind="airport" size={26} />
           <div>
             <p className={styles.tooltipName}>Aéroport</p>
-            <p className={styles.tooltipSelector}>hors les murs · toute la page</p>
+            <p className={styles.tooltipSelector}>hors les murs · {scope}</p>
           </div>
         </div>
         <ul className={styles.tooltipFacts}>
@@ -44,6 +51,13 @@ export function Tooltip({
           <li>
             {runways} piste{runways > 1 ? "s" : ""} · {airport.planes} avion{airport.planes > 1 ? "s" : ""} aux portes
           </li>
+          {first.length > 0 && (
+            <li>
+              Vers {first.join(", ")}
+              {airport.destinations.length > first.length ? "…" : ""}
+            </li>
+          )}
+          <li>Clic : le tableau des départs</li>
         </ul>
       </div>
     );
@@ -58,6 +72,7 @@ export function Tooltip({
         : `le long de ce que contient <${info.selector}>`;
     return (
       <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+        {page && <p className={`${styles.tooltipPage} mono-caps`}>{page}</p>}
         <div className={styles.tooltipHead}>
           <RoadSwatch size={26} />
           <div>
@@ -87,6 +102,7 @@ export function Tooltip({
 
   return (
     <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+      {page && <p className={`${styles.tooltipPage} mono-caps`}>{page}</p>}
       <div className={styles.tooltipHead}>
         <KindSwatch kind={info.kind} size={26} />
         <div>

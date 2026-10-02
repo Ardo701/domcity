@@ -15,6 +15,7 @@ import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
 import { WikiSearch } from "@/ui/WikiSearch";
 import { Cartouche } from "./Cartouche";
+import { Departures } from "./Departures";
 import { ImageViewer } from "./ImageViewer";
 import { Inspector } from "./Inspector";
 import { LegendPanel } from "./LegendPanel";
@@ -84,6 +85,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const [imageStatus, setImageStatus] = useState<Record<number, ImageStatus>>({});
   const [viewing, setViewing] = useState<number | null>(null);
   const [panel, setPanel] = useState<"share" | "report" | null>(null);
+  const [departures, setDepartures] = useState(false);
   const [copied, setCopied] = useState(false);
   const [measuring, setMeasuring] = useState(readPerf);
   const canWalk = useSyncExternalStore(subscribePointer, hasFinePointer, () => true);
@@ -134,7 +136,11 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         view = new CityView(stageRef.current, cityLayout, {
           onHover: (id, screen, part) =>
             setHover(id === null ? null : { id, x: screen?.x ?? -1, y: screen?.y ?? -1, part }),
-          onSelect: setSelected,
+          onSelect: (id) => {
+            setSelected(id);
+            if (id !== null) setDepartures(false);
+          },
+          onAirport: () => setDepartures(true),
           onModeChange: setMode,
           onWalkChange: setWalking,
           onImageStatus: (id, s) => setImageStatus((prev) => ({ ...prev, [id]: s })),
@@ -375,6 +381,10 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           y={hover.y}
           centered={walking === "locked"}
         />
+      )}
+
+      {ready && departures && !selectedInfo && layout?.airport && (
+        <Departures airport={layout.airport} scope="toute la page" onClose={() => setDepartures(false)} />
       )}
 
       {ready && selectedInfo && (

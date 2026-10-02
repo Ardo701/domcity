@@ -25,6 +25,8 @@ export interface InstanceRef {
 }
 
 export interface BillboardSlot {
+  /** Numéro du lot dans la vue (dans la mégalopole, celui de toute la mégalopole). */
+  id: number;
   lot: Lot;
   panels: THREE.Mesh[];
   ratio: number;
@@ -38,6 +40,7 @@ export interface EmblemSet {
 }
 
 export interface LabelSlot {
+  id: number;
   lot: Lot;
   level: 1 | 2 | 3;
   anchor: THREE.Vector3;
@@ -53,6 +56,8 @@ export interface CityScene {
   billboards: BillboardSlot[];
   emblems: EmblemSet;
   labels: LabelSlot[];
+  /** Le mobilier (arbres, voitures, lampadaires) : on le cache de loin dans la mégalopole. */
+  details: THREE.Object3D[];
   dispose(): void;
 }
 
@@ -86,7 +91,8 @@ class Batch {
     if (this.options.attribute) this.extras.push(...extra);
   }
 
-  build(refs: InstanceRef[][], baseColors: Map<THREE.InstancedMesh, Float32Array>): THREE.InstancedMesh | null {
+  /** `base` : numéro, dans la vue, du premier lot de cette ville (la mégalopole en assemble plusieurs). */
+  build(refs: InstanceRef[][], baseColors: Map<THREE.InstancedMesh, Float32Array>, base: number): THREE.InstancedMesh | null {
     const count = this.lots.length;
     if (count === 0) {
       this.geometry.dispose();
@@ -105,10 +111,11 @@ class Batch {
     mesh.computeBoundingBox();
     mesh.computeBoundingSphere();
     if (this.options.pickable) {
-      mesh.userData.lots = Int32Array.from(this.lots);
+      // -1 : la campagne et les autoroutes de la mégalopole, qui ne sont pas des éléments de la page.
+      mesh.userData.lots = Int32Array.from(this.lots, (lotId) => (lotId >= 0 ? lotId + base : -1));
       baseColors.set(mesh, colors);
       this.lots.forEach((lotId, index) => {
-        if (lotId >= 0) (refs[lotId] ??= []).push({ mesh, index });
+        if (lotId >= 0) (refs[lotId + base] ??= []).push({ mesh, index });
       });
     }
     return mesh;
@@ -167,7 +174,7 @@ class Obstacles {
 // La ville
 // ---------------------------------------------------------------------------
 
-export function buildCityScene(layout: CityLayout, materials: CityMaterials): CityScene {
+export function buildCityScene(layout: CityLayout, materials: CityMaterials, base = 0): CityScene {
   const group = new THREE.Group();
   group.name = "domcity";
   const pickable = { pickable: true };
@@ -358,7 +365,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     }
     box(id, cx, base, cz, s * 0.34, h * 0.05, s * 0.34, SIGNAL);
     kit.cone.add(id, at(cx, base + h * 0.05, cz, s * 0.2, y + h - base - h * 0.05, s * 0.2), "#d9d2c3");
-    labels.push({ lot, level: 1, anchor: new THREE.Vector3(cx, y + h, cz) });
+    labels.push({ id: lot.id + base, lot, level: 1, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
   /** Le beffroi (h2) : tour de pierre, cadrans sur les quatre faces, toit pyramidal de cuivre. */
@@ -381,7 +388,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     }
     const roofBase = stage + h * 0.12;
     kit.pyramid.add(id, at(cx, roofBase, cz, s * 0.94, y + h - roofBase, s * 0.94), "#5c8f80");
-    labels.push({ lot, level: 2, anchor: new THREE.Vector3(cx, y + h, cz) });
+    labels.push({ id: lot.id + base, lot, level: 2, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
   /** Le kiosque (h3) : un pavillon à coupole. */
@@ -396,7 +403,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     const lantern = y + 0.3 + h * 0.78;
     kit.cylinder.add(id, at(cx, lantern, cz, s * 0.16, h * 0.12, s * 0.16), "#f1ece0");
     kit.cone.add(id, at(cx, lantern + h * 0.12, cz, s * 0.2, y + h - lantern - h * 0.12, s * 0.2), "#5c8f80");
-    labels.push({ lot, level: 3, anchor: new THREE.Vector3(cx, y + h, cz) });
+    labels.push({ id: lot.id + base, lot, level: 3, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
   /** Les petits titres (h4 à h6) : une statue de bronze sur son socle. */
@@ -538,13 +545,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
       mesh.position.set(cx, frameY + panel.height / 2, cz + side * 0.18);
       mesh.scale.set(panel.width, panel.height, 1);
       if (side < 0) mesh.rotation.y = Math.PI;
-      mesh.userData.lotId = lot.id;
+      mesh.userData.lotId = lot.id + base;
       mesh.receiveShadow = true;
       group.add(mesh);
       panels.push(mesh);
       panelMeshes.push(mesh);
     }
-    if (lot.kind === "billboard") billboards.push({ lot, panels, ratio: panel.width / panel.height });
+    if (lot.kind === "billboard") billboards.push({ id: lot.id + base, lot, panels, ratio: panel.width / panel.height });
   }
 
   /** Canal : l'eau, et des ponts pour la franchir. */
@@ -607,6 +614,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
       0,
     ]);
     obstacles.add(road);
+    // Le terre-plein central d'une autoroute : un muret de béton.
+    if (road.style === "highway") {
+      const cx = road.x + road.w / 2;
+      const cz = road.z + road.d / 2;
+      if (road.axis === "x") box(road.owner, cx, road.y, cz, road.w, 0.32, 0.4, "#c9c4b8");
+      else box(road.owner, cx, road.y, cz, 0.4, 0.32, road.d, "#c9c4b8");
+    }
   }
   for (const joint of layout.joints) {
     junction(joint);
@@ -674,6 +688,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     const [main] = a.runways;
     if (a.runways.length >= 2) planeAt(id, main.x + main.w / 2, a.y, main.z + main.d - PLANE * 0.9, Math.PI / 2, 20);
     if (a.runways.length >= 3) planeAt(id, main.x + main.w / 2, a.y + 6, main.z - PLANE * 0.4, Math.PI / 2, 21, 0.22);
+    // Les vols vers les sites liés, déjà en l'air.
+    a.flights.forEach((flight, i) => planeAt(id, flight.x, flight.y, flight.z, flight.heading, 30 + i, flight.pitch));
   }
 
   /** Un avion (nez vers +x avant rotation) et sa dérive aux couleurs d'une compagnie. */
@@ -811,6 +827,9 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     }
   }
 
+  // Bosquets de la campagne, autour des villes de la mégalopole.
+  for (const decor of layout.decor) if (decor.type === "woods") plant(decor.owner, decor, decor.y, 2.2, 0.8);
+
   // Places publiques : une fontaine au milieu si elle tient, des arbres autour.
   for (const decor of layout.decor) {
     if (decor.type !== "square") continue;
@@ -854,7 +873,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     const sidewalkY = road.y + CURB;
 
     const drivable = road.style !== "path";
-    const lined = road.style === "ring" || road.style === "avenue" || (road.style === "street" && width >= 3.4);
+    const lined =
+      road.style === "ring" || road.style === "avenue" || road.style === "highway" || (road.style === "street" && width >= 3.4);
 
     if (lined) {
       const spacing = road.style === "street" ? 3.4 : 2.7;
@@ -881,10 +901,15 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     }
     if (!drivable) return;
 
-    // Voitures : deux files en sens opposés, loin des carrefours.
-    const lanes = width >= 2.6 ? [width * 0.28, width * 0.72] : [width * 0.5];
+    // Voitures : deux files en sens opposés (quatre sur l'autoroute), loin des carrefours.
+    const lanes =
+      road.style === "highway"
+        ? [0.14, 0.34, 0.66, 0.86].map((f) => width * f)
+        : width >= 2.6
+          ? [width * 0.28, width * 0.72]
+          : [width * 0.5];
     lanes.forEach((across, lane) => {
-      const forward = lane === 0;
+      const forward = lane < lanes.length / 2;
       const margin = Math.min(width * 0.9, length * 0.3);
       let t = margin + rand(salt, lane * 3) * 4;
       let n = 0;
@@ -907,10 +932,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
   const refs: InstanceRef[][] = [];
   const baseColors = new Map<THREE.InstancedMesh, Float32Array>();
   const pickables: THREE.Object3D[] = [];
+  const details: THREE.Object3D[] = [];
+  const furniture = new Set<Batch>([kit.tree, kit.poplar, kit.car, kit.lamp]);
   for (const batch of Object.values(kit)) {
-    const mesh = batch.build(refs, baseColors);
+    const mesh = batch.build(refs, baseColors, base);
     if (!mesh) continue;
     group.add(mesh);
+    if (furniture.has(batch)) details.push(mesh);
     // Une rue désigne le conteneur qui l'a fait tracer : le survol doit savoir que c'en est une.
     if (batch === kit.road || batch === kit.bend) mesh.userData.part = "road";
     if (batch.options.pickable) pickables.push(mesh);
@@ -923,8 +951,9 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     refs,
     baseColors,
     billboards,
-    emblems: { atlas, owners: atlas.sources.map((src) => iconOwners.get(src)!) },
+    emblems: { atlas, owners: atlas.sources.map((src) => iconOwners.get(src)!.map((id) => id + base)) },
     labels,
+    details,
     dispose() {
       group.traverse((object) => {
         if (object instanceof THREE.InstancedMesh) {

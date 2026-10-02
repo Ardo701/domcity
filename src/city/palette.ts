@@ -37,6 +37,7 @@ export const ROAD_COLORS: Record<RoadStyle, string> = {
   street: "#4a4b50",
   lane: "#56575b",
   path: "#cdbf9d",
+  highway: "#3a3b40",
 };
 
 /** Tirage stable : le même lot tire toujours les mêmes nombres. */

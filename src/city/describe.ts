@@ -20,6 +20,7 @@ export const ROAD_NAMES: Record<RoadStyle, string> = {
   street: "Rue",
   lane: "Ruelle",
   path: "Allée",
+  highway: "Autoroute",
 };
 
 export interface LotInfo {

@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches de la ville : rues alignées, ports ouverts, aéroport ; étape 4 pas encore commencée).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (étape 4 : la mégalopole).
 
 ## 1. Le concept
 
@@ -41,6 +41,7 @@ Une ville stockée est une **description** de la page (JSON), jamais un dessin. 
 - Le lien secret de suppression contient un jeton après le `#` (jamais envoyé au serveur dans l'adresse). La base ne garde que son empreinte SHA-256.
 - Rien ne quitte le navigateur tant que l'utilisateur ne clique pas sur « Publier ».
 - Le favori ne fait que lire : jamais le texte des paragraphes, ni ce qui est tapé dans les formulaires, ni les cookies. Avant publication d'un relevé, il montre l'adresse publiée, les titres, et laisse modifier le titre.
+- Les liens d'une page vers les autres pages de son site ne sont gardés que sous forme d'**empreinte** (FNV-1a sur 32 bits du chemin, `src/format/links.ts`), jamais en clair : la mégalopole calcule l'empreinte de ses pages et voit lesquelles sont visées. Un chemin privé (un dépôt, un dossier client) ne se lit donc pas dans une ville partagée. Les **domaines** des autres sites visés sont gardés en clair (60 au plus) : ce sont les destinations des vols (validé par l'utilisateur). Un intranet ou une adresse IP n'est jamais noté. L'aperçu avant partage le dit.
 
 ### Images
 
@@ -49,7 +50,7 @@ Le JSON garde seulement l'URL. Si le site de l'image autorise CORS, elle s'affic
 ### Versions et mégalopole
 
 - Chaque relevé d'une page crée une **version datée** ; on n'écrase jamais rien.
-- Mégalopole (étape 4) : la dernière version visible de chaque page d'un site, assemblée dans le navigateur, avec des cases à cocher pour ajouter ou retirer des pages. Placement selon l'adresse des pages (le chemin devient la géographie), stable quand on coche.
+- Mégalopole (étape 4, faite) : la dernière version visible de chaque page d'un site (48 au plus, les plus récentes), assemblée dans le navigateur, avec des cases à cocher pour ajouter ou retirer des pages. Placement selon l'adresse des pages (le chemin devient la géographie), stable quand on coche : une page masquée laisse des champs à sa place.
 - Machine à remonter le temps (étape 5) : la dernière version de chaque page avant une date.
 
 ## 3. Identité visuelle (règles de design)
@@ -76,14 +77,14 @@ src/
 │   ├── nouveau/                 reçoit la ville envoyée par le favori (non publiée tant qu'on ne clique pas)
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
 │   ├── c/[slug]/                ville partagée (+ supprimer/ : lien secret)
-│   ├── s/[domain]/              pages d'un site
-│   └── api/                     captures (POST), captures/[slug] (DELETE), report, view, search, dev-files
+│   ├── s/[domain]/              la mégalopole d'un site (toutes ses pages assemblées)
+│   └── api/                     captures (POST), captures/[slug] (DELETE), report, view, search, sites/known, dev-files
 ├── format/                      format de ville (types, zod, limites, adresses, dictionnaire HTML → ville)
 ├── capture/                     page web → ville (sans dépendance, compilé dans le favori) ; Wikipédia
 ├── bookmarklet/                 le favori : main.ts (point d'entrée), protocol.ts (échange avec /nouveau), href.ts, generated.ts (compilé)
-├── city/                        urbanisme (layout), scène Three.js, vue et contrôles, miniature
+├── city/                        urbanisme (layout), mégalopole (megalopolis, world), scène Three.js, vue et contrôles
 ├── server/                      config, base (Supabase ou locale), fichiers (R2 ou locaux), sécurité, partage
-└── ui/                          interface (recherche, explorateur, inspecteur, cartouche, partage, réception du favori…)
+└── ui/                          interface (recherche, explorateur, inspecteur, cartouche, partage, réception du favori, mégalopole…)
 scripts/build-bookmarklet.mts    compile le favori avec esbuild (npm run bookmarklet, lancé aussi avant chaque build)
 supabase/migrations/             schéma SQL (à appliquer dans Supabase, jamais via le compte connecté à Claude)
 docs/ROADMAP.md                  ce document
@@ -98,7 +99,10 @@ Le rendu (`src/city/`) :
 - `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
 - `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
 - `textures.ts` : affiches, panneau « indisponible », plaques des monuments, et l'atlas des icônes (toutes les petites images de la ville dans une seule texture, un seul appel de dessin).
-- `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection.
+- `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection. Elle affiche un « monde » (`world.ts`) : une ville seule, ou plusieurs posées à leur place.
+- `megalopolis.ts` : le plan de la mégalopole (placement des villes, couloirs, autoroutes, campagne, aéroport commun). `world.ts` : l'assemblage. Chaque ville est bâtie dans ses propres coordonnées et avec ses propres numéros de lots (ses tirages au sort en dépendent : elle est identique seule et dans la mégalopole) ; la vue la pose à sa place et décale ses numéros dans un plan commun qui sert au survol et à l'inspecteur.
+
+Flux d'une mégalopole : `/s/[domain]` (serveur : `site_city`, 48 pages au plus) → le navigateur télécharge les villes (6 à la fois) → `citySide` de chacune → `placePages` (toutes les pages, affichées ou non) → pour les pages cochées : `layoutCity(doc, { airport: false })` → `buildMegalopolis` (autoroutes, campagne, aéroport) → `assembleWorld` → `CityView`. Cocher ou décocher rebâtit le monde (`setWorld`) sans bouger la caméra ni les autres villes.
 Flux d'un partage Wikipédia : le navigateur envoie langue + titre + miniature JPEG → le serveur **relève lui-même l'article** (linkedom) pour ne pas faire confiance au JSON envoyé → gzip → R2 → ligne Supabase visible.
 Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic compte comme geste) → relevé de la page affichée (`live: true`) → `/nouveau` appelle « pret » → le favori répond avec la ville, adressée à l'origine de DOMCity seulement → `/nouveau` vérifie (zod, et que la ville vient bien du site qu'elle décrit) → « recu ». **Plan B** si l'onglet n'a pas pu s'ouvrir ou si le site coupe le lien entre fenêtres (en-tête COOP) : la ville compressée part dans l'ancre `#ville=…` et s'ouvre dans le même onglet. Partage : la ville est envoyée telle quelle (`source: "bookmarklet"`), le serveur la valide mais ne peut pas la vérifier.
 
@@ -110,9 +114,10 @@ Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic c
 
 ## 5. Le format de ville (v1)
 
-`CityDoc` : `{ format: 1, source: "wikipedia" | "bookmarklet", url, title, capturedAt, lang?, page?, root }`.
+`CityDoc` : `{ format: 1, source: "wikipedia" | "bookmarklet", url, title, capturedAt, lang?, page?, linksTo?, root }`.
 Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1 à h3), `label` (id lisible ou 1re classe), `img` (`src`, `alt`, `w`, `h`), `links` (`internal`, `external`), `rect` (position réelle, favori), `bg` (couleur de fond réelle `#rrggbb`, notée seulement là où elle change, favori), `children`.
 `page` (favori seulement) : `domSize` (éléments du DOM), `scripts`, `comments` (commentaires HTML), `resources`, `bytes` (octets transférés connus, minimum), `thirdParty` (hôtes tiers, 60 au plus, du plus sollicité au moins sollicité), `colors` (`background`, `text`, `link`). Ces ajouts sont facultatifs : les villes déjà stockées restent valides, le format reste en v1.
+`linksTo` (Wikipédia et favori, depuis l'étape 4) : `pages` (empreintes des chemins des pages du même site visées, 1 000 au plus, les plus visées d'abord, la page elle-même exclue) et `sites` (`[domaine, nombre de liens]`, 60 au plus). Facultatif : les villes relevées avant ne le savent pas (pas d'autoroute ni de vols pour elles tant qu'elles ne sont pas relevées à nouveau). Favori en version 2 (un bandeau propose de réinstaller l'ancien).
 Limites : 30 000 éléments, profondeur 64, 2 Mo compressé. Validation zod dans `src/format/schema.ts`.
 
 Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés. Avec le favori, github.com/vercel/next.js : 3 244 éléments relevés en 13 ms, 24 Ko de JSON, 6 Ko compressés.
@@ -136,7 +141,8 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `form` / `button`, `input`… | Place de la mairie (pavés, fontaine) / Guichet à auvent |
 | `table` | Champs cultivés |
 | `hr` | Canal entre deux quais, avec ses ponts |
-| liens externes (toute la page) | Aéroport hors les murs, à l'est, relié au périphérique : 1 piste dès 5 liens, 2 dès 50, 3 dès 300, et un avion par porte (12 au plus) |
+| liens externes (toute la page) | Aéroport hors les murs, à l'est, relié au périphérique : 1 piste dès 5 liens, 2 dès 50, 3 dès 300, et un avion par porte (12 au plus). Les six sites les plus visés ont chacun leur avion en vol ; un clic ouvre le tableau des départs |
+| lien vers une autre page du site (mégalopole) | Autoroute entre leurs deux villes (deux fois deux voies, terre-plein central), branchée sur un coin de chaque périphérique |
 | `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo, chenal vers le large), Parc arboré |
 
 Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
@@ -148,6 +154,7 @@ Idées d'ambiance retenues pour l'étape 5 : usines qui fument (quantité de Jav
 Migrations dans `supabase/migrations/`, testées sur PGlite :
 1. `20261002120000_initial_schema.sql` : tables `sites`, `pages`, `captures`, `capture_secrets`, `reports`, `rate_events` ; triggers de compteurs ; RLS (lecture publique seulement) ; fonctions `create_capture`, `publish_capture`, `delete_capture`, `report_capture`, `hit_rate_limit`, `site_city`, `page_versions`, `search_cities`, `record_view`.
 2. `20261002160000_sharing_reads.sql` : `get_capture`, `recent_captures`, `get_site`, `site_pages`.
+3. `20261003120000_megalopolis.sql` : `known_sites(domaines[])`, parmi les sites liés, ceux qui ont des villes sur DOMCity (le tableau des départs propose d'aller les voir).
 
 Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalements de personnes différentes masquent une version (la page retombe sur la précédente) ; une version est `pending` tant que ses fichiers ne sont pas dans R2. Ne jamais modifier une migration déjà appliquée : en ajouter une nouvelle.
 
@@ -160,6 +167,7 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 | `POST /api/captures/[slug]/report` | Signaler `{ reason, details? }` | Même origine, 20 / heure, un seul par IP et par ville |
 | `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur |
 | `GET /api/search?q=` | Recherche (« amzon » trouve amazon.com) | Lecture seule |
+| `GET /api/sites/known?d=a.com,b.org` | Parmi ces domaines, ceux qui ont des villes | Lecture seule, 60 domaines au plus |
 | `GET /api/dev-files/...` | Sert les fichiers en mode local | Développement uniquement |
 
 ## 9. État d'avancement
@@ -197,9 +205,22 @@ Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « me
 Petites images (demande de l'utilisateur : des « champs de panneaux vides » sur Wikipédia « Paris ») : les icônes de moins de 48 px (flèches de tendance des tableaux, pastilles « Article de qualité », crayons Wikidata) étaient de grands panneaux vierges, 342 sur 507. Ce sont désormais des panonceaux d'un mètre qui montrent l'icône, et les petits drapeaux (reconnus à leur fichier ou à leur texte, et à leur forme) flottent sur un mât de 5 m. Les 82 icônes différentes de Paris tiennent dans un atlas de 640 × 576 px : un appel de dessin pour toutes. L'inspecteur les nomme « Panonceau » et « Drapeau ».
 Rues alignées (demande de l'utilisateur : dans un lotissement, les petites rues « ne s'alignent pas ») : chaque rangée coupait ses pâtés à sa façon, les rues transversales se décalaient d'une rangée à l'autre (90 petites rues sur 73 positions dans les références de Paris). Elles suivent désormais une grille commune à la ville, au pas d'un pâté ; les cases voisines s'étirent de 30 % au plus pour l'atteindre. Paris : toutes sur 4 lignes, et les listes empilées partagent les mêmes rues.
 Survol d'une rue (demande de l'utilisateur : « pourquoi une route s'appelle un îlot ? ») : une rue appartient au conteneur qui l'a fait tracer, la bulle affichait donc ce conteneur. Elle nomme désormais la rue (rue, ruelle, allée, avenue), puis le conteneur : « Ruelle · dans <li.gallerybox> · îlot · Pas dans la page : la ville la trace entre les 2 éléments de ce <li.gallerybox> ». Un clic ouvre toujours la fiche du conteneur.
-Aéroport (demande de l'utilisateur) : les liens de la page vers d'autres sites. Il n'est pas un élément de la page : il est hors les murs, à l'est, sur une extension du socle (`airport` dans `layout.ts`), relié au périphérique par une avenue à travers la ceinture verte. Terminal vitré et tour de contrôle côté ville, avions aux portes avec passerelles (dérives aux couleurs de compagnies), voie de circulation à axe jaune, pistes à touches de piano (deux styles de chaussée de plus dans le shader). Avec 2 pistes, un avion attend en bout de piste ; avec 3, un autre décolle. Au survol : « Aéroport · 540 liens vers d'autres sites · 3 pistes · 12 avions aux portes » ; un clic n'ouvre pas de fiche. Paris : 540 liens, 3 pistes ; Tour Eiffel : 167, 2 pistes ; GitHub : 14, 1 piste. Un port ne fait jamais passer son chenal par l'aéroport.
+Aéroport (demande de l'utilisateur) : les liens de la page vers d'autres sites. Il n'est pas un élément de la page : il est hors les murs, à l'est, sur une extension du socle (`airport` dans `layout.ts`), relié au périphérique par une avenue à travers la ceinture verte. Terminal vitré et tour de contrôle côté ville, avions aux portes avec passerelles (dérives aux couleurs de compagnies), voie de circulation à axe jaune, pistes à touches de piano (deux styles de chaussée de plus dans le shader). Avec 2 pistes, un avion attend en bout de piste ; avec 3, un autre décolle. Au survol : « Aéroport · 540 liens vers d'autres sites · 3 pistes · 12 avions aux portes » ; un clic ouvre le tableau des départs (étape 4). Paris : 540 liens, 3 pistes ; Tour Eiffel : 167, 2 pistes ; GitHub : 14, 1 piste. Un port ne fait jamais passer son chenal par l'aéroport.
 Ports ouverts sur le large (demande de l'utilisateur : un port enfermé dans la ville « n'est pas logique ») : un chenal mène le bassin jusqu'au bord de la maquette, par le plus court chemin libre (bassin prolongé vers l'ouest ou l'est, ou chenal vers le sud). Il ne passe sous aucun bâtiment ni le long d'une rue ; trottoirs et ceinture verte s'écartent, les rues le franchissent sur un pont (`channels` et `bridges` dans `layout.ts`). Le bassin est descendu au niveau de l'eau des canaux, sous le quai. Sur github.com/vercel/next.js : 13 m vers l'ouest, sous le périphérique.
 Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fois dans la fenêtre « voir l'image » (jusqu'à 240 px de côté) et dans l'aperçu de l'inspecteur (160 px) ; au-delà de ×4 ses pixels restent nets plutôt que flous (`src/ui/explorer/FitImage.tsx`). Les images SVG restent vectorielles.
+
+### Étape 4 : la mégalopole ✅
+- **Relevé des liens** (commit `a24df6c`) : chaque page note les empreintes des pages de son site qu'elle vise et les domaines des autres sites (voir Vie privée et section 5). Wikipédia aussi (le serveur relève à nouveau l'article au partage). Aperçu avant partage : « Où mènent ses liens ».
+- **Page de site** `/s/[domain]` : la mégalopole en 3D, plein écran comme une ville. Liste « Pages du site » (titre et adresse, éléments, cases à cocher, « Voir » qui y amène la caméra, ↗ vers sa ville seule), repliée d'office sur téléphone. D'emblée, les premières pages tant qu'elles font moins de 16 000 éléments (16 pages au plus) ; au-delà de 40 000 éléments affichés, un avertissement.
+- **Placement** (`placePages`) : la page d'accueil en haut à gauche, puis dossier par dossier dans l'ordre des adresses ; dans un dossier, de la plus grande ville à la plus petite, en rangées ; une petite ville s'empile sous la précédente quand la plus grande de la rangée lui laisse la place. Des couloirs de campagne de 16 m séparent les villes. Le placement tient compte de toutes les pages, cochées ou non : rien ne bouge quand on coche.
+- **Autoroutes** (`buildMegalopolis`) : deux pages affichées sont liées si l'une vise l'autre. Chaque liaison suit le plus court chemin dans les couloirs (Dijkstra, virages pénalisés, autoroutes déjà tracées moins chères : le réseau se partage), et se branche par une bretelle sur un coin du périphérique de chaque ville (le coin devient un carrefour, la ceinture verte s'écarte). Carrefours d'autoroute en cases de raccord (`Joint`, style `highway`).
+- **Campagne** : herbe, et parcelles de tailles inégales (blé, cultures vertes, labours, bosquets, prés) bordées de haies, là où il n'y a pas de ville (pages masquées, bas des colonnes, bout des rangées).
+- **Aéroport commun** à l'est, au bout du grand couloir le plus proche du milieu, relié par l'autoroute à la page qui a le plus de liens vers d'autres sites ; sa taille suit la somme des liens externes des pages affichées. **Vols** : les six sites les plus visés ont un avion en vol, cap tiré du nom du site (aussi dans une ville seule). Un clic sur l'aéroport ouvre le **tableau des départs** (vols DC 001…, liens, « Voir sa ville → » quand le site est sur DOMCity).
+- **Ports** : le chenal qui sort d'une ville continue tout droit à travers la campagne jusqu'au bord de la mégalopole, sous les autoroutes (ponts) ; une autre ville, un carrefour ou une route parallèle l'arrêtent avant.
+- **Niveaux de détail** : de loin, une ville de la mégalopole perd ses arbres, voitures et lampadaires ; ses affiches et icônes ne se chargent que quand on s'en approche. Survol : la bulle nomme la page de l'élément ; l'inspecteur donne son numéro dans sa page et un lien vers sa ville seule.
+
+Vérifié : 68 tests (empreintes, relevé des liens, placement sans chevauchement et empilement, liaisons et seulement elles, autoroutes jamais sur une ville, stabilité quand on masque, aéroport et vols, chenal prolongé, plan identique d'une fois sur l'autre), TypeScript, ESLint, compilation de production. Dans le navigateur, sur la base locale : 9 articles de Wikipédia liés (Paris, Louvre, Lyon, Tour Eiffel…) : 12 417 éléments, 24 liaisons, 60 destinations ; 2,3 millions de triangles et 2 ms par image en vue d'ensemble sur ce poste ; prête en ~5 s en développement, une case cochée rebâtit en ~0,25 s ; github.com (1 page) : chenal prolongé jusqu'au bord, autoroute vers l'aéroport ; téléphone 375 px sans débordement.
+**Non vérifié** : une mégalopole de 48 grandes pages ; un ordinateur peu puissant ; `known_sites` sur un vrai Supabase.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -212,10 +233,6 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 
 ## 10. Étapes suivantes
 
-### Étape 4 : la mégalopole
-En attente : l'utilisateur donnera le feu vert avant qu'on la commence.
-Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées (branchées sur les coins du périphérique de chaque ville : ouvrir un côté vers l'extérieur d'un `Joint` en fait un carrefour, le moteur le dessine déjà), niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Vols entre les aéroports des sites liés (validé par l'utilisateur) : il faudra relever les domaines des liens externes (aujourd'hui seulement leur nombre), donc une évolution du favori et du format. Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
-
 ### Étape 5 : machine à remonter le temps et ambiance
 Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6. Les données sont déjà relevées par le favori : `page.scripts` (usines), `page.thirdParty` à comparer à une liste de traqueurs tenue par le moteur (caméras), `page.bytes` et `page.domSize` (météo), `page.comments` (graffitis), `bg` et `page.colors` (vraies couleurs).
 
@@ -226,9 +243,10 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 
 - Promenade : pas encore de collisions avec les bâtiments.
 - Canaux (`hr`) : les mener eux aussi jusqu'au bord de la maquette, comme les ports (mis de côté par l'utilisateur pour l'instant).
+- Mégalopole : survoler une autoroute ne dit pas encore quelles pages elle relie ; les vols ne vont pas encore d'une mégalopole à l'autre en 3D (le tableau des départs y mène) ; un site de plus de 48 pages ne montre que les plus récentes ; les affiches d'une ville très illustrée (Louvre) font beaucoup d'appels de dessin, même de loin.
 - Port d'un `<footer>` peu profond (rangée pleine largeur) : bassin et chenal étroits (1,6 m sur GitHub).
 - Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
-- Rendu : niveaux de détail par page (arbres et voitures masqués au loin) si une mégalopole devient lourde ; immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
+- Rendu : immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
@@ -245,7 +263,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 58 tests
+npm test           # 68 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

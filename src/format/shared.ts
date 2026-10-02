@@ -66,6 +66,26 @@ export interface SitePage {
   latestSlug: string | null;
 }
 
+/** Une page du site dans la mégalopole : sa dernière version visible. */
+export interface MegaPageInfo {
+  path: string;
+  title: string;
+  slug: string;
+  capturedAt: string;
+  source: CaptureSource;
+  /** Éléments de sa ville : on n'affiche d'emblée que ce que la vue tient sans peine. */
+  elements: number;
+  versions: number;
+  /** Fichier de la ville (JSON compressé). */
+  fileUrl: string;
+}
+
+/** Un site lié qui a des villes sur DOMCity. */
+export interface KnownSite {
+  domain: string;
+  pages: number;
+}
+
 export interface SearchHit {
   kind: "site" | "page";
   domain: string;

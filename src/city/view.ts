@@ -13,7 +13,7 @@ import { MapControls } from "three/addons/controls/MapControls.js";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
 import type { CityLayout, Lot, RoadStyle } from "./layout";
 import { createMaterials, type CityMaterials } from "./materials";
-import { buildCityScene, type CityScene, type LabelSlot } from "./scene";
+import { buildCityScene, type CityScene, type InstanceRef, type LabelSlot } from "./scene";
 import {
   createQueue,
   ensureFonts,
@@ -25,6 +25,7 @@ import {
   unavailableTexture,
   type ImageStatus,
 } from "./textures";
+import { singleWorld, type World, type WorldPart } from "./world";
 
 export type ViewMode = "aerial" | "walk";
 /** off : on lit le mode d'emploi · locked : souris capturée · free : on regarde en glissant. */
@@ -54,6 +55,8 @@ export interface ViewEvents {
   onModeChange?: (mode: ViewMode) => void;
   onWalkChange?: (state: WalkState) => void;
   onImageStatus?: (lotId: number, status: ImageStatus) => void;
+  /** Clic sur l'aéroport (qui n'a pas de fiche d'élément) : le tableau des départs. */
+  onAirport?: () => void;
 }
 
 const PAPER = "#EEEAE1";
@@ -68,6 +71,19 @@ const MOVE_KEYS = new Set([
   "Space", "ShiftLeft", "ShiftRight",
 ]);
 
+/** Une partie du monde dans la scène : une ville (ou la campagne de la mégalopole), posée à sa place. */
+interface PartView {
+  part: WorldPart;
+  scene: CityScene;
+  /** Centre et rayon dans le monde, pour juger de la distance. */
+  center: THREE.Vector3;
+  radius: number;
+  /** Mobilier affiché (de près). */
+  detailed: boolean;
+  /** Affiches et icônes demandées (la première fois qu'on s'approche). */
+  decorated: boolean;
+}
+
 interface Flight {
   fromPosition: THREE.Vector3;
   fromTarget: THREE.Vector3;
@@ -78,7 +94,9 @@ interface Flight {
 }
 
 export class CityView {
-  readonly layout: CityLayout;
+  /** Le plan commun : celui de la ville, ou de toute la mégalopole. */
+  layout: CityLayout;
+  private world: World;
   private readonly container: HTMLElement;
   private readonly events: ViewEvents;
   private readonly renderer: THREE.WebGLRenderer;
@@ -86,14 +104,18 @@ export class CityView {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly aerial: MapControls;
   private readonly materials: CityMaterials;
-  private readonly city: CityScene;
+  private parts: PartView[] = [];
+  private pickables: THREE.Object3D[] = [];
+  private refs: InstanceRef[][] = [];
+  private baseColors = new Map<THREE.InstancedMesh, Float32Array>();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
   private readonly size: number;
   private readonly center: THREE.Vector3;
   /** Tout ce qui est dessiné au-dessus du papier tient dans cette boîte (plaques comprises). */
   private readonly cityBox: THREE.Box3;
-  private readonly sprites: Array<{ slot: LabelSlot; sprite: THREE.Sprite }> = [];
+  private sprites: Array<{ slot: LabelSlot; sprite: THREE.Sprite; anchor: THREE.Vector3 }> = [];
+  private fontsReady = false;
   private readonly extras: THREE.Object3D[] = [];
   private readonly resizeObserver: ResizeObserver;
   private readonly timer = new THREE.Timer();
@@ -121,8 +143,10 @@ export class CityView {
   private savedAerial: { position: THREE.Vector3; target: THREE.Vector3 } | null = null;
   private disposed = false;
 
-  constructor(container: HTMLElement, layout: CityLayout, events: ViewEvents = {}) {
+  constructor(container: HTMLElement, world: World | CityLayout, events: ViewEvents = {}) {
     this.container = container;
+    this.world = "parts" in world ? world : singleWorld(world);
+    const layout = this.world.layout;
     this.layout = layout;
     this.events = events;
     this.reducedMotion =
@@ -158,8 +182,7 @@ export class CityView {
     this.camera = new THREE.PerspectiveCamera(42, 1, NEAR, this.size * 12);
 
     this.materials = createMaterials(GROUND);
-    this.city = buildCityScene(layout, this.materials);
-    this.scene.add(this.city.group);
+    this.buildParts();
     this.addGround();
     this.addLights();
     this.addSky();
@@ -286,6 +309,18 @@ export class CityView {
     this.invalidate();
   }
 
+  /** Montre toute une zone (une ville de la mégalopole), vue du sud comme la vue d'ensemble. */
+  frameArea(area: { x: number; z: number; w: number; d: number }) {
+    if (this.mode !== "aerial") return;
+    const size = Math.max(area.w, area.d, 30);
+    const target = new THREE.Vector3(area.x + area.w / 2, 0, area.z + area.d / 2 + size * 0.04);
+    const vertical = THREE.MathUtils.degToRad(this.camera.fov);
+    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * this.camera.aspect);
+    const distance = (size * 0.62) / Math.sin(Math.min(vertical, horizontal) / 2);
+    const direction = new THREE.Vector3(0, 0.62, 0.79).normalize();
+    this.flyTo(target.clone().addScaledVector(direction, Math.min(distance, this.aerial.maxDistance)), target, true);
+  }
+
   /** Approche la caméra d'un lot, en gardant l'angle de vue actuel. */
   focus(lotId: number) {
     if (this.mode !== "aerial") return;
@@ -407,6 +442,24 @@ export class CityView {
     this.renderNow();
   }
 
+  /**
+   * Remplace ce qui est bâti (on coche ou décoche une page de la mégalopole), sans bouger la caméra.
+   * Les villes gardent leur place : l'étendue de la vue ne change pas.
+   */
+  setWorld(world: World) {
+    if (this.disposed) return;
+    this.setHover(null, null);
+    this.select(null);
+    this.clearParts();
+    this.world = world;
+    this.layout = world.layout;
+    this.buildParts();
+    if (this.fontsReady) this.addLabels();
+    this.updateParts(true);
+    this.renderer.shadowMap.needsUpdate = true;
+    this.invalidate();
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -428,11 +481,7 @@ export class CityView {
     document.removeEventListener("mousemove", this.handleLockedMouse);
     if (this.isLocked()) document.exitPointerLock();
     this.aerial.dispose();
-    this.city.dispose();
-    for (const { sprite } of this.sprites) {
-      sprite.material.map?.dispose();
-      sprite.material.dispose();
-    }
+    this.clearParts();
     for (const object of this.extras) {
       object.traverse((child) => {
         if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
@@ -545,33 +594,100 @@ export class CityView {
     this.scene.add(sun, sun.target);
   }
 
+  /** Chaque partie du monde dans la scène, à sa place, ses lots renumérotés dans le plan commun. */
+  private buildParts() {
+    for (const part of this.world.parts) {
+      const scene = buildCityScene(part.layout, this.materials, part.base);
+      scene.group.position.set(part.offset.x, 0, part.offset.z);
+      this.scene.add(scene.group);
+      for (const [lotId, refs] of scene.refs.entries()) if (refs) this.refs[lotId] = refs;
+      for (const [mesh, colors] of scene.baseColors) this.baseColors.set(mesh, colors);
+      this.pickables.push(...scene.pickables);
+      const b = part.layout.bounds;
+      const center = new THREE.Vector3((b.minX + b.maxX) / 2 + part.offset.x, 0, (b.minZ + b.maxZ) / 2 + part.offset.z);
+      const radius = Math.hypot(b.maxX - b.minX, b.maxZ - b.minZ) / 2;
+      this.parts.push({ part, scene, center, radius, detailed: true, decorated: false });
+    }
+  }
+
+  private clearParts() {
+    for (const view of this.parts) {
+      this.scene.remove(view.scene.group);
+      view.scene.dispose();
+    }
+    for (const { sprite } of this.sprites) {
+      this.scene.remove(sprite);
+      sprite.material.map?.dispose();
+      sprite.material.dispose();
+    }
+    this.parts = [];
+    this.sprites = [];
+    this.pickables = [];
+    this.refs = [];
+    this.baseColors = new Map();
+  }
+
+  /**
+   * Dans la mégalopole, une ville lointaine se simplifie (ni arbres, ni voitures, ni lampadaires)
+   * et ses images ne se chargent que quand on s'en approche. Une ville seule est toujours complète.
+   */
+  private updateParts(force = false) {
+    const position = this.camera.position;
+    for (const view of this.parts) {
+      const distance = view.part.city ? Math.max(0, position.distanceTo(view.center) - view.radius) : 0;
+      const detailed = distance < 90 + view.radius * 0.6;
+      if (detailed !== view.detailed || force) {
+        view.detailed = detailed;
+        for (const mesh of view.scene.details) mesh.visible = detailed;
+      }
+      if (!view.decorated && this.fontsReady && distance < 160 + view.radius) {
+        view.decorated = true;
+        this.decoratePart(view);
+      }
+    }
+  }
+
   /** Plaques des monuments, affiches des panneaux et icônes, une fois les polices prêtes. */
   private async decorate() {
     await ensureFonts();
     if (this.disposed) return;
+    this.fontsReady = true;
+    this.addLabels();
+    this.updateParts(true);
+  }
 
-    for (const slot of this.city.labels) {
-      const text = slot.lot.node.heading ?? "";
-      const { texture, ratio } = plaqueTexture(text, slot.level);
-      const material = new THREE.SpriteMaterial({ map: texture, depthWrite: false, fog: false });
-      const sprite = new THREE.Sprite(material);
-      const height = slot.level === 1 ? Math.max(4.5, this.size * 0.03) : slot.level === 2 ? 2.6 : 1.5;
-      sprite.scale.set(height * ratio, height, 1);
-      sprite.center.set(0.5, 0);
-      sprite.position.copy(slot.anchor).add(new THREE.Vector3(0, slot.level === 1 ? 1.2 : 0.6, 0));
-      sprite.renderOrder = 10;
-      this.scene.add(sprite);
-      this.sprites.push({ slot, sprite });
+  private addLabels() {
+    for (const view of this.parts) {
+      for (const slot of view.scene.labels) {
+        const text = slot.lot.node.heading ?? "";
+        const { texture, ratio } = plaqueTexture(text, slot.level);
+        const material = new THREE.SpriteMaterial({ map: texture, depthWrite: false, fog: false });
+        const sprite = new THREE.Sprite(material);
+        // La plaque du titre principal suit la taille de sa ville, pas celle de toute la mégalopole.
+        const size = view.part.city ? view.radius * 1.4 : this.size;
+        const height = slot.level === 1 ? Math.max(4.5, size * 0.03) : slot.level === 2 ? 2.6 : 1.5;
+        sprite.scale.set(height * ratio, height, 1);
+        sprite.center.set(0.5, 0);
+        const anchor = slot.anchor.clone().add(new THREE.Vector3(view.part.offset.x, 0, view.part.offset.z));
+        sprite.position.copy(anchor).add(new THREE.Vector3(0, slot.level === 1 ? 1.2 : 0.6, 0));
+        sprite.renderOrder = 10;
+        this.scene.add(sprite);
+        this.sprites.push({ slot, sprite, anchor });
+      }
     }
     this.updateLabels();
     this.invalidate();
+  }
 
-    const enqueue = createQueue(6);
-    for (const board of this.city.billboards) {
+  private readonly enqueue = createQueue(6);
+
+  private decoratePart(view: PartView) {
+    const { scene } = view;
+    const alive = () => !this.disposed && this.parts.includes(view);
+    for (const board of scene.billboards) {
       const src = board.lot.node.img?.src ?? "";
-      const lotId = board.lot.id;
       const apply = (texture: THREE.Texture, status: ImageStatus) => {
-        if (this.disposed) {
+        if (!alive()) {
           texture.dispose();
           return;
         }
@@ -579,11 +695,11 @@ export class CityView {
         material.map = texture;
         material.color.set("#ffffff");
         material.needsUpdate = true;
-        this.events.onImageStatus?.(lotId, status);
+        this.events.onImageStatus?.(board.id, status);
         this.invalidate();
       };
-      void enqueue(async () => {
-        if (this.disposed) return;
+      void this.enqueue(async () => {
+        if (!alive()) return;
         try {
           if (!src) throw new Error("pas d'adresse");
           apply(await loadImageTexture(src), "shown");
@@ -595,11 +711,11 @@ export class CityView {
     }
 
     // Les icônes ensuite : petites et nombreuses, elles se peignent dans l'atlas commun.
-    const { atlas, owners } = this.city.emblems;
+    const { atlas, owners } = scene.emblems;
     atlas.sources.forEach((src, i) => {
       const index = i + 1;
-      void enqueue(async () => {
-        if (this.disposed) return;
+      void this.enqueue(async () => {
+        if (!alive()) return;
         let status: ImageStatus = "shown";
         try {
           atlas.draw(index, await loadCorsImage(src));
@@ -607,7 +723,7 @@ export class CityView {
           status = await probeImage(src);
           atlas.drawUnavailable(index);
         }
-        if (this.disposed) return;
+        if (!alive()) return;
         for (const lotId of owners[i]) this.events.onImageStatus?.(lotId, status);
         this.invalidate();
       });
@@ -616,8 +732,8 @@ export class CityView {
 
   private updateLabels() {
     const position = this.camera.position;
-    for (const { slot, sprite } of this.sprites) {
-      const distance = position.distanceTo(slot.anchor);
+    for (const { slot, sprite, anchor } of this.sprites) {
+      const distance = position.distanceTo(anchor);
       const reach = slot.level === 1 ? Infinity : slot.level === 2 ? this.size * 1.1 : this.size * 0.42;
       sprite.visible = distance < reach;
     }
@@ -633,12 +749,12 @@ export class CityView {
   }
 
   private paintLot(lotId: number) {
-    const refs = this.city.refs[lotId];
+    const refs = this.refs[lotId];
     if (!refs) return;
     const selectedTint = this.inSelection(lotId);
     const isHovered = lotId === this.hovered;
     for (const { mesh, index } of refs) {
-      const base = this.city.baseColors.get(mesh)!;
+      const base = this.baseColors.get(mesh)!;
       const colors = mesh.instanceColor!;
       const target = new THREE.Color(base[index * 3], base[index * 3 + 1], base[index * 3 + 2]);
       if (isHovered) target.copy(HOVER);
@@ -722,6 +838,7 @@ export class CityView {
     if (this.measuring) this.dirty = true;
     if (!this.dirty) return;
     this.dirty = false;
+    this.updateParts();
     this.updateLabels();
     if (this.walking === "locked") this.pick(new THREE.Vector2(0, 0), false);
     this.fitDepth();
@@ -792,7 +909,7 @@ export class CityView {
 
   private pick(ndc: THREE.Vector2, fromPointer: boolean) {
     this.raycaster.setFromCamera(ndc, this.camera);
-    const hits = this.raycaster.intersectObjects(this.city.pickables, false);
+    const hits = this.raycaster.intersectObjects(this.pickables, false);
     let lotId: number | null = null;
     let part: HoverPart = null;
     for (const hit of hits) {
@@ -809,8 +926,8 @@ export class CityView {
         break;
       }
     }
-    // Le terrain nu n'est pas une cible intéressante au survol.
-    if (lotId === 0) lotId = null;
+    // Le terrain nu (le socle d'une ville, la campagne) n'est pas une cible intéressante au survol.
+    if (lotId !== null && (lotId < 0 || this.layout.lots[lotId]?.depth === 0)) lotId = null;
     if (fromPointer) {
       const rect = this.renderer.domElement.getBoundingClientRect();
       const screen = {
@@ -914,6 +1031,7 @@ export class CityView {
     }
     this.toNdc(event);
     this.pick(this.pointer, true);
+    if (this.hovered !== null && this.hovered === this.layout.airport?.id) this.events.onAirport?.();
     this.select(this.hovered);
   };
 

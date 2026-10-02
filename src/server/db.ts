@@ -121,6 +121,8 @@ function localDb(config: LocalConfig): Promise<PGliteLike> {
 function toParam(value: unknown): unknown {
   if (value === null || value === undefined) return null;
   if (value instanceof Bytea) return new Uint8Array(Buffer.from(value.hex.replace(/^\\x/, ""), "hex"));
+  // Un tableau devient un tableau Postgres (text[]) ; un objet, du JSON.
+  if (Array.isArray(value)) return value;
   if (typeof value === "object") return JSON.stringify(value);
   return value;
 }

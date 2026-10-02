@@ -3,6 +3,7 @@ import type {
   CityCard,
   CityStatsSummary,
   CityVersion,
+  KnownSite,
   ReportReason,
   SearchHit,
   SharedCity,
@@ -151,6 +152,28 @@ export async function sitePages(domain: string): Promise<SitePage[]> {
     lastCaptureAt: str(row.last_capture_at),
     latestSlug: str(row.latest_slug),
   }));
+}
+
+/** La dernière version visible de chaque page du site (la mégalopole), dans l'ordre des adresses. */
+export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "views" | "pageTitle" | "pageVersions" | "domain">>> {
+  const rows = await reader().rows<Row>("site_city", { p_domain: domain });
+  return rows.map((row) => ({
+    slug: String(row.slug),
+    title: String(row.title ?? ""),
+    capturedAt: String(row.captured_at),
+    source: row.source as CaptureSource,
+    formatVersion: num(row.format_version),
+    sizeBytes: num(row.size_bytes),
+    stats: stats(row.stats),
+    path: String(row.path),
+  }));
+}
+
+/** Parmi ces domaines, ceux qui ont des villes sur DOMCity. */
+export async function knownSites(domains: string[]): Promise<KnownSite[]> {
+  if (domains.length === 0) return [];
+  const rows = await reader().rows<Row>("known_sites", { p_domains: domains.slice(0, 60) });
+  return rows.map((row) => ({ domain: String(row.domain), pages: num(row.pages_count) }));
 }
 
 export async function searchCities(query: string, limit = 12): Promise<SearchHit[]> {

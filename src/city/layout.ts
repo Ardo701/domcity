@@ -80,7 +80,8 @@ export interface Lot {
   panel?: Panel;
 }
 
-export type RoadStyle = "ring" | "avenue" | "street" | "lane" | "path";
+/** `highway` : les autoroutes de la mégalopole, entre les villes. */
+export type RoadStyle = "ring" | "avenue" | "street" | "lane" | "path" | "highway";
 export type GroundStyle = "base" | "sidewalk" | "plaza" | "grass" | "lawn" | "crops" | "dirt" | "wharf" | "quay";
 
 export interface Rect {
@@ -130,8 +131,11 @@ export interface Plate extends Rect {
 }
 
 export interface Decor extends Rect {
-  /** Le port (bassin et grues) du pied de page, la porte monumentale de l'en-tête, une place publique. */
-  type: "harbor" | "gate" | "square";
+  /**
+   * Le port (bassin et grues) du pied de page, la porte monumentale de l'en-tête, une place publique,
+   * un bosquet de la campagne autour de la mégalopole.
+   */
+  type: "harbor" | "gate" | "square" | "woods";
   owner: number;
   y: number;
 }
@@ -173,6 +177,20 @@ export interface Airport extends Rect {
   tower: Rect;
   /** Avions aux portes du terminal. */
   planes: number;
+  /** Sites visés par les liens, du plus visé au moins visé (relevés récents seulement). */
+  destinations: Array<[domain: string, links: number]>;
+  /** Un avion en vol vers chacun des premiers sites : il vient de décoller, cap sur sa destination. */
+  flights: Flight[];
+}
+
+export interface Flight {
+  domain: string;
+  x: number;
+  y: number;
+  z: number;
+  /** Cap (rotation autour de la verticale, 0 = vers l'est) et cabré. */
+  heading: number;
+  pitch: number;
 }
 
 export interface CityStats {
@@ -211,8 +229,8 @@ export const BASE = 0.4;
 export const CURB = 0.14;
 export const FLOOR = 1.15;
 
-const RING = 6;
-const BELT = 7;
+export const RING = 6;
+export const BELT = 7;
 const SIDEWALK = 0.75;
 const ALLEY = 0.16;
 const RIVER_WIDTH = 3.4;
@@ -223,6 +241,8 @@ const HARBOR_BAND = 10;
 const QUAY_SHARE = 0.38;
 /** Épaisseur de l'eau : sa surface reste sous le niveau des quais. */
 export const WATER_DEPTH = 0.05;
+/** Largeur d'une autoroute : deux fois deux voies et un terre-plein central. */
+export const HIGHWAY = 7;
 
 type StreetMode = RoadStyle | "none";
 
@@ -234,6 +254,7 @@ export function roadWidth(style: RoadStyle, depth: number): number {
     case "street": return Math.max(3, 6.4 * 0.84 ** depth);
     case "lane": return 2.4;
     case "path": return 1.4;
+    case "highway": return HIGHWAY;
   }
 }
 
@@ -639,13 +660,29 @@ interface Edge {
 
 const EDGE: Edge = { side: "edge", width: 0 };
 
-export function layoutCity(doc: CityDoc): CityLayout {
+export interface LayoutOptions {
+  /** Faux dans la mégalopole : un seul aéroport pour tout le site, pas un par page. */
+  airport?: boolean;
+}
+
+/** Côté du socle d'une page, sans la construire : la mégalopole range ses villes avant de les bâtir. */
+export function citySide(doc: CityDoc): number {
+  return Math.sqrt(buildPlot(doc.root, 0, "street").area);
+}
+
+export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayout {
   const rootPlot = buildPlot(doc.root, 0, "street");
   const ctx: Ctx = { lots: [], roads: [], joints: [], plates: [], decor: [], channels: [], bridges: [] };
   const side = Math.sqrt(rootPlot.area);
   const edge = { x: -side / 2, z: -side / 2, w: side, d: side };
   place(rootPlot, edge, 0, -1, ctx, { streets: "street" });
-  ctx.airport = planAirport(ctx, edge, externalLinks(doc.root));
+  if (options.airport !== false) {
+    const site: AirportSite = {
+      x0: edge.x + edge.w, z: edge.z, d: edge.d, center: edge.z + edge.d / 2,
+      access: edge.x + edge.w - BELT, owner: 0, y: BASE,
+    };
+    ctx.airport = planAirport(ctx, site, externalLinks(doc.root), doc.linksTo?.sites ?? []);
+  }
   openHarbors(ctx, ctx.airport ? { ...edge, w: ctx.airport.x + ctx.airport.w - edge.x } : edge);
   const { lots } = ctx;
 
@@ -680,7 +717,7 @@ export function layoutCity(doc: CityDoc): CityLayout {
       default: stats.buildings += 1;
     }
   }
-  if (ctx.airport) bounds.maxX = ctx.airport.x + ctx.airport.w;
+  if (ctx.airport) includeAirport(bounds, ctx.airport);
   return {
     lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor,
     channels: ctx.channels, bridges: ctx.bridges, airport: ctx.airport, bounds, stats,
@@ -706,18 +743,39 @@ export function runwaysFor(external: number): number {
   return external >= 300 ? 3 : external >= 50 ? 2 : 1;
 }
 
+/** Où poser l'aéroport : à l'est de x0, sur toute la profondeur [z, z + d], centré sur `center`. */
+export interface AirportSite {
+  x0: number;
+  z: number;
+  d: number;
+  center: number;
+  /** Où commence l'avenue d'accès (le périphérique de la ville, l'autoroute de la mégalopole). */
+  access: number;
+  /** Propriétaire de l'avenue d'accès (le socle de la ville ; -1 dans la mégalopole). */
+  owner: number;
+  y: number;
+}
+
+/** Combien de sites ont leur avion en vol. */
+const FLIGHTS = 6;
+
 /**
  * L'aéroport, à l'est de la ceinture verte : terminal et tour de contrôle côté ville, avions
  * aux portes sur le tarmac, puis la voie de circulation et les pistes. Une avenue le relie au
  * périphérique à travers la ceinture.
  */
-function planAirport(ctx: Ctx, edge: Rect, external: number): Airport | undefined {
+export function planAirport(
+  ctx: Pick<Ctx, "lots" | "roads" | "plates">,
+  site: AirportSite,
+  external: number,
+  sites: Array<[string, number]>,
+): Airport | undefined {
   if (external < AIRPORT_MIN) return undefined;
   const runways = runwaysFor(external);
-  const x0 = edge.x + edge.w;
-  const center = edge.z + edge.d / 2;
-  const length = Math.max(30, Math.min(edge.d - 8, 55 + 25 * runways));
-  const top = edge.z + edge.d / 2 - length / 2;
+  const { x0 } = site;
+  const length = Math.max(30, Math.min(site.d - 8, 55 + 25 * runways));
+  // Les pistes restent sur le socle, même quand l'accès n'arrive pas en son milieu.
+  const top = clamp(site.center - length / 2, site.z + 4, site.z + site.d - 4 - length);
 
   let x = x0 + 2;
   const terminalX = x;
@@ -740,6 +798,7 @@ function planAirport(ctx: Ctx, edge: Rect, external: number): Airport | undefine
   const gate = PLANE * 1.15;
   const planes = Math.min(clamp(Math.round(Math.sqrt(external) / 2), 1, 12), Math.floor((length - 6) / gate));
   const apronD = Math.min(length, planes * gate + 6);
+  const center = clamp(site.center, top + apronD / 2, top + length - apronD / 2);
   const apron = { x: apronX, z: center - apronD / 2, w: apronW, d: apronD };
   const terminal = { x: terminalX, z: apron.z, w: 5, d: apronD };
 
@@ -759,15 +818,31 @@ function planAirport(ctx: Ctx, edge: Rect, external: number): Airport | undefine
   // L'avenue d'accès, du périphérique au terminal : elle coupe la ceinture verte.
   const avenue = roadWidth("avenue", 0);
   const access: Road = {
-    x: x0 - BELT, z: center - avenue / 2, w: terminalX - (x0 - BELT), d: avenue,
-    axis: "x", style: "avenue", owner: 0, y: BASE,
+    x: site.access, z: site.center - avenue / 2, w: terminalX - site.access, d: avenue,
+    axis: "x", style: "avenue", owner: site.owner, y: site.y,
   };
   ctx.plates = ctx.plates.flatMap((plate) => cutRect(plate, access).map((piece) => ({ ...plate, ...piece })));
   ctx.roads.push(access);
 
+  // Les premiers sites visés ont chacun leur avion : parti du bout nord de la piste, il a déjà viré
+  // vers l'est, cap sur sa destination (un cap tiré du nom du site, toujours le même).
+  const [main] = strips;
+  const flights: Flight[] = sites.slice(0, FLIGHTS).map(([domain], i) => {
+    const heading = (hashOf(domain) / 0xffffffff - 0.5) * 2.4;
+    const distance = 30 + i * 16;
+    return {
+      domain,
+      x: main.x + main.w / 2 + Math.cos(heading) * distance,
+      y: BASE + 9 + i * 3.2,
+      z: top - Math.sin(heading) * distance,
+      heading,
+      pitch: 0.12,
+    };
+  });
+
   return {
     id: ctx.lots.length,
-    x: x0, z: edge.z, w: x - x0, d: edge.d,
+    x: x0, z: site.z, w: x - x0, d: site.d,
     y: BASE + CURB,
     external,
     runways: strips,
@@ -776,7 +851,33 @@ function planAirport(ctx: Ctx, edge: Rect, external: number): Airport | undefine
     terminal,
     tower: { x: terminalX + 1.3, z: terminal.z - 3.6, w: 2.4, d: 2.4 },
     planes,
+    destinations: sites,
+    flights,
   };
+}
+
+/** Les limites de la ville comprennent l'aéroport et les avions en vol. */
+export function includeAirport(bounds: CityLayout["bounds"], airport: Airport) {
+  bounds.minZ = Math.min(bounds.minZ, airport.z);
+  bounds.maxZ = Math.max(bounds.maxZ, airport.z + airport.d);
+  bounds.maxX = Math.max(bounds.maxX, airport.x + airport.w);
+  for (const flight of airport.flights) {
+    bounds.minX = Math.min(bounds.minX, flight.x - PLANE);
+    bounds.maxX = Math.max(bounds.maxX, flight.x + PLANE);
+    bounds.minZ = Math.min(bounds.minZ, flight.z - PLANE);
+    bounds.maxZ = Math.max(bounds.maxZ, flight.z + PLANE);
+    bounds.maxY = Math.max(bounds.maxY, flight.y + PLANE);
+  }
+}
+
+/** Tirage stable à partir d'un nom (FNV-1a). */
+function hashOf(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }
 
 /** Le bassin d'un port : le sud de sa bande, au pied du quai. */

@@ -14,7 +14,7 @@ export const FACADE = { glass: 0, office: 1, brick: 2, stucco: 3, house: 4, ston
 /** Styles de sol (aGround.x). */
 export const GROUND = { base: 0, sidewalk: 1, plaza: 2, grass: 3, lawn: 4, crops: 5, dirt: 6, wharf: 7, quay: 8 } as const;
 /** Styles de chaussée (aRoad.x). */
-export const ROAD = { ring: 0, avenue: 1, street: 2, lane: 3, path: 4, runway: 5, taxiway: 6 } as const;
+export const ROAD = { ring: 0, avenue: 1, street: 2, lane: 3, path: 4, runway: 5, taxiway: 6, highway: 7 } as const;
 /** Sens d'une chaussée pour le marquage (deuxième valeur de aRoad). */
 export const ROAD_AXIS = { x: 0, z: 1, bend: 2, cross: 3 } as const;
 
@@ -274,9 +274,16 @@ if (vDcNormal.y > 0.5) {
     float keys = step(0.45, fract(across / 0.62)) * step(0.8, across) * step(across, wid - 0.8);
     paint = mix(paint, max(keys, max(dcBand(across, 0.35, 0.08), dcBand(across, wid - 0.35, 0.08))), threshold);
     c = mix(c, vec3(0.93, 0.92, 0.87), clamp(paint, 0.0, 1.0) * 0.92);
-  } else {
+  } else if (dcStyle < 6.5) {
     // Voie de circulation des avions : un axe jaune continu.
     c = mix(c, vec3(0.93, 0.74, 0.18), dcBand(across, wid * 0.5, 0.07) * 0.9);
+  } else if (!dcCross) {
+    // Autoroute : deux chaussées de part et d'autre du terre-plein, deux voies chacune.
+    float side = abs(across - wid * 0.5);
+    float paint = max(dcBand(across, 0.35, 0.08), dcBand(across, wid - 0.35, 0.08));
+    paint = max(paint, dcBand(side, 0.75, 0.07));
+    paint = max(paint, dcBand(side, wid * 0.25 + 0.2, 0.06) * step(0.55, fract(along / 4.5)));
+    c = mix(c, vec3(0.93, 0.92, 0.87), clamp(paint, 0.0, 1.0) * 0.92);
   }
 }
 diffuseColor.rgb = c;

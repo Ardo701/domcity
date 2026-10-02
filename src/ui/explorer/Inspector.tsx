@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatChars, formatCount, type LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
@@ -15,6 +16,8 @@ const IMAGE_STATUS: Record<ImageStatus, string> = {
 /** Fiche détaillée de l'élément sélectionné. */
 export function Inspector({
   info,
+  number = info.id,
+  page,
   imageStatus,
   canFocus,
   onClose,
@@ -23,6 +26,10 @@ export function Inspector({
   onViewImage,
 }: {
   info: LotInfo;
+  /** Numéro de l'élément dans sa page (dans la mégalopole, les lots de toutes les pages se suivent). */
+  number?: number;
+  /** Dans la mégalopole : la page de l'élément, et sa ville à elle. */
+  page?: { path: string; href: string };
   imageStatus?: ImageStatus;
   canFocus: boolean;
   onClose: () => void;
@@ -60,13 +67,21 @@ export function Inspector({
       <div className={styles.inspectorHead}>
         <KindSwatch kind={info.kind} size={40} />
         <div>
-          <p className={`${styles.inspectorKicker} mono-caps`}>Élément n° {info.id}</p>
+          <p className={`${styles.inspectorKicker} mono-caps`}>Élément n° {number}</p>
           <h2>{info.name}</h2>
         </div>
         <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer l'inspecteur">
           ×
         </button>
       </div>
+
+      {page && (
+        <p className={styles.inspectorPage}>
+          <span className="mono-caps">Page</span>
+          <span className={styles.inspectorPagePath}>{page.path}</span>
+          <Link href={page.href}>Sa ville seule →</Link>
+        </p>
+      )}
 
       <code className={styles.selector}>{info.ownText ? `texte direct de <${parent?.selector}>` : `<${info.selector}>`}</code>
       <p className={styles.blurb}>{info.blurb}</p>
