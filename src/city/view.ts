@@ -53,6 +53,8 @@ const PAPER = "#EEEAE1";
 const GROUND = "#E7E2D7";
 /** Hauteur des yeux du promeneur. */
 const EYE = 1.9;
+/** Plan proche minimal (promenade, caméra au ras des toits). */
+const NEAR = 0.3;
 const HOVER = new THREE.Color(HIGHLIGHT_COLOR);
 const MOVE_KEYS = new Set([
   "KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
@@ -82,6 +84,8 @@ export class CityView {
   private readonly pointer = new THREE.Vector2();
   private readonly size: number;
   private readonly center: THREE.Vector3;
+  /** Tout ce qui est dessiné au-dessus du papier tient dans cette boîte (plaques comprises). */
+  private readonly cityBox: THREE.Box3;
   private readonly sprites: Array<{ slot: LabelSlot; sprite: THREE.Sprite }> = [];
   private readonly extras: THREE.Object3D[] = [];
   private readonly resizeObserver: ResizeObserver;
@@ -120,6 +124,12 @@ export class CityView {
     const { bounds } = layout;
     this.size = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ, 40);
     this.center = new THREE.Vector3((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2);
+    // Assez large pour les grues de chantier (26 au plus), antennes et plaques des titres.
+    const margin = Math.max(30, this.size * 0.1);
+    this.cityBox = new THREE.Box3(
+      new THREE.Vector3(bounds.minX - margin, 0, bounds.minZ - margin),
+      new THREE.Vector3(bounds.maxX + margin, bounds.maxY + margin, bounds.maxZ + margin),
+    );
 
     // Rendu
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -138,7 +148,7 @@ export class CityView {
     this.scene.background = new THREE.Color(PAPER);
     this.scene.fog = new THREE.Fog(PAPER, this.size * 1.8, this.size * 4.8);
 
-    this.camera = new THREE.PerspectiveCamera(42, 1, 0.3, this.size * 12);
+    this.camera = new THREE.PerspectiveCamera(42, 1, NEAR, this.size * 12);
 
     this.materials = createMaterials(GROUND);
     this.city = buildCityScene(layout, this.materials);
@@ -294,6 +304,7 @@ export class CityView {
 
     // Rendu et copie dans la même tâche : le tampon WebGL est encore plein.
     this.updateLabels();
+    this.fitDepth();
     this.renderer.render(this.scene, this.camera);
     const source = this.renderer.domElement;
     const scale = Math.max(width / source.width, height / source.height);
@@ -365,6 +376,7 @@ export class CityView {
   renderNow() {
     this.aerial.update();
     this.updateLabels();
+    this.fitDepth();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -641,6 +653,22 @@ export class CityView {
   // Boucle
   // -------------------------------------------------------------------------
 
+  /**
+   * Plan proche aussi loin que possible. La profondeur n'a qu'une précision limitée, répartie
+   * surtout près de la caméra : avec un plan proche à 30 cm, la ville vue de loin ne sait plus
+   * départager deux surfaces presque à la même hauteur (chaussée et sol, affiche et cadre)
+   * et elles scintillent. Rien n'est dessiné entre la caméra et la ville : on avance le plan
+   * proche jusqu'à mi-chemin.
+   */
+  private fitDepth() {
+    const position = this.camera.position;
+    const clear = this.mode === "aerial" ? Math.min(this.cityBox.distanceToPoint(position), position.y) : 0;
+    const near = Math.max(NEAR, clear * 0.5);
+    if (Math.abs(near - this.camera.near) <= this.camera.near * 0.02) return;
+    this.camera.near = near;
+    this.camera.updateProjectionMatrix();
+  }
+
   private invalidate = () => {
     this.dirty = true;
   };
@@ -668,6 +696,7 @@ export class CityView {
     this.dirty = false;
     this.updateLabels();
     if (this.walking === "locked") this.pick(new THREE.Vector2(0, 0), false);
+    this.fitDepth();
     const start = performance.now();
     this.renderer.render(this.scene, this.camera);
     const end = performance.now();

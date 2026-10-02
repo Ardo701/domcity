@@ -473,12 +473,17 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
       emissiveIntensity: lot.kind === "screen" ? 0.6 : 0,
       roughness: 0.75,
       metalness: 0,
+      // L'affiche est collée au cadre : vue de loin, la profondeur ne sait plus lequel est
+      // devant et le cadre perce l'image par rayures qui scintillent. L'affiche gagne toujours.
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -4,
     });
     panelMaterials.push(material);
     const panels: THREE.Mesh[] = [];
     for (const side of [1, -1]) {
       const mesh = new THREE.Mesh(panelGeometry, material);
-      mesh.position.set(cx, frameY + panel.height / 2, cz + side * 0.16);
+      mesh.position.set(cx, frameY + panel.height / 2, cz + side * 0.18);
       mesh.scale.set(panel.width, panel.height, 1);
       if (side < 0) mesh.rotation.y = Math.PI;
       mesh.userData.lotId = lot.id;

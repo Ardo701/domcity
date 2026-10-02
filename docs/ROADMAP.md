@@ -189,6 +189,7 @@ Demandée par l'utilisateur après l'étape 3. Ville plate, rues hiérarchisées
 Vérifié : tests de l'urbanisme (aucun bâtiment sur une rue, rues entre conteneurs voisins, périphérique, monument dominant), captures Paris, Tour Eiffel, GitHub, compilation de production.
 **Non vérifié** : un ordinateur peu puissant ou un téléphone ; la promenade au niveau de la rue en interaction réelle.
 Compteur **FPS** (bouton « FPS » de la barre d'outils, mémorisé dans le navigateur) : images par seconde, temps entre deux images, temps de calcul, triangles et appels de dessin. Tant qu'il est affiché, la ville est redessinée à chaque image (sinon elle ne l'est que quand quelque chose bouge). Chiffre à l'encre au-delà de 50 (fluide), sur fond jaune au-delà de 30, sur fond orange en dessous.
+Scintillement de loin corrigé (affiches rayées par leur cadre, chaussées, champs et toits verts qui clignotaient en dézoomant) : le plan proche de la caméra avance jusqu'à mi-chemin de la ville en vue aérienne, ce qui rend à la profondeur toute sa précision, et l'affiche passe toujours devant son cadre.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -213,6 +214,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ## 11. En réserve (idées et limites connues)
 
 - Promenade : pas encore de collisions avec les bâtiments.
+- Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
 - Rendu : niveaux de détail par page (arbres et voitures masqués au loin) si une mégalopole devient lourde ; immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
