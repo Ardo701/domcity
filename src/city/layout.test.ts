@@ -148,6 +148,24 @@ describe("layoutCity", () => {
     expect(first.parent).toBe(section.id);
   });
 
+  it("fait du texte d'un tableau, d'une liste ou d'un parc une maison, jamais un champ sur un champ", () => {
+    const city = layoutCity(
+      doc({
+        tag: "body",
+        children: [
+          { tag: "table", text: 1200, children: [{ tag: "img", img: { src: "https://example.com/a.png", w: 300, h: 200 } }] },
+          { tag: "ul", text: 80, children: [{ tag: "li", text: 30 }, { tag: "li", text: 40 }] },
+          { tag: "aside", text: 60, children: [{ tag: "p", text: 200 }] },
+          { tag: "section", text: 90, children: [{ tag: "p", text: 200 }] },
+        ],
+      }),
+    );
+    const ownKinds = Object.fromEntries(
+      city.lots.filter((lot) => lot.ownText).map((lot) => [city.lots[lot.parent].node.tag, lot.kind]),
+    );
+    expect(ownKinds).toEqual({ table: "house", ul: "house", aside: "house", section: "tower" });
+  });
+
   it("fait traverser le quartier par la rivière, entre les deux moitiés", () => {
     const river = lots.find((l) => l.kind === "river")!;
     const section = lots[river.parent];

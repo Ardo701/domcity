@@ -326,11 +326,27 @@ function blocksOf(items: Plot[], mode: StreetMode, depth: number): Plot[] {
   return out;
 }
 
-function buildPlot(node: CityNode, depth: number, streets: StreetMode, ownText = false): Plot {
+/** Les genres qui sont des bâtiments. */
+const BUILDINGS = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "kiosk", "bollard", "counter"]);
+
+/**
+ * Le texte écrit directement dans un conteneur devient un bâtiment de plus, jamais un champ,
+ * un lotissement ou un parc posé sur le sien. Dans un tableau (le texte de ses cases), une liste
+ * ou un parc : une maison, la ferme au milieu des champs ; ailleurs, un immeuble.
+ */
+function ownTextKind(tag: string, text: number, container: Kind): Kind {
+  const kind = kindOf(tag, false, text);
+  if (BUILDINGS.has(kind)) return kind;
+  return container === "fields" || container === "estate" || container === "park" ? "house" : "tower";
+}
+
+/** `textOf` : bâtiment du texte écrit directement dans ce conteneur, de ce genre. */
+function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: Kind): Plot {
+  const ownText = textOf !== undefined;
   const kept = ownText ? [] : node.children ?? [];
   const container = kept.length > 0;
   const text = node.text ?? 0;
-  const kind = kindOf(node.tag, container, text);
+  const kind = ownText ? ownTextKind(node.tag, text, textOf) : kindOf(node.tag, container, text);
   const plot: Plot = { node, kind, container, ownText, depth, children: [], area: 0, textTotal: text };
 
   if (!container) {
@@ -340,7 +356,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, ownText =
 
   const mode = depth === 0 ? "street" : streetsOf(kind) ?? streets;
   // Texte écrit directement dans le conteneur : un bâtiment de plus, en premier.
-  if (text > 0) plot.children.push(buildPlot(node, depth + 1, mode, true));
+  if (text > 0) plot.children.push(buildPlot(node, depth + 1, mode, kind));
   for (const child of kept) plot.children.push(buildPlot(child, depth + 1, mode));
 
   const gap = unitGap(mode, depth);

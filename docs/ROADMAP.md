@@ -138,7 +138,7 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `hr` | Canal entre deux quais, avec ses ponts |
 | `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo), Parc arboré |
 
-Le texte écrit directement dans un conteneur devient un bâtiment de plus. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
+Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
 
 Idées d'ambiance retenues pour l'étape 5 : usines qui fument (quantité de JavaScript), caméras de surveillance (traqueurs publicitaires), météo (poids de la page), ruines (images cassées), graffitis (commentaires HTML), vraies couleurs du site.
 
@@ -239,7 +239,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 55 tests
+npm test           # 56 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

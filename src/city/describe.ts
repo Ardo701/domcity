@@ -57,8 +57,20 @@ const EMBLEMS = {
   flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur son mât." },
 } as const;
 
-function nameOf(lot: Lot): { name: string; blurb: string } {
-  return lot.panel?.emblem ? EMBLEMS[lot.panel.emblem] : KINDS[lot.kind];
+/**
+ * Nom et phrase d'un lot : ceux de son genre, sauf les petites images, et le texte écrit
+ * directement dans un conteneur (dans un tableau, le texte de ses cases : une ferme).
+ */
+function nameOf(lot: Lot, layout?: CityLayout): { name: string; blurb: string } {
+  if (lot.panel?.emblem) return EMBLEMS[lot.panel.emblem];
+  if (lot.ownText && layout) {
+    const parent = layout.lots[lot.parent];
+    const where = `<${selectorOf(parent)}>`;
+    return parent.kind === "fields"
+      ? { name: "Ferme", blurb: `Le texte des cases du tableau ${where} : une ferme au milieu de ses champs.` }
+      : { name: KINDS[lot.kind].name, blurb: `Le texte écrit directement dans ${where}, sans balise à lui.` };
+  }
+  return KINDS[lot.kind];
 }
 
 export function selectorOf(lot: Lot): string {
@@ -91,10 +103,8 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
   return {
     id,
     kind: lot.kind,
-    name: nameOf(lot).name,
-    blurb: lot.ownText
-      ? `Le texte écrit directement dans ce ${KINDS[layout.lots[lot.parent].kind].name.toLowerCase()}, sans balise à lui.`
-      : nameOf(lot).blurb,
+    name: nameOf(lot, layout).name,
+    blurb: nameOf(lot, layout).blurb,
     color: kind.color,
     selector: selectorOf(lot),
     heading: lot.node.heading,
