@@ -11,8 +11,8 @@
 
 import * as THREE from "three";
 import * as shapes from "./geometries";
-import { CURB, FLOOR, type CityLayout, type Decor, type Lot, type Rect, type Road } from "./layout";
-import { FACADE, GROUND, ROAD, type CityMaterials } from "./materials";
+import { CURB, FLOOR, type CityLayout, type Decor, type Joint, type Lot, type Rect, type Road } from "./layout";
+import { FACADE, GROUND, ROAD, ROAD_AXIS, type CityMaterials } from "./materials";
 import * as PALETTE from "./palette";
 
 export interface InstanceRef {
@@ -172,6 +172,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     knot: new Batch(shapes.knotGeometry(), materials.plain, pickable),
     ground: new Batch(shapes.boxGeometry(), materials.ground, { attribute: "aGround", cast: false, pickable: true }),
     road: new Batch(shapes.boxGeometry(), materials.road, { attribute: "aRoad", cast: false, pickable: true }),
+    bend: new Batch(shapes.bendGeometry(), materials.road, { attribute: "aRoad", cast: false, pickable: true }),
+    verge: new Batch(shapes.bendVergeGeometry(), materials.ground, { attribute: "aGround", cast: false, pickable: true }),
     water: new Batch(shapes.boxGeometry(), materials.water, { attribute: "aWater", cast: false, pickable: true }),
     tree: new Batch(shapes.treeGeometry(), materials.painted, { receive: false }),
     poplar: new Batch(shapes.poplarGeometry(), materials.painted, { receive: false }),
@@ -552,9 +554,49 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials): Ci
     ]);
     obstacles.add(road);
   }
+  for (const joint of layout.joints) {
+    junction(joint);
+    obstacles.add(joint);
+  }
   for (const decor of layout.decor) {
     if (decor.type === "harbor") harbor(decor);
     else if (decor.type === "gate") gate(decor);
+  }
+
+  /** Case de raccord : virage arrondi si deux côtés voisins sont ouverts, sinon chaussée droite ou carrefour. */
+  function junction(joint: Joint) {
+    const { open, owner, y } = joint;
+    const cx = joint.x + joint.w / 2;
+    const cz = joint.z + joint.d / 2;
+    const sides = [open.north, open.east, open.south, open.west].filter(Boolean).length;
+    const turning = sides === 2 && open.north !== open.south;
+    if (!turning) {
+      // Ligne droite (marquage dans le sens de la traversée) ou carrefour (sans marquage).
+      const axis = sides === 2 ? (open.east ? ROAD_AXIS.x : ROAD_AXIS.z) : ROAD_AXIS.cross;
+      kit.road.add(owner, at(cx, y, cz, joint.w, 0.03, joint.d), ROAD_COLORS[joint.style], [ROAD[joint.style], axis, 0, 0]);
+      return;
+    }
+    // Le centre du virage est le coin de la case entre les deux côtés ouverts.
+    const rot = open.east ? (open.south ? Math.PI : -Math.PI / 2) : open.south ? Math.PI / 2 : 0;
+    kit.bend.add(owner, at(cx, y, cz, joint.w, 0.03, joint.d, rot), ROAD_COLORS[joint.style], [ROAD[joint.style], ROAD_AXIS.bend, 0, 0]);
+    kit.verge.add(owner, at(cx, y, cz, joint.w, CURB, joint.d, rot), GROUND_COLORS[joint.verge], [GROUND[joint.verge], 0, 0, 0]);
+
+    // Arbres d'alignement le long de l'arrondi, comme sur le reste du périphérique.
+    if (joint.style !== "ring" && joint.style !== "avenue") return;
+    const centerX = open.east ? joint.x + joint.w : joint.x;
+    const centerZ = open.south ? joint.z + joint.d : joint.z;
+    const dx = open.east ? -1 : 1;
+    const dz = open.south ? -1 : 1;
+    const radius = joint.w + 0.55;
+    const count = Math.max(1, Math.round((radius * Math.PI) / 2 / 2.7));
+    const salt = Math.round(joint.x * 13 + joint.z * 7);
+    for (let i = 0; i < count; i += 1) {
+      const angle = ((i + 0.5) / count) * (Math.PI / 2);
+      const size = 1.9 + rand(salt, i * 3) * 0.7;
+      const x = centerX + dx * radius * Math.cos(angle);
+      const z = centerZ + dz * radius * Math.sin(angle);
+      kit.tree.add(-1, at(x, y + CURB, z, size, size, size, rand(salt, i + 9) * 6), new THREE.Color(0.95, 0.97, 0.95));
+    }
   }
 
   function gate(decor: Decor) {

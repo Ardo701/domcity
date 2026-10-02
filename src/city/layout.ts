@@ -70,6 +70,29 @@ export interface Road extends Rect {
   y: number;
 }
 
+/** Les côtés d'une case de raccord par lesquels la chaussée en sort. */
+export interface Openings {
+  north: boolean;
+  east: boolean;
+  south: boolean;
+  west: boolean;
+}
+
+/**
+ * Case de raccord entre tronçons de chaussée. Deux côtés voisins ouverts font un virage
+ * arrondi (les coins du périphérique) ; deux côtés opposés, une ligne droite ; trois ou
+ * quatre, un carrefour. Pour brancher une autre route (les autoroutes de la mégalopole),
+ * il suffit d'ouvrir un côté de plus : le moteur dessine alors le carrefour.
+ */
+export interface Joint extends Rect {
+  open: Openings;
+  style: RoadStyle;
+  /** Le sol qui borde la chaussée hors du virage. */
+  verge: GroundStyle;
+  owner: number;
+  y: number;
+}
+
 export interface Plate extends Rect {
   style: GroundStyle;
   owner: number;
@@ -99,6 +122,8 @@ export interface CityStats {
 export interface CityLayout {
   lots: Lot[];
   roads: Road[];
+  /** Raccords entre tronçons (coins du périphérique). */
+  joints: Joint[];
   plates: Plate[];
   decor: Decor[];
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number };
@@ -435,6 +460,7 @@ export function stripLayout(areas: number[], rect: Rect): Rect[] {
 interface Ctx {
   lots: Lot[];
   roads: Road[];
+  joints: Joint[];
   plates: Plate[];
   decor: Decor[];
 }
@@ -458,7 +484,7 @@ const EDGE: Edge = { side: "edge", width: 0 };
 
 export function layoutCity(doc: CityDoc): CityLayout {
   const rootPlot = buildPlot(doc.root, 0, "street");
-  const ctx: Ctx = { lots: [], roads: [], plates: [], decor: [] };
+  const ctx: Ctx = { lots: [], roads: [], joints: [], plates: [], decor: [] };
   const side = Math.sqrt(rootPlot.area);
   place(rootPlot, { x: -side / 2, z: -side / 2, w: side, d: side }, 0, -1, ctx, { streets: "street" });
   const { lots } = ctx;
@@ -494,7 +520,7 @@ export function layoutCity(doc: CityDoc): CityLayout {
       default: stats.buildings += 1;
     }
   }
-  return { lots, roads: ctx.roads, plates: ctx.plates, decor: ctx.decor, bounds, stats };
+  return { lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor, bounds, stats };
 }
 
 function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lot {
@@ -611,10 +637,20 @@ function ringAround(inner: Rect, top: number, owner: number, ctx: Ctx) {
   const south = inner.z + inner.d;
   const full = inner.w + 2 * r;
   ctx.roads.push(
-    { x: left, z: north, w: full, d: r, axis: "x", style: "ring", owner, y: top },
-    { x: left, z: south, w: full, d: r, axis: "x", style: "ring", owner, y: top },
+    { x: inner.x, z: north, w: inner.w, d: r, axis: "x", style: "ring", owner, y: top },
+    { x: inner.x, z: south, w: inner.w, d: r, axis: "x", style: "ring", owner, y: top },
     { x: left, z: inner.z, w: r, d: inner.d, axis: "z", style: "ring", owner, y: top },
     { x: right, z: inner.z, w: r, d: inner.d, axis: "z", style: "ring", owner, y: top },
+  );
+  // Les quatre coins tournent en arrondi ; la mégalopole pourra y ouvrir un côté vers l'extérieur.
+  const corner = (x: number, z: number, open: Openings): Joint => ({
+    x, z, w: r, d: r, open, style: "ring", verge: "grass", owner, y: top,
+  });
+  ctx.joints.push(
+    corner(left, north, { north: false, east: true, south: true, west: false }),
+    corner(right, north, { north: false, east: false, south: true, west: true }),
+    corner(left, south, { north: true, east: true, south: false, west: false }),
+    corner(right, south, { north: true, east: false, south: false, west: true }),
   );
   const b = BELT;
   const outer = full + 2 * b;

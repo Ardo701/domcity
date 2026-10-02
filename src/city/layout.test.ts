@@ -97,10 +97,35 @@ describe("layoutCity", () => {
     }
   });
 
+  it("arrondit les quatre coins du périphérique, sans tronçon qui mène nulle part", () => {
+    const ring = layout.roads.filter((r) => r.style === "ring");
+    expect(layout.joints).toHaveLength(4);
+    // Le point milieu d'un côté de la case, juste au-dehors.
+    const beyond = (j: Rect, side: "north" | "east" | "south" | "west") => {
+      const e = 0.01;
+      if (side === "north") return { x: j.x + j.w / 2, z: j.z - e };
+      if (side === "south") return { x: j.x + j.w / 2, z: j.z + j.d + e };
+      if (side === "west") return { x: j.x - e, z: j.z + j.d / 2 };
+      return { x: j.x + j.w + e, z: j.z + j.d / 2 };
+    };
+    const onRing = (p: { x: number; z: number }) => ring.some((r) => p.x > r.x && p.x < r.x + r.w && p.z > r.z && p.z < r.z + r.d);
+    for (const joint of layout.joints) {
+      const open = (["north", "east", "south", "west"] as const).filter((side) => joint.open[side]);
+      // Deux côtés voisins : un virage.
+      expect(open).toHaveLength(2);
+      expect(joint.open.north !== joint.open.south).toBe(true);
+      // Chaque côté ouvert donne sur le périphérique, chaque côté fermé sur la ceinture verte.
+      for (const side of ["north", "east", "south", "west"] as const) {
+        expect(onRing(beyond(joint, side))).toBe(joint.open[side]);
+      }
+      for (const road of ring) expect(overlaps(joint, road)).toBe(false);
+    }
+  });
+
   it("ne bâtit jamais sur une rue", () => {
     for (const lot of lots) {
       if (lot.container) continue;
-      for (const road of layout.roads) expect(overlaps(lot, road)).toBe(false);
+      for (const road of [...layout.roads, ...layout.joints]) expect(overlaps(lot, road)).toBe(false);
     }
   });
 

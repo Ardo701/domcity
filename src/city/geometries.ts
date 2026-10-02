@@ -110,6 +110,30 @@ export function knotGeometry(): THREE.BufferGeometry {
   return g;
 }
 
+/**
+ * Virage : un quart de disque de rayon 1 centré sur le coin nord-ouest de la case (-0.5, -0.5).
+ * Pour une chaussée aussi large que la case, le bord intérieur tourne au ras du coin et le bord
+ * extérieur en arrondi : la largeur reste la même tout le long du virage.
+ */
+export function bendGeometry(): THREE.BufferGeometry {
+  const g = new THREE.CylinderGeometry(1, 1, 1, 18, 1, false, 0, Math.PI / 2);
+  g.translate(-0.5, 0.5, -0.5);
+  return g;
+}
+
+/** Ce qui reste de la case hors du virage : le bas-côté, qui borde l'arrondi comme un trottoir. */
+export function bendVergeGeometry(): THREE.BufferGeometry {
+  // Dessin dans le plan (x, -z), extrudé vers le haut ensuite.
+  const shape = new THREE.Shape();
+  shape.moveTo(0.5, 0.5);
+  shape.lineTo(0.5, -0.5);
+  shape.lineTo(-0.5, -0.5);
+  shape.absarc(-0.5, 0.5, 1, -Math.PI / 2, 0, false);
+  const g = new THREE.ExtrudeGeometry(shape, { depth: 1, bevelEnabled: false, curveSegments: 18 });
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+
 /** Arbre feuillu : tronc et trois touffes. */
 export function treeGeometry(): THREE.BufferGeometry {
   const trunk = new THREE.CylinderGeometry(0.05, 0.07, 0.42, 5, 1);

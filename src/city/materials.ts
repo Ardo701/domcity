@@ -15,6 +15,8 @@ export const FACADE = { glass: 0, office: 1, brick: 2, stucco: 3, house: 4, ston
 export const GROUND = { base: 0, sidewalk: 1, plaza: 2, grass: 3, lawn: 4, crops: 5, dirt: 6, wharf: 7, quay: 8 } as const;
 /** Styles de chaussée (aRoad.x). */
 export const ROAD = { ring: 0, avenue: 1, street: 2, lane: 3, path: 4 } as const;
+/** Sens d'une chaussée pour le marquage (deuxième valeur de aRoad). */
+export const ROAD_AXIS = { x: 0, z: 1, bend: 2, cross: 3 } as const;
 
 const NOISE = /* glsl */ `
 float dcHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -219,13 +221,23 @@ diffuseColor.rgb = c;
 `;
 
 /** Chaussées : asphalte, lignes de rive, axe, passages piétons. aRoad = (style, axe : 0 = x, 1 = z, -, -). */
+// Sens (vDcExtra.y) : 0 le long de x, 1 le long de z, 2 virage (quart de disque centré sur
+// le coin du repère local : la traversée devient le rayon, le long devient l'arc), 3 carrefour sans marquage.
 const ROAD_FRAGMENT = /* glsl */ `
 float dcStyle = vDcExtra.x;
 bool dcAlongX = vDcExtra.y < 0.5;
+bool dcBend = vDcExtra.y > 1.5 && vDcExtra.y < 2.5;
+bool dcCross = vDcExtra.y > 2.5;
 float along = dcAlongX ? vDcBox.x : vDcBox.z;
 float across = dcAlongX ? vDcBox.z : vDcBox.x;
 float len = dcAlongX ? vDcSize.x : vDcSize.z;
 float wid = dcAlongX ? vDcSize.z : vDcSize.x;
+if (dcBend) {
+  across = length(vDcBox.xz);
+  along = across * atan(vDcBox.z, max(vDcBox.x, 1e-4));
+  len = 0.0;
+  wid = vDcSize.x;
+}
 vec3 c = diffuseColor.rgb;
 if (vDcNormal.y > 0.5) {
   c *= 0.9 + 0.1 * dcNoise(vDcWorld.xz * 0.9) + 0.05 * dcNoise(vDcWorld.xz * 6.0);
@@ -248,6 +260,7 @@ if (vDcNormal.y > 0.5) {
       float zebra = step(0.5, fract(across / 0.6)) * step(0.35, across) * step(across, wid - 0.35);
       paint = mix(paint, zebra, zone);
     }
+    if (dcCross) paint = 0.0;
     c = mix(c, vec3(0.93, 0.92, 0.87), clamp(paint, 0.0, 1.0) * 0.92);
   } else {
     c *= 0.9 + 0.22 * dcNoise(vDcWorld.xz * 5.0);

@@ -92,9 +92,9 @@ docs/ROADMAP.md                  ce document
 Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) → `layoutCity` (lots, rues, trottoirs, décors) → `buildCityScene` (instances Three.js) → `CityView`.
 
 Le rendu (`src/city/`) :
-- `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
+- `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique (coins arrondis) et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
 - `palette.ts` : couleurs partagées par la 3D et le dessin de l'accueil (`src/ui/IsoCity.tsx`).
-- `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, arbres, voiture, lampadaire).
+- `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, virage et son bas-côté, arbres, voiture, lampadaire).
 - `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
 - `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
 - `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection.
@@ -190,6 +190,8 @@ Vérifié : tests de l'urbanisme (aucun bâtiment sur une rue, rues entre conten
 **Non vérifié** : un ordinateur peu puissant ou un téléphone ; la promenade au niveau de la rue en interaction réelle.
 Compteur **FPS** (bouton « FPS » de la barre d'outils, mémorisé dans le navigateur) : images par seconde, temps entre deux images, temps de calcul, triangles et appels de dessin. Tant qu'il est affiché, la ville est redessinée à chaque image (sinon elle ne l'est que quand quelque chose bouge). Chiffre à l'encre au-delà de 50 (fluide), sur fond jaune au-delà de 30, sur fond orange en dessous.
 Scintillement de loin corrigé (affiches rayées par leur cadre, chaussées, champs et toits verts qui clignotaient en dézoomant) : le plan proche de la caméra avance jusqu'à mi-chemin de la ville en vue aérienne, ce qui rend à la profondeur toute sa précision, et l'affiche passe toujours devant son cadre.
+Boutons Recadrer, Légende et FPS sur fond de papier encadré (ils se perdaient dans la ville).
+Coins du périphérique arrondis (demande de l'utilisateur : les tronçons « menaient nulle part ») : chaque coin est une **case de raccord** (`Joint` dans `layout.ts`) qui dit par quels côtés la chaussée sort. Deux côtés voisins donnent un virage (quart de disque, marquage qui suit la courbe, bas-côté gazonné, arbres le long de l'arrondi) ; deux côtés opposés une ligne droite ; trois ou quatre un carrefour.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -203,7 +205,7 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 ## 10. Étapes suivantes
 
 ### Étape 4 : la mégalopole
-Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées, niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
+Page de site enrichie : toutes les pages assemblées, cases à cocher, placement déterministe selon l'arborescence des adresses, autoroutes entre pages liées (branchées sur les coins du périphérique de chaque ville : ouvrir un côté vers l'extérieur d'un `Joint` en fait un carrefour, le moteur le dessine déjà), niveaux de détail pour les grandes villes (quartiers lointains simplifiés, images chargées de près). Fonction SQL déjà prête : `site_city(domain, as_of)`. Les relevés du favori nourrissent la mégalopole comme ceux de Wikipédia.
 
 ### Étape 5 : machine à remonter le temps et ambiance
 Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6. Les données sont déjà relevées par le favori : `page.scripts` (usines), `page.thirdParty` à comparer à une liste de traqueurs tenue par le moteur (caméras), `page.bytes` et `page.domSize` (météo), `page.comments` (graffitis), `bg` et `page.colors` (vraies couleurs).
@@ -232,7 +234,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 45 tests
+npm test           # 48 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
