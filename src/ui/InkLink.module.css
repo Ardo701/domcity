@@ -75,6 +75,33 @@
   transition: transform 0.2s ease;
 }
 
+/*
+ * Pendant le chargement : le repère animé à la place de la flèche. Sa case fait la taille de la flèche, le dessin
+ * en déborde : le bouton ne change pas de taille. Un court délai : une navigation instantanée ne le montre pas.
+ */
+.loading {
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  animation: apparition 0.15s ease 0.08s both;
+}
+
+.loading svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.8em;
+  height: 1.8em;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes apparition {
+  from {
+    opacity: 0;
+  }
+}
+
 .ink:hover,
 .ink:focus-visible {
   box-shadow: 6px 6px 0 var(--ink);
@@ -111,5 +138,9 @@
   .stain::after,
   .arrow {
     transition: none;
+  }
+
+  .loading {
+    animation: none;
   }
 }

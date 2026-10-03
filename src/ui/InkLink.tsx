@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useId, type ReactNode } from "react";
 import styles from "./InkLink.module.css";
+import { LogoLoader } from "./LogoLoader";
 
 /**
  * Le bouton principal de DOMCity (« Créer une ville » sur l'accueil) : blanc cassé, et au survol l'orange
  * tombe au centre comme une goutte et s'étale jusqu'aux bords, au bord ondulé par un bruit.
  * Chaque bouton a son propre filtre SVG : deux boutons sur une même page ne partagent pas d'identifiant.
+ * Pendant que la page visée se charge, le repère se bâtit et tombe à la place de la flèche.
  */
 export function InkLink({
   href,
@@ -34,11 +36,24 @@ export function InkLink({
       </svg>
       <span aria-hidden className={styles.stain} style={{ filter: `url(#${filter})` }} />
       {children}
-      {arrow && (
-        <span aria-hidden className={styles.arrow}>
-          →
-        </span>
-      )}
+      <Trailing arrow={arrow} />
     </Link>
   );
+}
+
+/** La flèche, ou le repère animé tant que la navigation n'est pas finie (useLinkStatus : dans le lien). */
+function Trailing({ arrow }: { arrow: boolean }) {
+  const { pending } = useLinkStatus();
+  if (pending) {
+    return (
+      <span aria-hidden className={styles.loading}>
+        <LogoLoader size={32} />
+      </span>
+    );
+  }
+  return arrow ? (
+    <span aria-hidden className={styles.arrow}>
+      →
+    </span>
+  ) : null;
 }
