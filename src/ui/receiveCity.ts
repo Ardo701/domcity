@@ -15,7 +15,7 @@ export class ReceiveError extends Error {
   constructor(
     readonly title: string,
     message: string,
-    /** Le site est refusé par DOMCity : ni surtitre, ni proposition de (ré)installer le favori. */
+    /** Le site est refusé par DOMCity : pas de proposition de (ré)installer le favori. */
     readonly refused = false,
   ) {
     super(message);

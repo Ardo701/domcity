@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CityExplorer } from "@/ui/explorer/CityExplorer";
+import { InkLink } from "@/ui/InkLink";
 import styles from "@/ui/explorer/explorer.module.css";
 import { ReceiveError, receiveCity, type ReceivedCity } from "@/ui/receiveCity";
 
@@ -48,7 +49,6 @@ export function NewCity({ canShare }: { canShare: boolean }) {
       {state.phase === "waiting" ? (
         <div className={styles.loadingWrap}>
           <section className={styles.loading} aria-live="polite" aria-busy="true">
-            <p className="mono-caps">Favori DOMCity</p>
             <h2>Réception du relevé</h2>
             <p className={styles.waitingText}>La page d&apos;origine envoie sa structure à DOMCity.</p>
             <div className={`${styles.progress} ${styles.progressWaiting}`} aria-hidden>
@@ -59,19 +59,24 @@ export function NewCity({ canShare }: { canShare: boolean }) {
       ) : (
         <div className={styles.errorWrap}>
           <section className={styles.error} role="alert">
-            {/* Un site refusé : la raison seule, sans surtitre (le favori n'y est pour rien). */}
-            {!state.refused && <p className="mono-caps">Favori DOMCity</p>}
             <h2>{state.title}</h2>
             <p>{state.message}</p>
+            {/* L'action principale prend le bouton de l'accueil : installer le favori, ou partir d'un site refusé. */}
             <div className={styles.actionsRow}>
-              {!state.refused && (
-                <Link href="/create" className={styles.primary}>
-                  Installer le favori
-                </Link>
+              {state.refused ? (
+                <InkLink href="/" size="small">
+                  Retour à l&apos;accueil
+                </InkLink>
+              ) : (
+                <>
+                  <InkLink href="/create" size="small">
+                    Installer le favori
+                  </InkLink>
+                  <Link href="/" className={styles.secondary}>
+                    Retour à l&apos;accueil
+                  </Link>
+                </>
               )}
-              <Link href="/" className={state.refused ? styles.primary : styles.secondary}>
-                Retour à l&apos;accueil
-              </Link>
             </div>
           </section>
         </div>

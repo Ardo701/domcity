@@ -14,6 +14,7 @@ import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, siteHost } from "@/format/url";
 import { loadBlocklist } from "@/ui/blocklist";
+import { InkLink } from "@/ui/InkLink";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
 import { WikiSearch } from "@/ui/WikiSearch";
@@ -469,11 +470,22 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             {!status.refused && <p className="mono-caps">Erreur de relevé</p>}
             <h2>{status.title}</h2>
             <p>{status.message}</p>
-            {/* Un article mal orthographié : on peut en chercher un autre. */}
-            {wiki && <WikiSearch initialLang={wiki.lang} />}
-            <Link href="/" className={styles.back}>
-              ← Retour à l&apos;accueil
-            </Link>
+            {status.refused ? (
+              // Comme dans /nouveau : le bouton de l'accueil, seule issue d'un site refusé.
+              <div className={styles.actionsRow}>
+                <InkLink href="/" size="small">
+                  Retour à l&apos;accueil
+                </InkLink>
+              </div>
+            ) : (
+              <>
+                {/* Un article mal orthographié : on peut en chercher un autre. */}
+                {wiki && <WikiSearch initialLang={wiki.lang} />}
+                <Link href="/" className={styles.back}>
+                  ← Retour à l&apos;accueil
+                </Link>
+              </>
+            )}
           </section>
         </div>
       )}
