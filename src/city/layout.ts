@@ -18,6 +18,7 @@
 import { kindOf, type Kind } from "@/format/taxonomy";
 import type { CityDoc, CityNode } from "@/format/types";
 import { ambianceOf, type Ambiance, type Weather } from "./ambiance";
+import { rand } from "./palette";
 
 export interface Panel {
   /** Largeur et hauteur de l'affiche. */
@@ -123,6 +124,8 @@ export interface Road extends Rect {
   /** Le conteneur dont c'est une rue : survoler la rue, c'est désigner le conteneur. */
   owner: number;
   y: number;
+  /** Tracée sur une pelouse (lotissement, parc) : retirée, elle laisse l'herbe, pas un trou. */
+  lawn?: boolean;
 }
 
 /** Les côtés d'une case de raccord par lesquels la chaussée en sort. */
@@ -594,7 +597,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
     // Un enfant unique remplit son parent : pas de rue à prévoir autour (les enveloppes <div> en chaîne).
     const alone = plot.children.length === 1;
     const big = child.container || LANDMARKS.has(child.kind);
-    const side = Math.sqrt(child.area) + (alone ? 0 : big && road > 0 ? road + 2 * SIDEWALK : gap);
+    const side = Math.sqrt(child.area) + (alone ? 0 : big && road > 0 ? road + 2 * SIDEWALK : Math.max(gap, accessMargin(mode)));
     inner += side * side;
   }
   if (inner === 0) inner = 9;
@@ -607,6 +610,16 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
 }
 
 /** Espace moyen réservé autour d'un élément : une demi-rue en ville (les voisins se touchent souvent). */
+/**
+ * Ce qu'un bâtiment réserve autour de lui, là où passent des voitures, pour qu'une rue le longe :
+ * la moitié d'une rue à double sens, son trottoir (son accotement sur une pelouse), la moitié de
+ * l'écart avec son voisin de derrière.
+ */
+function accessMargin(mode: StreetMode): number {
+  if (mode !== "street" && mode !== "avenue" && mode !== "lane") return 0;
+  return DRIVABLE_MIN / 2 + (mode === "lane" ? 0.35 : SIDEWALK) + softGap(mode) / 2;
+}
+
 function unitGap(mode: StreetMode, depth: number): number {
   if (mode === "street" || mode === "avenue") return roadWidth(mode, depth) * 0.55;
   if (mode === "none") return softGap(mode);
@@ -654,7 +667,7 @@ function rowShape(scaled: number[], width: number, rigid: boolean, least = 0) {
 export type Fit = "flexible" | "leaf" | "landmark";
 
 /** Range des surfaces dans un rectangle, par rangées, sans changer leur ordre. */
-export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: number[] = []): Row[] {
+export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: number[] = [], cores: number[] = mins): Row[] {
   const total = areas.reduce((sum, a) => sum + a, 0);
   if (areas.length === 0 || total <= 0) return [];
   const scale = (rect.w * rect.d) / total;
@@ -710,7 +723,12 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
   };
   // Même tassées au minimum, les rangées ne tiennent pas : on range les cases comme un texte, ligne
   // à ligne, chacune au moins à sa taille minimale, sans laisser de place libre au bout des lignes.
-  if (excess > spare && floors.some((floor) => floor > 0)) return denseRows(scaled, rect, mins);
+  if (excess > spare && floors.some((floor) => floor > 0)) {
+    const dense = denseRows(scaled, rect, mins);
+    // Toujours trop serré : on renonce aux marges (et aux rues qu'elles laissaient passer), jamais à
+    // la taille des bâtiments.
+    return dense.squeezed && cores !== mins ? denseRows(scaled, rect, cores).rows : dense.rows;
+  }
 
   const rows: Row[] = [];
   let z = rect.z;
@@ -736,7 +754,7 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
  * la place qui reste se partage selon leurs surfaces. Chaque case garde ainsi sa largeur et sa
  * profondeur minimales tant que le rectangle peut les contenir.
  */
-function denseRows(scaled: number[], rect: Rect, mins: number[]): Row[] {
+function denseRows(scaled: number[], rect: Rect, mins: number[]): { rows: Row[]; squeezed: boolean } {
   // Une case sans minimum (un conteneur vide de bâtiments, une statue) compte pour une petite largeur.
   const narrow = (j: number) => Math.max(mins[j] ?? 0, Math.sqrt(scaled[j]) * 0.6);
   const groups: number[][] = [];
@@ -779,7 +797,7 @@ function denseRows(scaled: number[], rect: Rect, mins: number[]): Row[] {
     rows.push({ z, d: depths[k], items });
     z += depths[k];
   });
-  return rows;
+  return { rows, squeezed: extra < 0 };
 }
 
 /** Un joint de rangée ne va chercher sa ligne de grille qu'à cette fraction de l'espacement. */
@@ -877,6 +895,15 @@ interface Env {
   /** Sol fourni par un conteneur ancêtre (parc, pelouse, place…) : pas de trottoirs à poser. */
   ground?: GroundStyle;
   streets: StreetMode;
+  /** Les bords de la case qui donnent sur une rue (tous, si absent : le périphérique entoure la ville). */
+  access?: Access;
+}
+
+interface Access {
+  north: boolean;
+  south: boolean;
+  west: boolean;
+  east: boolean;
 }
 
 /** Ce qu'il y a d'un côté d'une case : une rue, un simple écart, un voisin collé, ou le bord du conteneur. */
@@ -1416,7 +1443,7 @@ function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lo
 /**
  * Une rue où roulent des voitures mène toujours quelque part : de proche en proche, elle rejoint
  * le périphérique. Celle que rien ne relie au réseau (entre deux rangées sans rue à leurs bouts)
- * devient une allée piétonne, sans voitures.
+ * s'efface : de l'herbe sur une pelouse, un passage pavé en ville.
  */
 function connectRoads(ctx: Ctx) {
   type Way = Rect & { style: RoadStyle };
@@ -1456,8 +1483,12 @@ function connectRoads(ctx: Ctx) {
       }
     }
   }
+  // Une rue que rien ne relie s'efface (son pont avec elle).
   ways.forEach((way, i) => {
-    if (!reached.has(i)) way.style = "path";
+    if (reached.has(i)) return;
+    if (ctx.roads.includes(way as Road)) eraseRoad(way as Road, ctx);
+    const bridge = ctx.bridges.indexOf(way as Bridge);
+    if (bridge >= 0) ctx.bridges.splice(bridge, 1);
   });
 }
 
@@ -1501,8 +1532,10 @@ interface Host {
   /** Bande des affiches sur les façades. */
   bottom: number;
   top: number;
-  /** Le haut des murs, sous le toit : la base des mâts et des panneaux de toit. */
+  /** Le haut des murs, sous le toit : la base des panneaux de toit. */
   eave: number;
+  /** Où plantent les mâts des drapeaux : un toit plat au bord de la façade (null : un toit pentu). */
+  mast: number | null;
   /** Prochaine façade à essayer : les affiches font le tour du bâtiment. */
   next: number;
   roof: boolean;
@@ -1532,6 +1565,19 @@ class Solids {
     }
     return false;
   }
+}
+
+/**
+ * Le toit plat où planter un mât, au bord de la façade : comme la scène le dessine (mêmes tirages).
+ * Un gratte-ciel n'a de toit plat jusqu'au bord que sur son socle ; une maison et un petit immeuble
+ * à toit pentu n'en ont pas.
+ */
+function mastOf(lot: Lot): number | null {
+  const short = Math.min(lot.w, lot.d);
+  if (lot.kind === "house") return null;
+  if (lot.kind === "residence" && lot.h <= 9.5 && short >= 2 && rand(lot.id, 4) < 0.55) return null;
+  if (lot.kind === "tower" && lot.h >= 20 && short >= 3.6) return lot.y + clamp(lot.h * 0.14, 2.6, 5.5);
+  return lot.y + lot.h;
 }
 
 /** Taille naturelle d'une affiche : selon l'image (ses pixels, ses proportions), un écran en 16/9. */
@@ -1587,6 +1633,7 @@ function hangImages(lots: Lot[]) {
       bottom: lot.y + Math.min(POSTER_LIFT, Math.max(0.3, lot.h * 0.3)),
       top: lot.y + lot.h * wallTop - 0.15,
       eave: lot.y + (lot.kind === "house" ? lot.h * 0.62 : lot.kind === "residence" && lot.h <= 9.5 ? lot.h * 0.75 : lot.h),
+      mast: mastOf(lot),
       next: lot.id % 4,
       roof: false,
       flags: 0,
@@ -1662,13 +1709,14 @@ function hangImages(lots: Lot[]) {
 
   const flag = (host: Host, lot: Lot): boolean => {
     const L = host.lot;
-    const room = Math.max(1, Math.floor((L.w - 0.3) / (FLAG_WIDTH + 0.3)));
+    if (host.mast === null) return false;
+    const room = Math.max(1, Math.floor((L.w - 1.4) / (FLAG_WIDTH + 0.3)));
     if (host.flags >= room) return false;
     const img = lot.node.img;
     const height = FLAG_WIDTH / clamp((img?.w || 3) / (img?.h || 2), 1.2, 2.2);
-    const x = room === 1 && host.flags === 0 ? L.x + L.w / 2 - FLAG_WIDTH / 2 : L.x + 0.3 + host.flags * (FLAG_WIDTH + 0.3);
+    const x = room === 1 && host.flags === 0 ? L.x + L.w / 2 - FLAG_WIDTH / 2 : L.x + 0.7 + host.flags * (FLAG_WIDTH + 0.3);
     host.flags += 1;
-    Object.assign(lot, { x, z: L.z + L.d - 0.35, w: FLAG_WIDTH, d: 0.1, y: host.eave, h: FLAG_MAST + height });
+    Object.assign(lot, { x, z: L.z + L.d - 0.7, w: FLAG_WIDTH, d: 0.1, y: host.mast, h: FLAG_MAST + height });
     lot.panel = { width: FLAG_WIDTH, height, lift: FLAG_MAST, emblem: "flag", mount: "roof" };
     return true;
   };
@@ -1802,6 +1850,7 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
   const childEnv: Env = {
     ground: root ? undefined : own ?? env.ground,
     streets: root ? "street" : streetsOf(plot.kind) ?? env.streets,
+    access: root ? undefined : env.access,
   };
 
   let inner: Rect = cell;
@@ -1922,7 +1971,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   // Conteneurs et grands édifices ont une vraie rue de chaque côté : on leur réserve sa largeur.
   const alone = items.length === 1;
   const rows = stripRows(
-    items.map((item) => (Math.sqrt(item.area) + (alone ? 0 : big(item) && streets ? road + 2 * SIDEWALK : gap)) ** 2),
+    items.map((item) => (Math.sqrt(item.area) + (alone ? 0 : big(item) && streets ? road + 2 * SIDEWALK : Math.max(gap, accessMargin(mode)))) ** 2),
     rect,
     // Un pâté de maisons ajouté se range comme un conteneur ; s'il porte un grand édifice, comme lui.
     items.map((item): Fit =>
@@ -1930,16 +1979,39 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
         ? item.children.some((child) => LANDMARKS.has(child.kind)) ? "landmark" : "flexible"
         : item.container ? "flexible" : LANDMARKS.has(item.kind) ? "landmark" : "leaf",
     ),
-    // Largeur minimale de chaque case : son plus grand bâtiment et l'écart qui l'entoure.
-    items.map((item) => (item.least > 0 ? item.least + (alone ? 0 : gap) : 0)),
+    // Taille minimale de chaque case : son plus grand bâtiment et l'écart qui l'entoure. Un bâtiment
+    // seul dans sa case, là où passent des voitures, garde de quoi être longé par une rue.
+    items.map((item) => {
+      if (item.least <= 0) return 0;
+      if (alone) return item.least;
+      return item.least + Math.max(gap, item.container ? 0 : accessMargin(mode));
+    }),
+    // Au plus serré : le bâtiment et un simple écart.
+    items.map((item) => (item.least > 0 ? item.least + (alone ? 0 : soft) : 0)),
   );
   if (rows.length === 0) return;
+
+  // Un conteneur au bout d'une rangée incomplète prend la place libre : il touche ainsi le bord du
+  // tronçon, et la rue qui le longe (ses propres rues y trouvent une issue). La dernière rangée va
+  // jusqu'au bord sud.
+  for (const row of rows) {
+    const first = row.items[0];
+    const last = row.items[row.items.length - 1];
+    if (items[first.index].container && first.x > rect.x + 0.01) {
+      first.w += first.x - rect.x;
+      first.x = rect.x;
+    }
+    if (items[last.index].container && last.x + last.w < rect.x + rect.w - 0.01) last.w = rect.x + rect.w - last.x;
+  }
+  const lastRow = rows[rows.length - 1];
+  if (lastRow.z + lastRow.d < rect.z + rect.d - 0.01) lastRow.d = rect.z + rect.d - lastRow.z;
 
   const quiet: Edge = urban ? { side: "attached", width: ALLEY } : { side: "soft", width: soft };
   const half = (edge: Edge) => edge.width / 2;
   // Retrait d'un bâtiment : trottoir côté rue et côté bord, presque rien côté voisin.
   // Sur une pelouse (lotissement, parc), pas de trottoir : un simple accotement.
   const verge = env.ground ? 0.35 : SIDEWALK;
+  const tight = env.ground ? 0.15 : 0.4;
   const inset = (edge: Edge) =>
     edge.side === "road"
       ? edge.width / 2 + verge
@@ -1955,16 +2027,20 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
    * laisser à leurs bâtiments moins que leur taille minimale (`other` : le retrait de l'autre bord).
    */
   type Cell = { size: number; other: number; need: number };
-  const street = (a: Cell, b: Cell): Edge | null => {
-    // En ville, une rue ne prend pas plus de 42 % de la plus petite case ; sur une pelouse, seule
-    // compte la taille minimale des maisons qui la bordent.
-    let width = env.ground ? road : Math.min(road, 0.42 * Math.min(a.size, b.size));
+  const street = (a: Cell, b: Cell, required = false): Edge | null => {
+    // En ville, une rue ne prend pas plus de 42 % de la plus petite case (sauf celle qui dessert
+    // une rangée sans autre accès) ; sur une pelouse, seule compte la taille minimale des maisons.
+    let width = env.ground || required ? road : Math.min(road, 0.42 * Math.min(a.size, b.size));
+    // Pour desservir une rangée qui n'a pas d'autre accès, le trottoir (l'accotement) se resserre :
+    // les bâtiments mordront dessus plutôt que de rétrécir.
+    const margin = required ? tight : verge;
     for (const cell of [a, b]) {
-      if (cell.need > 0) width = Math.min(width, 2 * (cell.size - cell.other - verge - cell.need));
+      if (cell.need > 0) width = Math.min(width, 2 * (cell.size - cell.other - margin - cell.need));
     }
-    return width >= narrowest ? { side: "road", width } : null;
+    return width >= narrowest - 1e-6 ? { side: "road", width: Math.max(width, narrowest) } : null;
   };
   const rowNeed = rows.map((row) => Math.max(0, ...row.items.map((it) => items[it.index].least)));
+  const access: Access = env.access ?? { north: true, south: true, west: true, east: true };
 
   // Entre les rangées : une rue dès qu'un conteneur est en jeu, ou quand le pâté devient trop profond.
   const between: Edge[] = [];
@@ -1972,14 +2048,35 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   for (let k = 0; k < rows.length - 1; k += 1) {
     const here = rows[k].items.some((it) => big(items[it.index]));
     const next = rows[k + 1].items.some((it) => big(items[it.index]));
-    const wanted = streets && (here || next || depthSinceRoad + rows[k + 1].d > blockDepth(mode));
     const north = k === 0 ? EDGE : between[k - 1];
-    const edge = wanted
-      ? street(
-          { size: rows[k].d, other: inset(north), need: rowNeed[k] },
-          { size: rows[k + 1].d, other: leastInset(k + 1 === rows.length - 1), need: rowNeed[k + 1] },
-        )
-      : null;
+    // Chaque bâtiment donne sur une rue : une rangée qui n'en a pas au nord en reçoit une au sud,
+    // et la dernière, si son bord sud ne donne sur rien, en reçoit une au nord (les rangées vont
+    // par deux, dos à dos, de part et d'autre des rues).
+    const homes = (r: number) => rows[r].items.some((it) => !items[it.index].container);
+    const reachedNorth = k === 0 ? access.north : north.side === "road";
+    const last = k + 1 === rows.length - 1;
+    const required =
+      streets && mode !== "path" &&
+      ((homes(k) && !reachedNorth) || (last && homes(k + 1) && !access.south));
+    const wanted = streets && (required || here || next || depthSinceRoad + rows[k + 1].d > blockDepth(mode));
+    const sides = (): [Cell, Cell] => [
+      { size: rows[k].d, other: inset(north), need: rowNeed[k] },
+      { size: rows[k + 1].d, other: leastInset(k + 1 === rows.length - 1), need: rowNeed[k + 1] },
+    ];
+    let edge = wanted ? street(...sides(), required) : null;
+    if (!edge && required) {
+      // La rue obligatoire ne tient pas : la limite entre les deux rangées glisse vers celle qui a
+      // de la place, si à elles deux elles peuvent la border.
+      const [a, b] = sides();
+      const room = (cell: Cell) => cell.other + tight + cell.need + narrowest / 2;
+      if (a.size + b.size >= room(a) + room(b) - 1e-6) {
+        const shift = a.size < room(a) ? room(a) - a.size : b.size < room(b) ? b.size - room(b) : 0;
+        rows[k].d += shift;
+        rows[k + 1].z += shift;
+        rows[k + 1].d -= shift;
+        edge = street(...sides(), required);
+      }
+    }
     if (!streets) between.push({ side: "soft", width: soft });
     else if (edge) {
       between.push(edge);
@@ -1993,8 +2090,14 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   // Grille des rues transversales, à la longueur d'un pâté.
   const spacing = blockLength(mode);
   const lines = gridLines(rect.x, rect.w, spacing);
+  // Un tronçon dont ni l'ouest ni l'est ne donnent sur une rue : ses rues entre rangées n'auraient
+  // pas d'issue. Une rue transversale commune à toutes les rangées les relie au nord ou au sud.
+  const enclosed = streets && mode !== "path" && !access.west && !access.east && (access.north || access.south);
+  if (enclosed && rows.length > 1 && lines.length === 0) lines.push(rect.x + rect.w / 2);
 
   const groundTop = env.ground ? top : top + CURB;
+  /** Les rues transversales de chaque rangée : à la fin, celles qui butent sur une maison s'effacent. */
+  const crossing: Road[][] = rows.map(() => []);
 
   rows.forEach((row, k) => {
     const north = k === 0 ? EDGE : between[k - 1];
@@ -2015,7 +2118,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     if (south.side === "road") {
       ctx.roads.push({
         x: rect.x, z: row.z + row.d - south.width / 2, w: rect.w, d: south.width,
-        axis: "x", style: mode as RoadStyle, owner, y: top,
+        axis: "x", style: mode as RoadStyle, owner, y: top, ...(env.ground ? { lawn: true } : {}),
       });
     }
 
@@ -2068,16 +2171,27 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       if (west.side === "road") {
         const n = north.side === "road" ? north.width / 2 : 0;
         const s = south.side === "road" ? south.width / 2 : 0;
-        ctx.roads.push({
+        const road: Road = {
           x: item.x - west.width / 2, z: row.z + n, w: west.width, d: row.d - n - s,
-          axis: "z", style: mode as RoadStyle, owner, y: top,
-        });
+          axis: "z", style: mode as RoadStyle, owner, y: top, ...(env.ground ? { lawn: true } : {}),
+        };
+        ctx.roads.push(road);
+        // Seules les petites rues d'un pâté s'effacent si elles butent sur une maison : celle qui borde
+        // un conteneur le dessert (ses propres rues s'y raccordent), quitte à finir en impasse.
+        if (!big(plot) && !big(items[row.items[j - 1].index])) crossing[k].push(road);
       }
 
       if (plot.container) {
         const cell = { x: item.x + half(west), z: z0, w: item.w - half(west) - half(east), d: z1 - z0 };
-        if (plot.virtual) placeRows(plot.children, cell, top, owner, ctx, env, depth);
-        else place(plot, cell, top, owner, ctx, env);
+        // Ce que la case touche : une rue de ce tronçon, ou le bord du tronçon s'il donne lui-même sur une rue.
+        const reach: Access = {
+          north: north.side === "road" || (row.z <= rect.z + 0.01 && access.north),
+          south: south.side === "road" || (row.z + row.d >= rect.z + rect.d - 0.01 && access.south),
+          west: west.side === "road" || (item.x <= rect.x + 0.01 && access.west),
+          east: east.side === "road" || (item.x + item.w >= rect.x + rect.w - 0.01 && access.east),
+        };
+        if (plot.virtual) placeRows(plot.children, cell, top, owner, ctx, { ...env, access: reach }, depth);
+        else place(plot, cell, top, owner, ctx, { ...env, access: reach });
         return;
       }
 
@@ -2118,6 +2232,41 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       if (east.side !== "attached") closeSegment(j);
     });
   });
+
+  // Une rue transversale qui débouche, à travers un simple écart, sur une maison de la rangée voisine
+  // (au lieu de rejoindre la rue de cette rangée) ferait croire que la maison coupe la route : elle
+  // s'efface. En ville, sa place devient un passage pavé ; sur une pelouse, de l'herbe.
+  const meets = (a: Road, b: Road) => a.x < b.x + b.w - 0.05 && b.x < a.x + a.w - 0.05;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let k = 0; k < rows.length - 1; k += 1) {
+      if (between[k].side === "road") continue;
+      const upper = crossing[k];
+      const lower = crossing[k + 1];
+      const lost = [
+        ...upper.filter((road) => !lower.some((other) => meets(road, other))),
+        ...lower.filter((road) => !upper.some((other) => meets(road, other))),
+      ];
+      for (const road of lost) {
+        eraseRoad(road, ctx);
+        for (const list of crossing) {
+          const at = list.indexOf(road);
+          if (at >= 0) list.splice(at, 1);
+        }
+        changed = true;
+      }
+    }
+  }
+}
+
+/** Retire une rue : sur une pelouse, l'herbe reprend sa place ; en ville, un passage pavé. */
+function eraseRoad(road: Road, ctx: Pick<Ctx, "roads" | "plates">) {
+  const at = ctx.roads.indexOf(road);
+  if (at >= 0) ctx.roads.splice(at, 1);
+  if (!road.lawn) {
+    ctx.plates.push({ x: road.x, z: road.z, w: road.w, d: road.d, y: road.y, h: CURB, style: "sidewalk", owner: road.owner });
+  }
 }
 
 function shapeLeaf(lot: Lot, node: CityNode): void {

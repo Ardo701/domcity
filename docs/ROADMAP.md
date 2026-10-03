@@ -260,9 +260,14 @@ Vérifié : 75 tests (affiches contre la façade de leur porteur, dans aucun bâ
 Demande de l'utilisateur : des maisons minuscules (une d'un mètre de large sous un drapeau), des ruelles « seules » sans route au bout, des voitures au milieu de la chaussée.
 - **Taille minimale des bâtiments** (`MIN_SIDE` dans `layout.ts`) : maison 2,2 unités (6,6 m), immeuble et tour 2,6 (7,8 m), galerie 6. Une petite case ne partage plus la rangée d'un voisin qui l'écraserait, une rangée n'est jamais moins profonde que son plus petit bâtiment, une rue ne se trace pas si elle écrase ses voisins, et un bâtiment mord sur son trottoir plutôt que de rétrécir. Quand les rangées ne tiennent vraiment pas, elles se rangent comme un texte, ligne à ligne, chaque case à sa taille minimale (`denseRows`).
 - **Rues à double sens** : toute rue carrossable fait au moins 2,4 unités (7 m, `DRIVABLE_MIN`) et porte une file de voitures dans chaque sens. Une rue plus étroite n'est pas tracée. Les lotissements gardent entre leurs rangées la place d'une ruelle (jardins un peu plus profonds) ; sur une pelouse, la ruelle a un accotement plutôt qu'un trottoir.
-- **Réseau relié** : de proche en proche, chaque rue rejoint le périphérique ; celle que rien ne relie devient une allée piétonne, sans voitures (`connectRoads`). Les impasses (rattachées par un seul bout) restent permises.
+- **Réseau relié** : de proche en proche, chaque rue rejoint le périphérique ; celle que rien ne relie s'efface (`connectRoads`) : de l'herbe sur une pelouse, un passage pavé en ville. Les impasses (rattachées par un seul bout) restent permises.
+- **Chaque bâtiment donne sur une rue** (deuxième retour de l'utilisateur : des maisons sans route, une maison qui coupe une route, un « sable » au survol muet, des drapeaux en l'air). Les rangées vont par deux, dos à dos, de part et d'autre d'une rue : une rangée sans rue au nord en reçoit une au sud, la dernière en reçoit une au nord si son bord sud ne donne sur rien. Chaque bâtiment réserve de quoi être longé par une rue (`accessMargin`) ; si la rue obligatoire ne tient pas, la limite entre les deux rangées glisse vers celle qui a de la place et le trottoir se resserre (les bâtiments mordent dessus). Chaque conteneur sait quels bords donnent vraiment sur une rue (`Access`) ; un conteneur au bout d'une rangée incomplète prend la place libre pour toucher le bord ; un tronçon sans issue à l'est ni à l'ouest reçoit une rue transversale commune à ses rangées. Au plus serré, on renonce aux marges (et à la rue), jamais à la taille des bâtiments.
+- **Plus de maison au milieu d'une route** : une petite rue transversale qui bute, à travers un simple écart, sur une maison de la rangée voisine (au lieu de rejoindre la rue d'en face) s'efface. Celle qui borde un conteneur reste (elle le dessert), quitte à finir en impasse.
+- Le « sable » était une rue coupée du réseau changée en allée de gravier : elle s'efface désormais.
+- **Drapeaux** : le mât se plante sur le vrai toit plat de son porteur (le socle d'un gratte-ciel, en retrait du bord), jamais sur une maison ni un toit pentu (mêmes tirages que la scène).
+- Sur les 11 villes locales (~7 500 bâtiments) : 0 bâtiment trop petit, 0 rue trop étroite, 29 bâtiments sans rue à moins de 9 m (0,4 %, des blocs exigus : diagrammes, bandeaux), contre 365 avant (Montmartre 61 → 0, Lyon 98 → 1, Paris 129 → 16).
 - Paris : 485 maisons sur 721 sous 2,2 unités avant, 0 après ; 200 rues trop étroites pour deux voitures avant, 0 après ; 0 rue coupée du réseau (6 allées piétonnes) ; ruelles des lotissements 212 ; la ville grandit de 1,4 %.
-Vérifié : 77 tests (tailles minimales sur des pages piégeuses : trente niveaux en escalier, longue liste, boîtes de galerie ; rues assez larges et toutes reliées au périphérique), TypeScript, ESLint, compilation de production ; Paris dans le navigateur (lotissement, ruelle à double sens).
+Vérifié : 79 tests (tailles minimales sur des pages piégeuses : trente niveaux en escalier, longue liste, boîtes de galerie ; rues assez larges et toutes reliées au périphérique ; chaque maison d'un lotissement enclavé à moins de 9 m d'une rue ; drapeaux sur un toit plat, jamais sur une maison), TypeScript, ESLint, compilation de production ; Paris dans le navigateur (lotissements, ruelles à double sens, drapeaux).
 **Non vérifié** : un site très imbriqué relevé par le favori (les escaliers de `div` de l'essai sont synthétiques).
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
@@ -306,7 +311,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 77 tests
+npm test           # 79 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

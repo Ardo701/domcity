@@ -345,6 +345,44 @@ describe("layoutCity", () => {
     expect(reached.size).toBe(ways.length);
   });
 
+  it("fait donner chaque maison sur une rue, même dans un lotissement enclavé", () => {
+    const li = (text: number): CityNode => ({ tag: "li", text });
+    const section = (n: number, k: number): CityNode => ({
+      tag: "section",
+      children: [{ tag: "h2", text: 12, heading: `Partie ${k}` }, { tag: "p", text: 300 }, { tag: "ul", children: Array.from({ length: n }, (_, i) => li(40 + ((i * 41) % 300))) }],
+    });
+    const city = layoutCity(doc({ tag: "body", children: [section(30, 1), section(24, 2), { tag: "ol", children: Array.from({ length: 140 }, (_, i) => li(30 + ((i * 37) % 260))) }, section(12, 3)] }));
+    const roads = city.roads.filter((road) => road.style !== "path");
+    const gap = (a: Rect, b: Rect) => Math.hypot(Math.max(0, b.x - (a.x + a.w), a.x - (b.x + b.w)), Math.max(0, b.z - (a.z + a.d), a.z - (b.z + b.d)));
+    const houses = city.lots.filter((lot) => lot.kind === "house" && !lot.hung);
+    expect(houses.length).toBeGreaterThan(150);
+    // Un jardin de façade, pas plus : moins de 3 unités (9 m) jusqu'à la rue.
+    for (const house of houses) expect(roads.some((road) => gap(house, road) <= 3)).toBe(true);
+  });
+
+  it("plante les drapeaux sur un vrai toit plat, jamais en l'air ni sur une maison", () => {
+    const flag = (n: number): CityNode => ({ tag: "img", img: { src: `https://e.org/Flag_of_${n}.svg.png`, w: 22, h: 15 } });
+    const city = layoutCity(
+      doc({
+        tag: "body",
+        children: [
+          { tag: "ul", children: [{ tag: "li", text: 30 }, flag(1), { tag: "li", text: 40 }] },
+          { tag: "div", children: [{ tag: "div", text: 6000 }, flag(2), flag(3)] },
+        ],
+      }),
+    );
+    const flags = city.lots.filter((lot) => lot.panel?.emblem === "flag");
+    expect(flags).toHaveLength(3);
+    for (const f of flags) {
+      const host = city.lots.find((lot) => !lot.container && !lot.hung && overlaps({ x: f.x, z: f.z, w: 0.1, d: f.d }, lot))!;
+      expect(host).toBeDefined();
+      expect(host.kind).not.toBe("house");
+      // Le mât repose sur le toit plat de son porteur : le haut du bâtiment, ou son socle pour un gratte-ciel.
+      const sky = host.kind === "tower" && host.h >= 20 && Math.min(host.w, host.d) >= 3.6;
+      expect(f.y).toBeCloseTo(sky ? host.y + Math.min(5.5, Math.max(2.6, host.h * 0.14)) : host.y + host.h, 6);
+    }
+  });
+
   it("cale la grille des rues transversales sur la ville, loin des bords", () => {
     expect(gridLines(-20, 100, 26)).toEqual([0, 26, 52]);
     // à moins de 0,4 pas du bord (10,4 m), pas de ligne : le bout de pâté serait trop court
