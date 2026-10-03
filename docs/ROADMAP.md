@@ -313,7 +313,7 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 ## 10. Étapes suivantes
 
 ### Étape 6 : mise en ligne
-Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. Reste : `www.domcity.app` (n'existe pas encore : l'ajouter dans Vercel, redirigé vers `domcity.app`), Supabase, R2, variables.
+Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. `www.domcity.app` redirige vers `domcity.app` (308 permanente, chemin et paramètres gardés ; CNAME vers Vercel en nuage gris). Reste : Supabase, R2, variables.
 
 Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** pour `domcity.app` vers Vercel, **nuage orange** pour `files.domcity.app` vers R2), projet Vercel relié au dépôt, variables d'environnement, règles du pare-feu Vercel (limite sur `/api/captures`), Attack Mode en cas d'attaque, purge du cache Cloudflare à la suppression (jeton facultatif).
 
