@@ -7,6 +7,7 @@ import { megalopolisPath, sharedCityPath, sitePath } from "@/format/shared";
 import { fileStore, thumbKey } from "@/server/files";
 import { sitePageList } from "@/server/store";
 import { Gallery, GalleryCard, GalleryGap, shortDate } from "@/ui/Gallery";
+import { InkLink } from "@/ui/InkLink";
 import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../../page.module.css";
@@ -79,9 +80,9 @@ export default async function SitePage(props: PageProps<"/site/[domain]">) {
               .join(" · ")}
           </p>
           <div className={styles.actions}>
-            <Link href={several ? megalopolisPath(domain) : sharedCityPath(pages[0].slug)} className={styles.visit}>
-              {several ? "Visiter la mégalopole" : "Visiter la ville"} <span aria-hidden>→</span>
-            </Link>
+            <InkLink href={several ? megalopolisPath(domain) : sharedCityPath(pages[0].slug)} size="small" arrow>
+              {several ? "Visiter la mégalopole" : "Visiter la ville"}
+            </InkLink>
             <a href={`https://${domain}/`} target="_blank" rel="noreferrer" className={styles.origin}>
               Ouvrir {domain} ↗
             </a>
