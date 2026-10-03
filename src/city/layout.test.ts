@@ -210,11 +210,69 @@ describe("layoutCity", () => {
     ).lots.filter((l) => l.kind === "billboard");
     expect(icons.map((l) => l.panel!.emblem)).toEqual(["flag", "sign", "flag", undefined]);
     const [flag, sign, , photo] = icons;
-    // Un panonceau tient dans un mètre et garde la forme de l'icône ; le drapeau flotte en haut de son mât.
+    // Une enseigne tient dans un mètre et garde la forme de l'icône ; le drapeau flotte sur un mât, au toit.
     expect(Math.max(sign.panel!.width, sign.panel!.height)).toBeLessThanOrEqual(1);
     expect(sign.panel!.width / sign.panel!.height).toBeCloseTo(9 / 12, 6);
-    expect(flag.panel!.lift).toBeGreaterThan(3);
+    expect(sign.panel!.mount).not.toBe("roof");
+    expect(flag.panel!.mount).toBe("roof");
+    expect(flag.panel!.lift).toBeGreaterThan(2);
     expect(photo.panel!.width).toBeGreaterThan(flag.panel!.width);
+  });
+
+  it("accroche les images aux façades du bâtiment le plus proche, sans case au sol", () => {
+    const img = (w: number, h: number, n = 0): CityNode => ({ tag: "img", img: { src: `https://e.org/${w}-${n}.jpg`, w, h } });
+    const body = (withImages: boolean): CityNode => ({
+      tag: "body",
+      children: [
+        {
+          tag: "section",
+          children: [
+            { tag: "p", text: 900 },
+            ...(withImages ? [img(400, 300, 1), img(300, 300, 2), img(640, 360, 3), img(220, 330, 4)] : []),
+            { tag: "div", children: [...(withImages ? [img(250, 167, 5)] : []), { tag: "div", text: 120, label: ".legende" }] },
+            { tag: "p", text: 400 },
+          ],
+        },
+        // Un bloc d'images seules : une galerie les porte.
+        ...(withImages ? [{ tag: "div", label: ".grille", children: [img(300, 300, 6), img(300, 300, 7), img(300, 300, 8)] }] : []),
+      ],
+    });
+    const city = layoutCity(doc(body(true)));
+    const bare = layoutCity(doc(body(false)));
+    const posters = city.lots.filter((l) => l.kind === "billboard");
+    expect(posters).toHaveLength(8);
+    const hosts = city.lots.filter((l) => !l.container && !l.hung && ["tower", "residence", "house", "gallery"].includes(l.kind));
+    const solids = city.lots.filter((l) => !l.container && !l.hung && l.h > 0);
+    for (const poster of posters) {
+      expect(poster.hung).toBe(true);
+      expect(poster.panel?.mount).not.toBe("roof");
+      // Contre une façade d'un porteur, au-dessus du rez-de-chaussée, et dans aucun bâtiment.
+      const host = hosts.find((h) => overlaps({ x: poster.x - 0.05, z: poster.z - 0.05, w: poster.w + 0.1, d: poster.d + 0.1 }, h));
+      expect(host).toBeDefined();
+      expect(poster.y).toBeGreaterThan(host!.y);
+      expect(poster.y + poster.h).toBeLessThanOrEqual(host!.y + host!.h);
+      for (const solid of solids) expect(overlaps(poster, solid)).toBe(false);
+    }
+    // L'image de la figure va sur sa légende, celles de la grille sur leur galerie.
+    const legend = city.lots.find((l) => l.node.label === ".legende")!;
+    const figure = posters.find((p) => p.node.img?.src.endsWith("250-5.jpg"))!;
+    expect(overlaps({ x: figure.x - 0.05, z: figure.z - 0.05, w: figure.w + 0.1, d: figure.d + 0.1 }, legend)).toBe(true);
+    const gallery = city.lots.find((l) => l.kind === "gallery")!;
+    expect(gallery.gallery).toBe(3);
+    // Plusieurs façades servent, pas une seule.
+    expect(new Set(posters.map((p) => p.panel!.mount)).size).toBeGreaterThan(1);
+    // Les numéros suivent toujours l'ordre de la page.
+    for (const lot of city.lots) {
+      if (lot.parent < 0) continue;
+      const parent = city.lots[lot.parent];
+      expect(lot.id).toBeGreaterThan(parent.id);
+      expect(lot.id).toBeLessThan(parent.subtreeEnd);
+    }
+    const srcs = posters.map((p) => p.node.img!.src.replace(/.*-(\d)\.jpg/, "$1")).join("");
+    expect(srcs).toBe("12345678");
+    // Sans la grille, les images ne prennent pas de place : la ville a la même taille.
+    const withoutGrid = layoutCity(doc({ ...body(true), children: body(true).children!.slice(0, 1) }));
+    expect(withoutGrid.lots[0].w).toBeCloseTo(bare.lots[0].w, 6);
   });
 
   it("reconnaît un drapeau à son fichier ou à son texte, et à sa forme", () => {

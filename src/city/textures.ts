@@ -51,7 +51,14 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
   return lines;
 }
 
-/** Affiche de remplacement : hachures de chantier, mention, texte alternatif. */
+/** Teintes calmes des affiches de remplacement : une façade couverte ne doit pas être uniforme. */
+const PLACARDS = ["#E6DFCF", "#DCE2DA", "#E4D8D0", "#D9DEE4", "#E8E1CC", "#DED6E0"];
+
+/**
+ * Affiche de remplacement, quand le site de l'image ne la prête pas (ou qu'elle a disparu) :
+ * sobre, comme une affiche imprimée. Le texte alternatif de l'image en gros, une mention
+ * discrète en bas. Un clic montre toujours la vraie image.
+ */
 export function unavailableTexture(ratio: number, status: ImageStatus, alt?: string): THREE.CanvasTexture {
   const width = 512;
   const height = Math.max(160, Math.round(width / Math.max(ratio, 0.45)));
@@ -60,37 +67,36 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#DCD5C6";
+  const text = alt?.trim() || "Image sans légende";
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  ctx.fillStyle = PLACARDS[hash % PLACARDS.length];
   ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = "rgba(21,21,26,0.09)";
-  ctx.lineWidth = 14;
-  for (let x = -height; x < width; x += 40) {
-    ctx.beginPath();
-    ctx.moveTo(x, height);
-    ctx.lineTo(x + height, 0);
-    ctx.stroke();
-  }
   ctx.strokeStyle = "#15151A";
-  ctx.lineWidth = 6;
-  ctx.strokeRect(3, 3, width - 6, height - 6);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(14, 14, width - 28, height - 28);
 
   const display = fontFamily("--font-display", "sans-serif");
   const mono = fontFamily("--font-mono", "monospace");
-  const label = status === "missing" ? "IMAGE INTROUVABLE" : "IMAGE INDISPONIBLE";
+  const caption = status === "missing" ? "IMAGE INTROUVABLE" : "IMAGE NON AFFICHÉE · CLIC POUR LA VOIR";
+  const box = { x: 34, y: 34, w: width - 68, h: height - 104 };
 
-  ctx.fillStyle = "#FF4B12";
-  ctx.fillRect(28, 28, 44, 10);
+  // Le texte alternatif, aussi gros que la place le permet.
   ctx.fillStyle = "#15151A";
-  ctx.font = `800 54px ${display}`;
   ctx.textBaseline = "top";
-  ctx.fillText(label, 28, 52, width - 56);
-
-  if (alt) {
-    ctx.font = `500 22px ${mono}`;
-    ctx.fillStyle = "#45454F";
-    const lines = wrapLines(ctx, alt, width - 56, Math.max(1, Math.floor((height - 140) / 30)));
-    lines.forEach((text, i) => ctx.fillText(text, 28, 124 + i * 30));
+  let size = 64;
+  let lines: string[] = [];
+  for (; size >= 22; size -= 4) {
+    ctx.font = `800 ${size}px ${display}`;
+    lines = wrapLines(ctx, text.toUpperCase(), box.w, Math.max(1, Math.floor(box.h / (size * 1.05))));
+    if (lines.length * size * 1.05 <= box.h) break;
   }
+  lines.forEach((line, i) => ctx.fillText(line, box.x, box.y + i * size * 1.05, box.w));
+
+  ctx.font = `500 16px ${mono}`;
+  ctx.fillStyle = "#45454F";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(caption, box.x, height - 32, box.w);
   return canvasTexture(canvas);
 }
 

@@ -60,25 +60,28 @@ function facesOf(lot: Lot): IsoFace[] {
     return ground && lot.h > 0 ? isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, GROUND_COLORS[ground]) : [];
   }
   if (lot.kind === "river") return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, WATER);
-  if (lot.panel?.emblem) {
-    // Panonceau sur son poteau, ou drapeau en haut de son mât (sans l'icône : le dessin reste au trait).
-    const { width, height, lift, emblem } = lot.panel;
-    const cz = lot.z + lot.d / 2;
-    const pole = emblem === "flag" ? lot.x : lot.x + lot.w / 2;
-    return [
-      ...isoBox(pole - 0.05, lot.y, cz - 0.05, 0.1, lift + height, 0.1, "#8e9197"),
-      ...isoBox(emblem === "flag" ? lot.x + 0.05 : lot.x, lot.y + lift, cz - 0.02, width, height, 0.04, "#f4f1ea"),
-    ];
-  }
+  // Une image sans place nulle part n'est pas dessinée.
+  if (lot.hung && !lot.panel) return [];
   if (lot.panel) {
-    const { width, height, lift } = lot.panel;
-    const cx = lot.x + lot.w / 2;
+    const { width, height, lift, emblem, mount } = lot.panel;
     const cz = lot.z + lot.d / 2;
-    return [
-      ...isoBox(cx - width * 0.32 - 0.15, lot.y, cz - 0.15, 0.3, lift, 0.3, "#55555c"),
-      ...isoBox(cx + width * 0.32 - 0.15, lot.y, cz - 0.15, 0.3, lift, 0.3, "#55555c"),
-      ...isoBox(lot.x, lot.y + lift, lot.z, width, height, lot.d, "#2b2b31"),
-    ];
+    if (emblem === "flag") {
+      // Drapeau en haut de son mât, sur un toit (sans l'icône : le dessin reste au trait).
+      return [
+        ...isoBox(lot.x - 0.05, lot.y, cz - 0.05, 0.1, lift + height, 0.1, "#8e9197"),
+        ...isoBox(lot.x + 0.05, lot.y + lift, cz - 0.02, width, height, 0.04, "#f4f1ea"),
+      ];
+    }
+    if (mount === "roof") {
+      const cx = lot.x + lot.w / 2;
+      return [
+        ...isoBox(cx - width * 0.32 - 0.1, lot.y, cz - 0.1, 0.2, lift, 0.2, "#55555c"),
+        ...isoBox(cx + width * 0.32 - 0.1, lot.y, cz - 0.1, 0.2, lift, 0.2, "#55555c"),
+        ...isoBox(lot.x, lot.y + lift, lot.z, width, height, lot.d, "#2b2b31"),
+      ];
+    }
+    // Affiche ou enseigne à plat sur sa façade.
+    return isoBox(lot.x, lot.y, lot.z, lot.w, lot.h, lot.d, emblem ? "#f4f1ea" : "#2b2b31");
   }
   const color = buildingColor(lot);
   if (lot.kind === "house") {

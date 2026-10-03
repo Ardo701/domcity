@@ -37,7 +37,8 @@ export function Inspector({
   onFocus: () => void;
   onViewImage: () => void;
 }) {
-  const parent = info.path.length > 1 ? info.path[info.path.length - (info.ownText ? 1 : 2)] : null;
+  const added = info.ownText || info.gallery;
+  const parent = info.path.length > 1 ? info.path[info.path.length - (added ? 1 : 2)] : null;
   const rows: Array<[string, ReactNode]> = [
     ["Texte propre", formatChars(info.text)],
     ["Texte en tout", formatChars(info.textTotal)],
@@ -83,7 +84,9 @@ export function Inspector({
         </p>
       )}
 
-      <code className={styles.selector}>{info.ownText ? `texte direct de <${parent?.selector}>` : `<${info.selector}>`}</code>
+      <code className={styles.selector}>
+        {info.ownText ? `texte direct de <${parent?.selector}>` : info.gallery ? `images de <${parent?.selector}>` : `<${info.selector}>`}
+      </code>
       <p className={styles.blurb}>{info.blurb}</p>
 
       {info.heading && <blockquote className={styles.heading}>{info.heading}</blockquote>}
@@ -135,7 +138,7 @@ export function Inspector({
             Approcher
           </button>
         )}
-        {parent && !info.ownText && (
+        {parent && !added && (
           <button type="button" className={styles.secondary} onClick={() => onSelect(parent.id)}>
             Voir le parent
           </button>

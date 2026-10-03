@@ -165,7 +165,7 @@ export function Tooltip({
         <div>
           <p className={styles.tooltipName}>{info.name}</p>
           <p className={styles.tooltipSelector}>
-            {info.ownText ? "texte direct" : `<${info.selector}>`}
+            {info.ownText ? "texte direct" : info.gallery ? `images de <${info.selector}>` : `<${info.selector}>`}
           </p>
         </div>
       </div>

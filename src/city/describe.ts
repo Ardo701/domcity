@@ -34,6 +34,8 @@ export interface LotInfo {
   heading?: string;
   /** Bâtiment ajouté pour le texte écrit directement dans un conteneur. */
   ownText: boolean;
+  /** Galerie ajoutée pour porter les images d'un conteneur qui n'a qu'elles. */
+  gallery: boolean;
   text: number;
   textTotal: number;
   children: number;
@@ -52,11 +54,14 @@ export interface LotInfo {
 
 const STOREYED = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "embassy"]);
 
-/** Les petites images ne sont pas des panneaux : elles ont leur propre nom. */
+/** Les petites images ne sont pas des affiches : elles ont leur propre nom. */
 const EMBLEMS = {
-  sign: { name: "Panonceau", blurb: "Une icône du site (moins de 48 px), sur un petit panneau à son image." },
-  flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur son mât." },
+  sign: { name: "Enseigne", blurb: "Une icône du site (moins de 48 px), en enseigne au rez-de-chaussée du bâtiment le plus proche dans la page." },
+  flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur un mât, au toit du bâtiment le plus proche dans la page." },
 } as const;
+
+/** Bâtiment ajouté par la ville : pour le texte direct d'un conteneur, ou pour porter ses images. */
+const added = (lot: Lot) => lot.ownText || lot.gallery !== undefined;
 
 /**
  * Nom et phrase d'un lot : ceux de son genre, sauf les petites images, et le texte écrit
@@ -64,6 +69,13 @@ const EMBLEMS = {
  */
 function nameOf(lot: Lot, layout?: CityLayout): { name: string; blurb: string } {
   if (lot.panel?.emblem) return EMBLEMS[lot.panel.emblem];
+  if (lot.gallery !== undefined && layout) {
+    const where = `<${selectorOf(layout.lots[lot.parent])}>`;
+    return {
+      name: KINDS.gallery.name,
+      blurb: `${lot.gallery > 1 ? `Les ${lot.gallery} images` : "L'image"} de ${where}, sans texte à côté pour les porter : un immeuble couvert d'écrans.`,
+    };
+  }
   if (lot.ownText && layout) {
     const parent = layout.lots[lot.parent];
     const where = `<${selectorOf(parent)}>`;
@@ -84,7 +96,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
   const path: LotStep[] = [];
   let current: Lot | undefined = lot;
   while (current) {
-    if (!current.ownText) {
+    if (!added(current)) {
       path.unshift({ id: current.id, selector: selectorOf(current), name: nameOf(current).name });
     }
     current = current.parent >= 0 ? layout.lots[current.parent] : undefined;
@@ -98,7 +110,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
 
   let children = 0;
   for (let i = lot.id + 1; i < lot.subtreeEnd; i += 1) {
-    if (layout.lots[i].parent === lot.id && !layout.lots[i].ownText) children += 1;
+    if (layout.lots[i].parent === lot.id && !added(layout.lots[i])) children += 1;
   }
 
   return {
@@ -110,14 +122,15 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
     selector: selectorOf(lot),
     heading: lot.node.heading,
     ownText: lot.ownText,
-    text: lot.node.text ?? 0,
+    gallery: lot.gallery !== undefined,
+    text: lot.gallery !== undefined ? 0 : lot.node.text ?? 0,
     textTotal: lot.textTotal,
     children,
     descendants: lot.subtreeEnd - lot.id - 1,
-    links: lot.ownText ? undefined : lot.node.links,
+    links: added(lot) ? undefined : lot.node.links,
     img: lot.node.img,
     background,
-    rect: lot.ownText ? undefined : lot.node.rect,
+    rect: added(lot) ? undefined : lot.node.rect,
     depth: lot.depth,
     floors: STOREYED.has(lot.kind) ? Math.max(1, Math.round(lot.h / FLOOR)) : undefined,
     path,

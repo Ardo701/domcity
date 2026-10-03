@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (étape 5 : l'ambiance).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (images accrochées aux bâtiments).
 
 ## 1. Le concept
 
@@ -136,8 +136,9 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | `p`, `blockquote`, `pre` | Immeuble d'habitation (béton, brique ou enduit, commerces au rez-de-chaussée) |
 | `ul`, `ol` / `li` | Lotissement sur pelouse / Maison à toit et cheminée |
 | `h1` / `h2` / `h3` / `h4-h6` | Tour Art déco qui domine la ville / Beffroi à horloge / Kiosque à coupole / Statue, avec plaque gravée pour h1 à h3 |
-| `img` | Panneau avec la vraie image ; icône de moins de 48 px : panonceau à son image ; petit drapeau : drapeau sur son mât |
-| `video`, `canvas` | Écran géant |
+| `img` | Affiche avec la vraie image, accrochée à une façade du bâtiment le plus proche dans la page (toutes les façades libres, en rangées comme à Times Square ; sur le toit quand elles sont pleines). Icône de moins de 48 px : enseigne au rez-de-chaussée ; petit drapeau : mât sur le toit. Elle ne prend pas de case au sol |
+| `video`, `canvas` | Écran géant sur une façade, comme une affiche |
+| bloc qui n'a que des images (grille de photos) | Galerie : un immeuble sombre bâti pour porter ses images, couvert d'écrans |
 | `iframe` | Ambassade à colonnes, sous son drapeau |
 | `svg` | Sculpture abstraite |
 | `form` / `button`, `input`… | Place de la mairie (pavés, fontaine) / Guichet à auvent |
@@ -147,7 +148,7 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 | lien vers une autre page du site (mégalopole) | Autoroute entre leurs deux villes (deux fois deux voies, terre-plein central), branchée sur un coin de chaque périphérique |
 | `nav`, `header`, `footer`, `aside` | Allée plantée, Porte de la ville (arc monumental), Port (grues, cargo, chenal vers le large), Parc arboré |
 
-Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
+Les images cherchent leur porteur dans leur bloc (le bâtiment le plus proche dans l'ordre de la page), sinon un niveau au-dessus, et ainsi de suite ; un porteur plein passe la main au suivant. Si aucun bâtiment n'est à deux niveaux d'elles et qu'elles sont au moins trois, ou au bord d'un quartier, une galerie est bâtie pour elles. Une façade collée à un voisin ne porte rien. Leurs numéros restent dans l'ordre de la page (`hung` dans `layout.ts` : un lot sans case, posé ensuite). Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
 
 ### L'ambiance (étape 5) : ce que la page fait sans le montrer
 
@@ -246,6 +247,15 @@ Demande de l'utilisateur : l'ambiance seule, pas la machine à remonter le temps
 Vérifié : 74 tests (traqueurs et sous-domaines, météo et comptes, usines dans la ceinture hors des rues, carrefours et chenaux, caméras au bord des rues, ruines, numéros de survol seule et dans le monde, image cassée relevée et pas celle en chargement différé), TypeScript, ESLint, compilation de production. Dans le navigateur : GitHub (relevé réel) : couvert, 2 usines, 7 graffitis, vraies couleurs sombres (la page avait été relevée en thème sombre) ; le même relevé chargé de 5 traqueurs, 7,5 Mo, 48 scripts et 3 images cassées : orage avec pluie et éclair, 8 usines, 15 caméras, 23 graffitis, 3 ruines ; mégalopole Wikipédia : 3 villes nuageuses, 1 de beau temps, 5 au soleil ; bulletin sur téléphone 375 px sans débordement.
 **Non vérifié** : la détection des images cassées dans un vrai navigateur (couverte par les tests) ; le favori v3 glissé dans une vraie barre ; le rendu sur un ordinateur peu puissant (nuages et fumées ajoutent quelques centaines d'instances).
 
+### Images accrochées aux bâtiments ✅
+Demande de l'utilisateur : des dizaines de panneaux plantés chacun sur sa parcelle (et des champs de panonceaux) ne font pas une ville naturelle. Les images deviennent des affiches sur les façades, à la Times Square, sur toutes les façades libres (la caméra tourne : aucune n'est privilégiée). Voir le dictionnaire (section 6).
+- Les 9 articles Wikipédia de la mégalopole avaient 935 grands panneaux pour 6 780 bâtiments ; 99,7 % des images trouvent un porteur à un ou deux niveaux d'elles. Musée du Louvre : 301 affiches, toutes accrochées, réparties sur les quatre orientations (70 à 88 chacune), 22 enseignes, 1 drapeau, aucune image sans place.
+- Taille d'une affiche selon l'image (environ 3 m pour une vignette de 250 px, 13 m au plus), au-dessus du rez-de-chaussée (vitrines, enseignes, graffitis restent visibles) ; sous le toit pentu d'un immeuble bas, sous le premier retrait d'un gratte-ciel.
+- Affiche de remplacement sobre quand le site ne prête pas l'image : le texte alternatif en grand sur une teinte calme, « image non affichée · clic pour la voir » (les hachures « indisponible » auraient couvert des façades entières).
+- La bulle et l'inspecteur nomment « Affiche », « Enseigne », « Drapeau », « Galerie (images de <div.grille>) ». Les ruines (images cassées) gardent leur parcelle.
+Vérifié : 75 tests (affiches contre la façade de leur porteur, dans aucun bâtiment, au-dessus de sa base ; image d'une figure sur sa légende ; galerie pour un bloc d'images ; plusieurs façades ; numéros dans l'ordre de la page ; les images ne grandissent pas la ville), TypeScript, ESLint, compilation de production. Dans le navigateur : Louvre (vue d'ensemble sans champ de panneaux, affiches sur façades, drapeau au toit), page d'essai à grille de 20 photos (galerie de 14 étages couverte d'affiches).
+**Non vérifié** : un site marchand réel (grilles de produits) ; le rendu de très nombreuses affiches sur un ordinateur modeste (autant d'appels de dessin qu'avant : les niveaux de détail des affiches restent à faire).
+
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
 1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
@@ -266,6 +276,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Ambiance : le temps n'est pas animé (pluie, fumée et éclair sont figés, la ville ne se redessine que quand on bouge) ; la liste des traqueurs est à tenir à jour.
 - Promenade : pas encore de collisions avec les bâtiments.
 - Canaux (`hr`) : les mener eux aussi jusqu'au bord de la maquette, comme les ports (mis de côté par l'utilisateur pour l'instant).
+- Performances : chaque affiche est un objet à part (un appel de dessin) ; de loin, les remplacer par des aplats dessinés en un seul lot (proposé à l'utilisateur, avec les plaques des h2 et h3 cachées de loin).
 - Mégalopole : survoler une autoroute ne dit pas encore quelles pages elle relie ; les vols ne vont pas encore d'une mégalopole à l'autre en 3D (le tableau des départs y mène) ; un site de plus de 48 pages ne montre que les plus récentes ; les affiches d'une ville très illustrée (Louvre) font beaucoup d'appels de dessin, même de loin.
 - Port d'un `<footer>` peu profond (rangée pleine largeur) : bassin et chenal étroits (1,6 m sur GitHub).
 - Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
@@ -286,7 +297,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 74 tests
+npm test           # 75 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

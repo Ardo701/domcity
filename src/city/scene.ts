@@ -512,14 +512,40 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       kit.flag.add(lot.id, at(pole + 0.04 + panel.width / 2, lot.y + panel.lift, cz, panel.width, panel.height, panel.width), "#ffffff", cell);
       return;
     }
-    // Plaque d'aluminium lisible des deux côtés, poteau derrière.
-    const cx = lot.x + lot.w / 2;
-    kit.cylinder.add(lot.id, at(cx, lot.y, cz - 0.07, 0.08, panel.lift + panel.height * 0.85, 0.08), "#8e9197");
-    box(lot.id, cx, lot.y + panel.lift - 0.03, cz, panel.width + 0.06, panel.height + 0.06, 0.04, "#b4b7bd");
-    for (const side of [1, -1]) {
-      const face = at(cx, lot.y + panel.lift, cz + side * 0.021, panel.width, panel.height, 1, side < 0 ? Math.PI : 0);
-      kit.sign.add(lot.id, face, "#ffffff", cell);
+    // Enseigne : une plaque d'aluminium à plat sur la façade, l'icône tournée vers la rue.
+    const { x, z, rot, alongX } = onWall(lot, panel);
+    box(lot.id, x, lot.y - 0.04, z, alongX ? panel.width + 0.08 : 0.05, panel.height + 0.08, alongX ? 0.05 : panel.width + 0.08, "#b4b7bd");
+    kit.sign.add(lot.id, at(x + outward(panel).x * 0.04, lot.y, z + outward(panel).z * 0.04, panel.width, panel.height, 1, rot), "#ffffff", cell);
+  }
+
+  /** Vers où regarde une façade. */
+  function outward(panel: Panel): { x: number; z: number } {
+    switch (panel.mount) {
+      case "south": return { x: 0, z: 1 };
+      case "north": return { x: 0, z: -1 };
+      case "east": return { x: 1, z: 0 };
+      case "west": return { x: -1, z: 0 };
+      default: return { x: 0, z: 1 };
     }
+  }
+
+  /** Centre d'une affiche contre son mur (au ras de la façade), et sa rotation. */
+  function onWall(lot: Lot, panel: Panel) {
+    const n = outward(panel);
+    const alongX = n.z !== 0;
+    // Le lot est la bande devant la façade : le mur est son bord intérieur.
+    const x = alongX ? lot.x + lot.w / 2 : n.x > 0 ? lot.x : lot.x + lot.w;
+    const z = alongX ? (n.z > 0 ? lot.z : lot.z + lot.d) : lot.z + lot.d / 2;
+    const rot = panel.mount === "north" ? Math.PI : panel.mount === "east" ? Math.PI / 2 : panel.mount === "west" ? -Math.PI / 2 : 0;
+    return { x, z, rot, alongX, n };
+  }
+
+  /** Une galerie : un immeuble sombre, sobre, que ses écrans et ses affiches habillent. */
+  function gallery(lot: Lot) {
+    const cx = lot.x + lot.w / 2;
+    const cz = lot.z + lot.d / 2;
+    facade(lot.id, cx, lot.y, cz, lot.w, lot.h, lot.d, pick(["#4a4f58", "#3d424b", "#565b63"], rand(lot.id, 2)), FACADE.office, 1);
+    rooftop(lot, lot.y + lot.h, cx, cz, lot.w, lot.d);
   }
 
   /** Une image cassée : le panneau s'est effondré, entre un pan de mur et des gravats. */
@@ -558,23 +584,18 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   }
 
   function board(lot: Lot) {
-    const panel = lot.panel!;
+    const panel = lot.panel;
+    // Une image qui n'a trouvé de place nulle part : elle n'est que dans l'inspecteur.
+    if (!panel || lot.h <= 0) return;
     if (panel.emblem) {
       emblem(lot, panel);
       return;
     }
-    const cx = lot.x + lot.w / 2;
-    const cz = lot.z + lot.d / 2;
-    const frameY = lot.y + panel.lift;
-    box(lot.id, cx, frameY - 0.15, cz, panel.width + 0.3, panel.height + 0.3, 0.3, "#2b2b31");
-    box(lot.id, cx, frameY - 0.45, cz + 0.35, panel.width * 0.9, 0.08, 0.5, "#55575c");
-    const spread = panel.width * 0.32;
-    for (const dx of [-spread, spread]) kit.cylinder.add(lot.id, at(cx + dx, lot.y, cz, 0.24, panel.lift, 0.24), "#55575c");
-
+    const screen = lot.kind === "screen";
     const material = new THREE.MeshStandardMaterial({
-      color: lot.kind === "screen" ? "#1b1d2b" : "#cfc8b9",
-      emissive: lot.kind === "screen" ? new THREE.Color("#22337a") : new THREE.Color("#000000"),
-      emissiveIntensity: lot.kind === "screen" ? 0.6 : 0,
+      color: screen ? "#1b1d2b" : "#cfc8b9",
+      emissive: screen ? new THREE.Color("#22337a") : new THREE.Color("#000000"),
+      emissiveIntensity: screen ? 0.6 : 0,
       roughness: 0.75,
       metalness: 0,
       // L'affiche est collée au cadre : vue de loin, la profondeur ne sait plus lequel est
@@ -585,16 +606,38 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     });
     panelMaterials.push(material);
     const panels: THREE.Mesh[] = [];
-    for (const side of [1, -1]) {
+    const addPanel = (x: number, y: number, z: number, rot: number) => {
       const mesh = new THREE.Mesh(panelGeometry, material);
-      mesh.position.set(cx, frameY + panel.height / 2, cz + side * 0.18);
+      mesh.position.set(x, y + panel.height / 2, z);
       mesh.scale.set(panel.width, panel.height, 1);
-      if (side < 0) mesh.rotation.y = Math.PI;
+      mesh.rotation.y = rot;
       mesh.userData.lotId = lot.id + base;
       mesh.receiveShadow = true;
       group.add(mesh);
       panels.push(mesh);
       panelMeshes.push(mesh);
+    };
+    const frameColor = screen ? "#15161c" : "#2b2b31";
+
+    if (panel.mount === "roof") {
+      // Le panneau d'un toit : sur ses poteaux, lisible des deux côtés.
+      const cx = lot.x + lot.w / 2;
+      const cz = lot.z + lot.d / 2;
+      const frameY = lot.y + panel.lift;
+      box(lot.id, cx, frameY - 0.15, cz, panel.width + 0.3, panel.height + 0.3, 0.3, frameColor);
+      const spread = panel.width * 0.32;
+      for (const dx of [-spread, spread]) kit.cylinder.add(lot.id, at(cx + dx, lot.y, cz, 0.2, panel.lift, 0.2), "#55575c");
+      addPanel(cx, frameY, cz + 0.18, 0);
+      addPanel(cx, frameY, cz - 0.18, Math.PI);
+    } else {
+      // Sur la façade : un caisson sombre contre le mur, l'affiche devant.
+      const { x, z, rot, alongX, n } = onWall(lot, panel);
+      const depth = 0.1;
+      box(
+        lot.id, x + n.x * depth / 2, lot.y - 0.1, z + n.z * depth / 2,
+        alongX ? panel.width + 0.2 : depth, panel.height + 0.2, alongX ? depth : panel.width + 0.2, frameColor,
+      );
+      addPanel(x + n.x * (depth + 0.01), lot.y, z + n.z * (depth + 0.01), rot);
     }
     if (lot.kind === "billboard") billboards.push({ id: lot.id + base, lot, panels, ratio: panel.width / panel.height });
   }
@@ -641,6 +684,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       case "counter": booth(lot); break;
       case "vacant": site(lot); break;
       case "ruin": ruin(lot); break;
+      case "gallery": gallery(lot); break;
       case "fields": ground(lot.id, lot, lot.y, 0.08, "crops"); break;
       case "river": river(lot); break;
       case "billboard":
@@ -1018,12 +1062,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       .sort((a, b) => rand(a.id, 900) - rand(b.id, 900) || a.id - b.id)
       .slice(0, count);
     walls.forEach((lot, i) => {
-      const w = Math.min(lot.w * 0.72, 3.6);
+      // Au pied du mur, sous les enseignes.
+      const w = Math.min(lot.w * 0.72, 1.9);
       const h = w / 2;
       const x = lot.x + lot.w / 2 + (rand(lot.id, 901) - 0.5) * (lot.w - w) * 0.8;
       const z = lot.z + lot.d + (lot.kind === "vacant" ? 0.12 : 0.03);
       const cell = materials.graffitiAtlas.cell(Math.floor(rand(lot.id, 902) * 97) + i);
-      kit.graffiti.add(lot.id, at(x, lot.y + 0.12, z, w, Math.min(h, 1.5), 1), "#ffffff", cell);
+      kit.graffiti.add(lot.id, at(x, lot.y + 0.08, z, w, Math.min(h, 0.92), 1), "#ffffff", cell);
     });
   }
 

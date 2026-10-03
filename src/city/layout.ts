@@ -23,11 +23,16 @@ export interface Panel {
   /** Largeur et hauteur de l'affiche. */
   width: number;
   height: number;
-  /** Hauteur du bas de l'affiche au-dessus du sol. */
+  /** Hauteur du bas de l'affiche au-dessus de la base du lot (sur un toit : ses poteaux, ou le mât d'un drapeau). */
   lift: number;
-  /** Petite image : un panonceau ou un drapeau sur son mât, plutôt qu'un grand panneau. */
+  /** Petite image : une enseigne, ou un drapeau sur son mât, plutôt qu'une grande affiche. */
   emblem?: Emblem;
+  /** Où elle est accrochée sur son bâtiment porteur : une façade, ou le toit. */
+  mount: Mount;
 }
+
+/** Une façade (celle qui regarde vers le sud, le nord, l'est, l'ouest) ou le toit. */
+export type Mount = "south" | "north" | "east" | "west" | "roof";
 
 export type Emblem = "sign" | "flag";
 
@@ -49,12 +54,24 @@ export function emblemOf(node: CityNode): Emblem | undefined {
   return wide && (FLAG_NAME.test(file) || FLAG_NAME.test(img?.alt ?? "")) ? "flag" : "sign";
 }
 
-/** Panonceau : la plus grande dimension de la plaque, et la hauteur de son bas. */
+/** Enseigne : la plus grande dimension de la plaque, et la hauteur de son bas sur la façade. */
 const SIGN_SIZE = 1;
-const SIGN_LIFT = 1.4;
-/** Drapeau : sa largeur, et la hauteur de son haut sur le mât. */
+const SIGN_LIFT = 1.05;
+/** Drapeau : sa largeur, et la hauteur de son mât au-dessus du toit. */
 const FLAG_WIDTH = 1.6;
-const FLAG_TOP = 5;
+const FLAG_MAST = 2.2;
+/** Le bas des affiches, au-dessus des vitrines, des enseignes et des graffitis. */
+const POSTER_LIFT = 2.2;
+const POSTER_GAP = 0.35;
+/** Les poteaux d'un panneau sur un toit. */
+const ROOF_LIFT = 0.8;
+/** Épaisseur d'une affiche sur sa façade. */
+const POSTER_DEPTH = 0.12;
+
+/** Ce qui s'accroche à un bâtiment plutôt que de prendre une case au sol : les images, les écrans. */
+const MOUNTED = new Set<Kind>(["billboard", "screen"]);
+/** Ce qui peut porter des affiches. */
+const HOSTS = new Set<Kind>(["tower", "residence", "house", "gallery"]);
 
 export interface Lot {
   id: number;
@@ -79,6 +96,13 @@ export interface Lot {
   /** Texte propre + texte de tous les descendants. */
   textTotal: number;
   panel?: Panel;
+  /**
+   * Posé ailleurs que sur une case au sol : une image accrochée à un bâtiment voisin, ou un
+   * conteneur qui n'a que des images (il n'a pas de sol, son emprise est celle de ses images).
+   */
+  hung?: boolean;
+  /** Galerie : le nombre d'images qu'elle a été bâtie pour porter. */
+  gallery?: number;
 }
 
 /** `highway` : les autoroutes de la mégalopole, entre les villes. */
@@ -410,6 +434,18 @@ interface Plot {
   textTotal: number;
   /** Pâté de maisons ajouté par l'urbanisme : il n'existe pas dans la page, il n'a pas de lot. */
   virtual?: boolean;
+  /** Rang parmi les enfants de son conteneur, dans l'ordre de la page (-1 : une galerie ajoutée). */
+  order: number;
+  /** Faux pour une image (accrochée ailleurs) ou un conteneur qui n'a que des images. */
+  placed: boolean;
+  /** Enfants qui ne prennent pas de case : leurs lots se créent à leur rang, posés ensuite. */
+  unplaced: Plot[];
+  /** Le sous-arbre a un bâtiment pour porter des images. */
+  hosts: boolean;
+  /** Images du sous-arbre encore sans porteur, et de combien de niveaux elles sont remontées. */
+  orphans: number;
+  climb: number;
+  gallery?: number;
 }
 
 /**
@@ -436,6 +472,12 @@ function blocksOf(items: Plot[], mode: StreetMode, depth: number): Plot[] {
       area: inner,
       textTotal: run.reduce((sum, item) => sum + item.textTotal, 0),
       virtual: true,
+      order: run[0].order,
+      placed: true,
+      unplaced: [],
+      hosts: run.some((item) => item.hosts),
+      orphans: 0,
+      climb: 0,
     });
     run = [];
   };
@@ -465,6 +507,15 @@ function ownTextKind(tag: string, text: number, container: Kind): Kind {
   return container === "fields" || container === "estate" || container === "park" ? "house" : "tower";
 }
 
+/** Une galerie : un immeuble couvert d'écrans, bâti pour porter les images d'un bloc qui n'a qu'elles. */
+function galleryPlot(node: CityNode, depth: number, images: number): Plot {
+  const side = clamp(5 + 1.15 * Math.sqrt(images), 6, 16);
+  return {
+    node, kind: "gallery", container: false, ownText: false, depth, children: [], area: side * side, textTotal: 0,
+    order: -1, placed: true, unplaced: [], hosts: true, orphans: 0, climb: 0, gallery: images,
+  };
+}
+
 /** `textOf` : bâtiment du texte écrit directement dans ce conteneur, de ce genre. */
 function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: Kind): Plot {
   const ownText = textOf !== undefined;
@@ -474,24 +525,60 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
   let kind = ownText ? ownTextKind(node.tag, text, textOf) : kindOf(node.tag, container, text);
   // Une image cassée dans la page : son panneau est en ruine.
   if (kind === "billboard" && node.img?.broken) kind = "ruin";
-  const plot: Plot = { node, kind, container, ownText, depth, children: [], area: 0, textTotal: text };
+  const plot: Plot = {
+    node, kind, container, ownText, depth, children: [], area: 0, textTotal: text,
+    order: 0, placed: true, unplaced: [], hosts: false, orphans: 0, climb: 0,
+  };
 
   if (!container) {
     plot.area = leafArea(kind, node);
+    plot.placed = !MOUNTED.has(kind);
+    plot.hosts = HOSTS.has(kind);
     return plot;
   }
 
   const mode = depth === 0 ? "street" : streetsOf(kind) ?? streets;
   // Texte écrit directement dans le conteneur : un bâtiment de plus, en premier.
-  if (text > 0) plot.children.push(buildPlot(node, depth + 1, mode, kind));
-  for (const child of kept) plot.children.push(buildPlot(child, depth + 1, mode));
+  const built: Plot[] = [];
+  if (text > 0) built.push(buildPlot(node, depth + 1, mode, kind));
+  for (const child of kept) built.push(buildPlot(child, depth + 1, mode));
+
+  // Les images ne prennent pas de case : elles s'accrochent au bâtiment le plus proche dans la page.
+  // Celles qui n'en ont pas dans leur bloc remontent ; au bout de deux niveaux (si elles sont au
+  // moins trois), ou au bord d'un quartier, une galerie couverte d'écrans est bâtie pour elles.
+  let orphans = 0;
+  let climb = 0;
+  built.forEach((child, i) => {
+    child.order = i;
+    plot.textTotal += child.ownText ? 0 : child.textTotal;
+    plot.hosts ||= child.hosts;
+    if (MOUNTED.has(child.kind)) {
+      orphans += 1;
+      climb = Math.max(climb, 1);
+    } else if (child.orphans > 0) {
+      orphans += child.orphans;
+      climb = Math.max(climb, child.climb + 1);
+    }
+    if (child.placed) plot.children.push(child);
+    else plot.unplaced.push(child);
+  });
+  // Une ou deux images seules continuent de chercher un vrai bâtiment ; trois font une galerie.
+  if (orphans > 0 && !plot.hosts && ((climb >= 2 && orphans >= 3) || depth <= 1 || kind === "district")) {
+    plot.children.unshift(galleryPlot(node, depth + 1, orphans));
+    plot.hosts = true;
+  }
+  plot.orphans = plot.hosts ? 0 : orphans;
+  plot.climb = plot.hosts ? 0 : climb;
+  if (plot.children.length === 0) {
+    plot.placed = false;
+    return plot;
+  }
 
   const gap = unitGap(mode, depth);
   const road = mode === "none" ? 0 : roadWidth(mode, depth);
   let inner = 0;
   let rivers = 0;
   for (const child of plot.children) {
-    plot.textTotal += child.ownText ? 0 : child.textTotal;
     if (child.kind === "river") {
       rivers += 1;
       continue;
@@ -693,6 +780,8 @@ export function stripLayout(areas: number[], rect: Rect): Rect[] {
 
 interface Ctx {
   lots: Lot[];
+  /** Enfants sans case de chaque conteneur en cours de pose, dans l'ordre de la page. */
+  waiting: Map<number, Plot[]>;
   roads: Road[];
   joints: Joint[];
   plates: Plate[];
@@ -734,10 +823,11 @@ export function citySide(doc: CityDoc): number {
 
 export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayout {
   const rootPlot = buildPlot(doc.root, 0, "street");
-  const ctx: Ctx = { lots: [], roads: [], joints: [], plates: [], decor: [], channels: [], bridges: [] };
+  const ctx: Ctx = { lots: [], waiting: new Map(), roads: [], joints: [], plates: [], decor: [], channels: [], bridges: [] };
   const side = Math.sqrt(rootPlot.area);
   const edge = { x: -side / 2, z: -side / 2, w: side, d: side };
   place(rootPlot, edge, 0, -1, ctx, { streets: "street" });
+  hangImages(ctx.lots);
   const kind = options.airport ?? "airport";
   if (kind !== "none") {
     const site: AirportSite = {
@@ -1235,16 +1325,344 @@ function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lo
     h: 0,
     textTotal: plot.textTotal,
   };
+  if (plot.gallery !== undefined) lot.gallery = plot.gallery;
   ctx.lots.push(lot);
   return lot;
 }
 
+/** Crée, dans l'ordre de la page, les lots des enfants sans case qui précèdent ce rang. */
+function hangBefore(parent: number, order: number, y: number, ctx: Ctx) {
+  const queue = ctx.waiting.get(parent);
+  while (queue && queue.length > 0 && queue[0].order < order) hang(queue.shift()!, parent, y, ctx);
+}
+
+// ---------------------------------------------------------------------------
+// Les images accrochées aux bâtiments
+// ---------------------------------------------------------------------------
+
+interface Placed {
+  lot: Lot;
+  along: number;
+  width: number;
+  height: number;
+  y: number;
+}
+
+interface Shelf {
+  y: number;
+  h: number;
+  used: number;
+  items: Placed[];
+}
+
+interface Wall {
+  mount: Exclude<Mount, "roof">;
+  length: number;
+  open: boolean;
+  shelves: Shelf[];
+  signs: Placed[];
+  signsUsed: number;
+}
+
+interface Host {
+  lot: Lot;
+  walls: Wall[];
+  /** Bande des affiches sur les façades. */
+  bottom: number;
+  top: number;
+  /** Le haut des murs, sous le toit : la base des mâts et des panneaux de toit. */
+  eave: number;
+  /** Prochaine façade à essayer : les affiches font le tour du bâtiment. */
+  next: number;
+  roof: boolean;
+  flags: number;
+}
+
+/** Grille des bâtiments, pour savoir si une façade donne sur la rue ou contre un voisin. */
+class Solids {
+  private readonly cells = new Map<string, Lot[]>();
+  constructor(lots: Lot[], private readonly size = 8) {
+    for (const lot of lots) {
+      for (const key of this.keys(lot)) {
+        const list = this.cells.get(key);
+        if (list) list.push(lot);
+        else this.cells.set(key, [lot]);
+      }
+    }
+  }
+  private *keys(r: Rect) {
+    for (let i = Math.floor(r.x / this.size); i <= Math.floor((r.x + r.w) / this.size); i += 1) {
+      for (let j = Math.floor(r.z / this.size); j <= Math.floor((r.z + r.d) / this.size); j += 1) yield `${i},${j}`;
+    }
+  }
+  hit(r: Rect, except: number): boolean {
+    for (const key of this.keys(r)) {
+      for (const lot of this.cells.get(key) ?? []) if (lot.id !== except && overlap(lot, r)) return true;
+    }
+    return false;
+  }
+}
+
+/** Taille naturelle d'une affiche : selon l'image (ses pixels, ses proportions), un écran en 16/9. */
+function posterSize(lot: Lot): [number, number] {
+  if (lot.kind === "screen") return [4, 4 / (16 / 9)];
+  const img = lot.node.img;
+  const ratio = clamp((img?.w || 4) / (img?.h || 3), 0.45, 3);
+  // Une vignette de 250 px : 3 m de large environ ; une grande photo : 13 m au plus.
+  let width = img?.w && img?.h ? clamp(Math.sqrt(img.w * img.h) / 80, 1.6, 4.4) : 3;
+  let height = width / ratio;
+  if (height > 3.4) {
+    height = 3.4;
+    width = height * ratio;
+  }
+  return [width, height];
+}
+
+/**
+ * Accroche les images (et les écrans) au bâtiment le plus proche dans la page : dans leur bloc,
+ * sinon un niveau au-dessus, et ainsi de suite. Les affiches font le tour des façades libres
+ * (pas celles collées à un voisin), empilées par rangées comme à Times Square ; les enseignes se
+ * posent au rez-de-chaussée, les drapeaux sur un mât au toit. Quand toutes les façades sont pleines,
+ * un panneau monte sur le toit, puis on passe au bâtiment suivant.
+ */
+function hangImages(lots: Lot[]) {
+  const images = lots.filter((lot) => lot.hung && MOUNTED.has(lot.kind));
+  if (images.length === 0) return;
+  const hostIds = lots.filter((lot) => !lot.container && !lot.hung && HOSTS.has(lot.kind)).map((lot) => lot.id);
+  const solids = new Solids(lots.filter((lot) => !lot.container && !lot.hung && lot.h > 0.4 && lot.kind !== "river"));
+  const hosts = new Map<number, Host>();
+
+  const hostOf = (id: number): Host => {
+    let host = hosts.get(id);
+    if (host) return host;
+    const lot = lots[id];
+    const short = Math.min(lot.w, lot.d);
+    const sky = lot.kind === "tower" && lot.h >= 20 && short >= 3.6;
+    // Le haut des murs utilisables : sous le toit pentu, sous le premier retrait d'un gratte-ciel.
+    const wallTop =
+      lot.kind === "gallery" ? 0.97 : sky ? 0.45 : lot.kind === "house" ? 0.58 : lot.kind === "residence" && lot.h <= 9.5 ? 0.74 : 0.9;
+    const e = 0.25;
+    const fronts: Array<[Wall["mount"], number, Rect]> = [
+      ["south", lot.w, { x: lot.x + e, z: lot.z + lot.d, w: lot.w - 2 * e, d: 0.6 }],
+      ["east", lot.d, { x: lot.x + lot.w, z: lot.z + e, w: 0.6, d: lot.d - 2 * e }],
+      ["north", lot.w, { x: lot.x + e, z: lot.z - 0.6, w: lot.w - 2 * e, d: 0.6 }],
+      ["west", lot.d, { x: lot.x - 0.6, z: lot.z + e, w: 0.6, d: lot.d - 2 * e }],
+    ];
+    host = {
+      lot,
+      walls: fronts.map(([mount, length, front]) => ({
+        mount, length, open: !solids.hit(front, lot.id), shelves: [], signs: [], signsUsed: 0,
+      })),
+      bottom: lot.y + Math.min(POSTER_LIFT, Math.max(0.3, lot.h * 0.3)),
+      top: lot.y + lot.h * wallTop - 0.15,
+      eave: lot.y + (lot.kind === "house" ? lot.h * 0.62 : lot.kind === "residence" && lot.h <= 9.5 ? lot.h * 0.75 : lot.h),
+      next: lot.id % 4,
+      roof: false,
+      flags: 0,
+    };
+    hosts.set(id, host);
+    return host;
+  };
+
+  const poster = (host: Host, lot: Lot): boolean => {
+    const [w0, h0] = posterSize(lot);
+    for (let k = 0; k < 4; k += 1) {
+      const wall = host.walls[(host.next + k) % 4];
+      if (!wall.open) continue;
+      const usable = wall.length - 0.4;
+      const scale = Math.min(1, usable / w0, (host.top - host.bottom) / h0);
+      const w = w0 * scale;
+      const h = h0 * scale;
+      if (w < 0.9 || h < 0.6) continue;
+      let placed = false;
+      for (const shelf of wall.shelves) {
+        const gap = shelf.items.length > 0 ? POSTER_GAP : 0;
+        if (h <= shelf.h + 1e-6 && shelf.used + gap + w <= usable) {
+          shelf.items.push({ lot, along: shelf.used + gap, width: w, height: h, y: shelf.y + (shelf.h - h) / 2 });
+          shelf.used += gap + w;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        const last = wall.shelves[wall.shelves.length - 1];
+        const y = last ? last.y + last.h + POSTER_GAP : host.bottom;
+        if (y + h > host.top) continue;
+        wall.shelves.push({ y, h, used: w, items: [{ lot, along: 0, width: w, height: h, y }] });
+      }
+      host.next = (host.next + k + 1) % 4;
+      return true;
+    }
+    // Les façades sont pleines : un panneau sur le toit (pas sur le toit pentu d'une maison).
+    if (host.roof || host.lot.kind === "house") return false;
+    const ratio = w0 / h0;
+    let width = Math.min(w0, host.lot.w * 0.85);
+    let height = width / ratio;
+    if (height > 3.2) {
+      height = 3.2;
+      width = height * ratio;
+    }
+    if (width < 0.9) return false;
+    host.roof = true;
+    const L = host.lot;
+    Object.assign(lot, { x: L.x + (L.w - width) / 2, z: L.z + L.d / 2 - 0.2, w: width, d: 0.4, y: host.eave, h: ROOF_LIFT + height });
+    lot.panel = { width, height, lift: ROOF_LIFT, mount: "roof" };
+    return true;
+  };
+
+  const sign = (host: Host, lot: Lot): boolean => {
+    const img = lot.node.img;
+    const ratio = clamp((img?.w || 1) / (img?.h || 1), 0.4, 2.5);
+    const w = ratio >= 1 ? SIGN_SIZE : SIGN_SIZE * ratio;
+    const h = w / ratio;
+    for (let k = 0; k < 4; k += 1) {
+      const wall = host.walls[(host.next + k) % 4];
+      const gap = wall.signs.length > 0 ? 0.3 : 0;
+      if (!wall.open || wall.signsUsed + gap + w > wall.length - 0.4) continue;
+      const y = Math.min(host.lot.y + SIGN_LIFT, host.eave - h - 0.1);
+      if (y < host.lot.y + 0.2) continue;
+      wall.signs.push({ lot, along: wall.signsUsed + gap, width: w, height: h, y });
+      wall.signsUsed += gap + w;
+      host.next = (host.next + k + 1) % 4;
+      return true;
+    }
+    return false;
+  };
+
+  const flag = (host: Host, lot: Lot): boolean => {
+    const L = host.lot;
+    const room = Math.max(1, Math.floor((L.w - 0.3) / (FLAG_WIDTH + 0.3)));
+    if (host.flags >= room) return false;
+    const img = lot.node.img;
+    const height = FLAG_WIDTH / clamp((img?.w || 3) / (img?.h || 2), 1.2, 2.2);
+    const x = room === 1 && host.flags === 0 ? L.x + L.w / 2 - FLAG_WIDTH / 2 : L.x + 0.3 + host.flags * (FLAG_WIDTH + 0.3);
+    host.flags += 1;
+    Object.assign(lot, { x, z: L.z + L.d - 0.35, w: FLAG_WIDTH, d: 0.1, y: host.eave, h: FLAG_MAST + height });
+    lot.panel = { width: FLAG_WIDTH, height, lift: FLAG_MAST, emblem: "flag", mount: "roof" };
+    return true;
+  };
+
+  const attach = (host: Host, lot: Lot): boolean => {
+    const emblem = lot.kind === "billboard" ? emblemOf(lot.node) : undefined;
+    if (emblem === "flag") return flag(host, lot);
+    if (emblem === "sign") return sign(host, lot);
+    return poster(host, lot);
+  };
+
+  /** Les porteurs dans [lo, hi[ les plus proches de l'image dans l'ordre de la page. */
+  const nearest = (target: number, lo: number, hi: number, count: number): number[] => {
+    let right = 0;
+    let span = hostIds.length;
+    while (right < span) {
+      const mid = (right + span) >> 1;
+      if (hostIds[mid] < target) right = mid + 1;
+      else span = mid;
+    }
+    let left = right - 1;
+    const out: number[] = [];
+    while (out.length < count) {
+      const l = left >= 0 && hostIds[left] >= lo ? hostIds[left] : -1;
+      const r = right < hostIds.length && hostIds[right] < hi ? hostIds[right] : -1;
+      if (l < 0 && r < 0) break;
+      if (r < 0 || (l >= 0 && target - l <= r - target)) {
+        out.push(l);
+        left -= 1;
+      } else {
+        out.push(r);
+        right += 1;
+      }
+    }
+    return out;
+  };
+
+  for (const lot of images) {
+    const tried = new Set<number>();
+    let done = false;
+    for (let a: Lot | undefined = lots[lot.parent]; a && !done; a = a.parent >= 0 ? lots[a.parent] : undefined) {
+      for (const id of nearest(lot.id, a.id, a.subtreeEnd, 8)) {
+        if (tried.has(id)) continue;
+        tried.add(id);
+        if (attach(hostOf(id), lot)) {
+          done = true;
+          break;
+        }
+      }
+    }
+    // Plus aucune place nulle part : l'image s'efface (elle reste dans l'inspecteur).
+    if (!done) lot.h = 0;
+  }
+
+  // Chaque rangée d'affiches, et la rangée d'enseignes, se centre sur sa façade.
+  for (const host of hosts.values()) {
+    const L = host.lot;
+    for (const wall of host.walls) {
+      const usable = wall.length - 0.4;
+      const rows: Array<[number, Placed[]]> = wall.shelves.map((shelf) => [shelf.used, shelf.items]);
+      rows.push([wall.signsUsed, wall.signs]);
+      rows.forEach(([used, items]) => {
+        const offset = 0.2 + (usable - used) / 2;
+        for (const item of items) {
+          const along = offset + item.along;
+          const { lot } = item;
+          if (wall.mount === "south" || wall.mount === "north") {
+            lot.x = L.x + along;
+            lot.z = wall.mount === "south" ? L.z + L.d : L.z - POSTER_DEPTH;
+            lot.w = item.width;
+            lot.d = POSTER_DEPTH;
+          } else {
+            lot.x = wall.mount === "east" ? L.x + L.w : L.x - POSTER_DEPTH;
+            lot.z = L.z + along;
+            lot.w = POSTER_DEPTH;
+            lot.d = item.width;
+          }
+          lot.y = item.y;
+          lot.h = item.height;
+          const emblem = items === wall.signs ? ("sign" as const) : undefined;
+          lot.panel = { width: item.width, height: item.height, lift: 0, mount: wall.mount, ...(emblem ? { emblem } : {}) };
+        }
+      });
+    }
+  }
+
+  // Un conteneur qui n'a que des images prend l'emprise de ses images (pour l'inspecteur).
+  for (let i = lots.length - 1; i >= 0; i -= 1) {
+    const box = lots[i];
+    if (!box.container || !box.hung) continue;
+    let minX = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxZ = -Infinity;
+    let minY = Infinity;
+    for (let j = box.id + 1; j < box.subtreeEnd; j += 1) {
+      const lot = lots[j];
+      if (lot.container || lot.h <= 0) continue;
+      minX = Math.min(minX, lot.x);
+      minZ = Math.min(minZ, lot.z);
+      maxX = Math.max(maxX, lot.x + lot.w);
+      maxZ = Math.max(maxZ, lot.z + lot.d);
+      minY = Math.min(minY, lot.y);
+    }
+    if (minX === Infinity) continue;
+    Object.assign(box, { x: minX, z: minZ, w: maxX - minX, d: maxZ - minZ, y: minY, h: 0 });
+  }
+}
+
+/** Un lot sans case : son emprise sera celle de l'affiche (ou de ses images, pour un conteneur). */
+function hang(plot: Plot, parent: number, y: number, ctx: Ctx) {
+  const lot = newLot(plot, { x: 0, z: 0, w: 0, d: 0 }, y, parent, ctx);
+  lot.hung = true;
+  for (const child of plot.unplaced) hang(child, lot.id, y, ctx);
+  lot.subtreeEnd = ctx.lots.length;
+}
+
 function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env: Env): void {
+  hangBefore(parent, plot.order, y, ctx);
   const lot = newLot(plot, cell, y, parent, ctx);
   if (!plot.container) {
     shapeLeaf(lot, plot.node);
     return;
   }
+  ctx.waiting.set(lot.id, plot.unplaced.slice());
 
   const root = plot.depth === 0;
   const own = groundOf(plot.kind);
@@ -1318,6 +1736,8 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
     }
   });
 
+  hangBefore(lot.id, Infinity, top, ctx);
+  ctx.waiting.delete(lot.id);
   lot.subtreeEnd = ctx.lots.length;
 }
 
@@ -1557,35 +1977,13 @@ function shapeLeaf(lot: Lot, node: CityNode): void {
       break;
     }
     case "embassy": capRatio(1.6); break;
-    case "billboard":
-    case "screen": {
-      const ratio =
-        lot.kind === "screen" ? 16 / 9 : clamp((node.img?.w || 4) / (node.img?.h || 3), 0.45, 3);
-      const emblem = lot.kind === "billboard" ? emblemOf(node) : undefined;
-      let width = lot.w * 0.92;
-      let height = width / ratio;
-      let lift = lot.kind === "screen" ? 2.2 : 1.6;
-      if (emblem === "flag") {
-        width = FLAG_WIDTH;
-        height = width / clamp(ratio, 1.2, 2.2);
-        lift = FLAG_TOP - height;
-      } else if (emblem === "sign") {
-        width = Math.min(lot.w * 0.92, ratio >= 1 ? SIGN_SIZE : SIGN_SIZE * ratio);
-        height = width / ratio;
-        lift = SIGN_LIFT;
-      } else {
-        const maxHeight = Math.max(2, lot.d * 2.2, 3);
-        if (height > maxHeight) {
-          height = maxHeight;
-          width = height * ratio;
-        }
-      }
-      lot.panel = emblem ? { width, height, lift, emblem } : { width, height, lift };
-      lot.x = cx - width / 2;
-      lot.w = width;
-      lot.z = cz - 0.2;
-      lot.d = 0.4;
-      lot.h = lift + height;
+    case "gallery": {
+      // Assez haute pour ses écrans, sur ses quatre façades (une affiche type : 4 × 3).
+      capRatio(1.6);
+      const across = (length: number) => Math.max(1, Math.floor((length - 0.4 + POSTER_GAP) / (4 + POSTER_GAP)));
+      const perRow = 2 * (across(lot.w) + across(lot.d));
+      const rows = Math.ceil((lot.gallery ?? 1) / perRow) + 1;
+      lot.h = clamp(POSTER_LIFT + rows * (3.4 + POSTER_GAP) + 0.8, 7, 48);
       break;
     }
     case "tower":

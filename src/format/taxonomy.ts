@@ -34,7 +34,7 @@ export type Kind =
   | "terrain" | "district" | "block" | "boulevard" | "gate" | "port" | "park"
   | "estate" | "townhall" | "fields"
   // Bâtiments
-  | "tower" | "vacant" | "residence" | "house" | "monument" | "belfry" | "kiosk"
+  | "tower" | "vacant" | "residence" | "house" | "gallery" | "monument" | "belfry" | "kiosk"
   | "bollard" | "billboard" | "ruin" | "screen" | "embassy" | "sculpture" | "counter"
   // Infrastructures
   | "river"
@@ -103,14 +103,15 @@ export const KINDS: Record<Kind, KindInfo> = {
   tower:     { name: "Immeuble",           tags: "div",                 group: "Bâtiments",        color: "#7F9BAB", blurb: "Un bloc de texte : un immeuble de bureaux. Avec beaucoup de texte, une tour de verre." },
   vacant:    { name: "Chantier",           tags: "div (vide)",          group: "Bâtiments",        color: "#A88F6B", blurb: "Un élément vide : un chantier clôturé, parfois avec sa grue. Du balisage pour rien." },
   residence: { name: "Habitation",         tags: "p · blockquote · pre", group: "Bâtiments",       color: "#E3C9A6", blurb: "Un paragraphe : un immeuble d'habitation. Plus il est long, plus il a d'étages." },
+  gallery:   { name: "Galerie",            tags: "bloc d'images",       group: "Bâtiments",        color: "#4A4F58", blurb: "Un bloc qui ne contient que des images : un immeuble couvert d'écrans, comme à Times Square." },
   house:     { name: "Maison",             tags: "li",                  group: "Bâtiments",        color: "#F0E2C4", blurb: "Un élément de liste : une maison, son toit et sa cheminée." },
   monument:  { name: "Monument",           tags: "h1",                  group: "Monuments",        color: "#FF4B12", blurb: "Le titre principal : la tour Art déco qui domine la ville, son nom gravé au sommet." },
   belfry:    { name: "Beffroi",            tags: "h2",                  group: "Monuments",        color: "#5C8F80", blurb: "Un titre de partie : un beffroi à horloge, qui nomme son quartier." },
   kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#C4683F", blurb: "Un sous-titre : un pavillon à coupole." },
   bollard:   { name: "Statue",             tags: "h4 · h5 · h6",        group: "Monuments",        color: "#6D5D45", blurb: "Un petit titre : une statue de bronze sur son socle." },
-  billboard: { name: "Panneau",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, affichée sur un panneau. Une icône devient un panonceau, un petit drapeau flotte sur son mât." },
+  billboard: { name: "Affiche",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, en affiche sur une façade du bâtiment le plus proche dans la page (sur son toit quand les façades sont pleines). Une icône devient une enseigne, un petit drapeau flotte sur un mât au toit." },
   ruin:      { name: "Ruine",              tags: "img cassée",          group: "Ambiance",         color: "#8A7F72", blurb: "Une image cassée dans la page : son panneau s'est effondré, au milieu des gravats." },
-  screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin." },
+  screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin : un écran géant sur une façade du bâtiment voisin." },
   embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#EFE8DA", blurb: "Un autre site, enclavé dans celui-ci : un édifice à colonnes, sous son drapeau." },
   sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },
   counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir : un petit kiosque à auvent." },
