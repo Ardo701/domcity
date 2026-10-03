@@ -65,12 +65,3 @@ export const HERO_SAMPLE: CityDoc = {
     ],
   },
 };
-
-export const EXAMPLES: Array<{ lang: "fr" | "en"; title: string }> = [
-  { lang: "fr", title: "Paris" },
-  { lang: "fr", title: "Croissant (viennoiserie)" },
-  { lang: "fr", title: "Tour Eiffel" },
-  { lang: "fr", title: "Jazz" },
-  { lang: "fr", title: "Lune" },
-  { lang: "en", title: "Cat" },
-];

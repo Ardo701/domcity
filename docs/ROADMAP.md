@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori).
 
 ## 1. Le concept
 
@@ -15,7 +15,7 @@
 | Sujet | Décision | Raison |
 |---|---|---|
 | Plateforme | **Web app** (pas d'appli de bureau) | Partage par lien, rien à installer |
-| Capture des sites | **Bookmarklet uniquement** + champ Wikipédia sur le site | La page est déjà affichée chez l'utilisateur : ni CORS, ni anti-bot, ni proxy. Extension Chrome et npx **écartés** par l'utilisateur |
+| Capture des sites | **Bookmarklet uniquement** + champ Wikipédia dans la vue d'une ville (plus sur l'accueil) | La page est déjà affichée chez l'utilisateur : ni CORS, ni anti-bot, ni proxy. Extension Chrome et npx **écartés** par l'utilisateur |
 | Wikipédia | Lu directement dans le navigateur | Son API envoie `access-control-allow-origin: *` (vérifié) |
 | Proxy serveur pour lire n'importe quel site | **Écarté** | Les règles de Vercel interdisent proxys et scrapers |
 | Python, BeautifulSoup, Tauri | **Écartés** | Le navigateur analyse le HTML lui-même |
@@ -72,7 +72,7 @@ Identité retenue : **« planche d'urbanisme »**.
 ```
 src/
 ├── app/                         Next.js 16 (App Router)
-│   ├── page.tsx                 accueil : recherche Wikipédia, lien vers le favori, villes partagées, légende, méthode
+│   ├── page.tsx                 accueil : bouton « Créer une ville » (vers le favori), villes partagées, légende, méthode
 │   ├── installer/               page « Installer le favori » (bouton à glisser, animation, installation à la main)
 │   ├── nouveau/                 reçoit la ville envoyée par le favori (non publiée tant qu'on ne clique pas)
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
@@ -279,6 +279,7 @@ Demandées par l'utilisateur avant l'étape 6.
 - Le bouton de l'accueil qui mène à la page Installer s'intitule « Créer une ville » (sous « N'importe quel site ») au lieu de « Installer le favori DOMCity ».
 - L'image de la figure est préchargée (`preload` de React) : sans cela, le navigateur ne la découvre qu'en lisant le SVG, et les repères apparaissaient un instant sans la ville.
 - **Le héros tient dans le premier écran** (« tout le hero n'est pas visible sur l'écran de mon Mac », 1470 × 800) : il faisait 1 085 px de haut, le bouton « Créer une ville » tombait sous le pli. Le titre passe sur trois lignes voulues (« Chaque page / web est une / ville. », il en faisait quatre par retour à la ligne), sa taille, les marges et les écarts suivent aussi la hauteur de l'écran (`svh`) ; sur un écran bas (760 px ou moins, portable de 13 pouces), l'en-tête et le texte se resserrent encore. Vérifié de 1280 × 700 à 2560 × 1300 ; une fenêtre plus basse (1024 × 640) défile encore un peu.
+- **Accueil centré sur le favori** (« pour éviter de mettre en avant Wikipédia ») : le champ Wikipédia et les exemples « Essayer » quittent l'accueil. Le bouton principal, orange, est « Créer une ville » : il mène aux instructions du favori (`/installer`). Le texte d'accroche parle du favori seulement. Le mode Wikipédia reste entier : adresses `/w/…`, champ de recherche dans la barre d'une ville et de la mégalopole, villes partagées. Le héros tient désormais dans le premier écran de 1024 × 640 à 1920 × 1000, et sur téléphone la figure aussi.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).

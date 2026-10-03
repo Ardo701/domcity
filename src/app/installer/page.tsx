@@ -223,7 +223,7 @@ export default function InstallerPage() {
         <div>
           <span className="mono-caps">Retour</span>
           <p>
-            <Link href="/">Construire un article Wikipédia</Link>
+            <Link href="/">L&apos;accueil de DOMCity</Link>
           </p>
         </div>
       </footer>

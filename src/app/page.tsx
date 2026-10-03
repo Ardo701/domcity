@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { wikiPath } from "@/capture/wikipedia";
 import { gateArch } from "@/city/layout";
 import type { CityCard } from "@/format/shared";
 import { KINDS, LEGEND_GROUPS, type Kind } from "@/format/taxonomy";
@@ -14,8 +13,7 @@ import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { Wordmark } from "@/ui/Logo";
 import { MyCities } from "@/ui/MyCities";
-import { EXAMPLES, HERO_SAMPLE } from "@/ui/samples";
-import { WikiSearch } from "@/ui/WikiSearch";
+import { HERO_SAMPLE } from "@/ui/samples";
 import styles from "./page.module.css";
 
 const LEGEND_KINDS = (Object.keys(KINDS) as Kind[]).filter((k) => k !== "terrain");
@@ -79,30 +77,13 @@ export default async function Home() {
               <em>ville.</em>
             </h1>
             <p className={styles.lead}>
-              Donnez un article, ou relevez n&apos;importe quel site avec le favori : DOMCity en relève le plan et
-              le construit en 3D. Les sections deviennent des quartiers, les paragraphes des habitations, les titres
-              des monuments. Ensuite, on s&apos;y promène.
+              Ouvrez n&apos;importe quel site et cliquez sur le favori : DOMCity en relève le plan et le construit en
+              3D. Les sections deviennent des quartiers, les paragraphes des habitations, les titres des monuments.
+              Ensuite, on s&apos;y promène.
             </p>
 
-            <WikiSearch />
-
-            <div className={styles.examples}>
-              <span className="mono-caps">Essayer</span>
-              <ul>
-                {EXAMPLES.map((e) => (
-                  <li key={`${e.lang}-${e.title}`}>
-                    <Link href={wikiPath(e.lang, e.title)}>
-                      {e.title}
-                      {e.lang !== "fr" && <span className={styles.exampleLang}>{e.lang}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Link href="/installer" className={styles.bookmarkletCta}>
-              <span className="mono-caps">N&apos;importe quel site</span>
-              <strong>Créer une ville</strong>
+            <Link href="/installer" className={styles.cta}>
+              Créer une ville
               <span aria-hidden className={styles.ctaArrow}>
                 →
               </span>

@@ -74,93 +74,42 @@
   max-width: 54ch;
 }
 
-.examples {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-}
-
-.examples > span {
-  color: var(--ink-3);
-}
-
-.examples ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.examples a {
+/* Le bouton principal : il mène aux instructions du favori. */
+.cta {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  background: var(--paper-raised);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.12s ease;
-}
-
-.examples a:hover {
-  background: var(--beacon);
-}
-
-.exampleLang {
-  font-family: var(--mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-/* Lien vers le favori : une étiquette de planche, pas un bouton de plus. */
-.bookmarkletCta {
-  align-self: flex-start;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  column-gap: 18px;
-  padding: 10px 14px 10px 14px;
-  border: 1px solid var(--ink);
-  border-left: 6px solid var(--signal);
-  border-radius: var(--radius-sm);
-  background: var(--paper-raised);
-  text-decoration: none;
-  transition: background 0.12s ease;
-}
-
-.bookmarkletCta span:first-child {
-  grid-column: 1;
-  color: var(--ink-3);
-}
-
-.bookmarkletCta strong {
-  grid-column: 1;
+  gap: 14px;
+  padding: 16px 26px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--signal);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
   text-transform: uppercase;
-  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .ctaArrow {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  font-size: 24px;
-  transition: transform 0.12s ease;
+  font-family: var(--body);
+  font-weight: 600;
+  transition: transform 0.15s ease;
 }
 
-.bookmarkletCta:hover {
-  background: var(--beacon);
+.cta:hover {
+  background: #ff6a37;
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: translate(-1px, -1px);
 }
 
-.bookmarkletCta:hover .ctaArrow {
+.cta:hover .ctaArrow {
   transform: translateX(3px);
 }
 
