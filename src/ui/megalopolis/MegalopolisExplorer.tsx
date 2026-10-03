@@ -8,9 +8,11 @@ import { buildMegalopolis, comparePaths, placePages, type MegaCity, type Megalop
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
 import { assembleWorld, isSpecial, partOf, type World } from "@/city/world";
+import { withoutBlocked } from "@/format/blocklist";
 import { sharedCityPath, sitePath, type MegaPageInfo } from "@/format/shared";
 import { linkPath } from "@/format/links";
 import type { CityDoc } from "@/format/types";
+import { loadBlocklist } from "@/ui/blocklist";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
 import { Departures } from "@/ui/explorer/Departures";
@@ -162,13 +164,16 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
     let cancelled = false;
     (async () => {
       try {
+        const blocked = loadBlocklist();
         const docs = await loadAll(pages, controller.signal, setLoaded);
+        // Les images des sites refusés ne sont jamais demandées (le site lui-même ne l'est pas : le serveur l'a servi).
+        const refused = await blocked;
         if (cancelled) return;
         const list: Entry[] = [];
         const lost: MegaPageInfo[] = [];
         pages.forEach((info, i) => {
           const doc = docs[i];
-          if (doc) list.push({ info, doc });
+          if (doc) list.push({ info, doc: withoutBlocked(doc, refused) });
           else lost.push(info);
         });
         if (list.length === 0) {

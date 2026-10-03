@@ -3,7 +3,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { DOMParser } from "linkedom";
 import { fetchWikipediaCity, type WikiLang } from "@/capture/wikipedia";
 import { layoutCity } from "@/city/layout";
-import { cityRefusal } from "@/format/blocklist";
+import { cityRefusal, withoutBlocked } from "@/format/blocklist";
 import { validateCityDoc } from "@/format/schema";
 import { THUMBNAIL, type CityStatsSummary } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
@@ -120,25 +120,36 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   const address = normalizePageUrl(doc.url);
   if (!address) throw new ShareError(400, "Adresse de page invalide.");
   if (!isPublicHost(address.domain)) throw new ShareError(400, "Les pages locales ou d'intranet ne se partagent pas.");
-  const refusal = cityRefusal(doc);
+  // Les sites refusés (dans la base) : pas de ville pour eux, et leurs images ne partent pas avec celle d'un autre.
+  const blocked = await store.blocklist();
+  const refusal = cityRefusal(doc, blocked);
   if (refusal) throw new ShareError(403, refusal);
   if (address.path.length > 1024) throw new ShareError(400, "Adresse de page trop longue.");
 
-  const canonical: CityDoc = { ...doc, url: address.url };
+  const canonical: CityDoc = { ...withoutBlocked(doc, blocked), url: address.url };
   const body = new Uint8Array(gzipSync(JSON.stringify(canonical), { level: 9 }));
   if (body.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "Ville trop lourde.");
 
   const token = newDeleteToken();
   const tokenHash = hashToken(token);
-  const slug = await store.createCapture({
-    domain: address.domain,
-    path: address.path,
-    source: doc.source,
-    title: doc.title.slice(0, 300),
-    sizeBytes: body.byteLength,
-    stats: { ...statsOf(canonical), thumbnail: thumbnail !== null },
-    deleteTokenHash: tokenHash,
-  });
+  let slug: string;
+  try {
+    slug = await store.createCapture({
+      domain: address.domain,
+      path: address.path,
+      source: doc.source,
+      title: doc.title.slice(0, 300),
+      sizeBytes: body.byteLength,
+      stats: { ...statsOf(canonical), thumbnail: thumbnail !== null },
+      deleteTokenHash: tokenHash,
+    });
+  } catch (error) {
+    // La base refuse aussi : un site entré dans la liste entre-temps.
+    if (error instanceof Error && error.message.includes("blocked_domain")) {
+      throw new ShareError(403, "Ce site est sur la liste des sites refusés par DOMCity.");
+    }
+    throw error;
+  }
 
   try {
     await files.put(cityKey(slug), body, "application/gzip");

@@ -36,6 +36,10 @@ export default function PrivacyPage() {
         Il ne lit jamais le texte des paragraphes, ce que vous tapez dans les formulaires, vos cookies, vos mots de passe
         ni les paramètres de l&apos;adresse. Le détail est sur la page <Link href="/create#releve">Créer une ville</Link>.
       </p>
+      <p>
+        Pour savoir si un site est refusé (sites pour adultes, banques, messageries…), votre navigateur télécharge la
+        liste entière des sites refusés et vérifie lui-même : DOMCity n&apos;apprend pas quelle page vous relevez.
+      </p>
 
       <h2>Ce qui reste dans votre navigateur</h2>
       <p>Tant que vous ne publiez pas, rien ne quitte votre navigateur. Il garde :</p>

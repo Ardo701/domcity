@@ -9,9 +9,11 @@ import { layoutCity, type CityLayout } from "@/city/layout";
 import { isSpecial } from "@/city/world";
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
+import { cityRefusal, withoutBlocked } from "@/format/blocklist";
 import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, siteHost } from "@/format/url";
+import { loadBlocklist } from "@/ui/blocklist";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
 import { WikiSearch } from "@/ui/WikiSearch";
@@ -114,6 +116,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
     (async () => {
       try {
+        // La liste des sites refusés se télécharge pendant que la ville arrive.
+        const blocked = loadBlocklist();
         let cityDoc: CityDoc;
         if (source.kind === "shared") {
           cityDoc = await loadSharedCity(source.fileUrl, controller.signal);
@@ -127,7 +131,15 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           }
           cityDoc = result.doc;
         }
+        const list = await blocked;
         if (cancelled) return;
+        const refusal = cityRefusal(cityDoc, list);
+        if (refusal) {
+          setStatus({ phase: "error", title: "Site refusé", message: refusal });
+          return;
+        }
+        // Les images des sites refusés ne sont jamais demandées, même dans la ville d'un autre site.
+        cityDoc = withoutBlocked(cityDoc, list);
         setDoc(cityDoc);
         setStatus({ phase: "loading", step: 1 });
         await nextFrame();

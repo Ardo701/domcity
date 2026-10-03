@@ -11,15 +11,15 @@ import type {
   SitePageCard,
   SiteSummary,
 } from "@/format/shared";
-import { isBlockedHost } from "@/format/blocklist";
+import { isBlockCategory, type BlockCategory } from "@/format/blocklist";
 import type { CaptureSource } from "@/format/types";
 import { Bytea, rpc } from "./db";
 
 /**
  * Les opérations sur les villes partagées, au-dessus des fonctions SQL.
  * Les lectures passent avec les droits d'un visiteur ; les écritures avec la clé secrète.
- * Aucune lecture ne rend un site refusé (`src/format/blocklist.ts`), même publié avant
- * d'entrer dans la liste : ses villes restent dans la base jusqu'à ce qu'on les efface.
+ * Aucune lecture ne rend un site refusé (table `blocked_domains`) : les fonctions SQL l'ignorent,
+ * même publié avant d'entrer dans la liste. Ses villes restent dans la base jusqu'à ce qu'on les efface.
  */
 
 type Row = Record<string, unknown>;
@@ -94,7 +94,7 @@ export async function recordView(slug: string): Promise<void> {
 
 export async function getCapture(slug: string): Promise<SharedCity | null> {
   const [row] = await reader().rows<Row>("get_capture", { p_slug: slug });
-  if (!row || isBlockedHost(String(row.domain))) return null;
+  if (!row) return null;
   return {
     slug: String(row.slug),
     title: String(row.title ?? ""),
@@ -112,7 +112,6 @@ export async function getCapture(slug: string): Promise<SharedCity | null> {
 }
 
 export async function pageVersions(domain: string, path: string): Promise<CityVersion[]> {
-  if (isBlockedHost(domain)) return [];
   const rows = await reader().rows<Row>("page_versions", { p_domain: domain, p_path: path });
   return rows.map((row) => ({
     slug: String(row.slug),
@@ -125,7 +124,7 @@ export async function pageVersions(domain: string, path: string): Promise<CityVe
 /** Les sites mis à jour le plus récemment (la galerie). */
 export async function recentSites(limit = 12, offset = 0): Promise<SiteCard[]> {
   const rows = await reader().rows<Row>("recent_sites", { p_limit: limit, p_offset: offset });
-  return rows.filter((row) => !isBlockedHost(String(row.domain))).map((row) => ({
+  return rows.map((row) => ({
     domain: String(row.domain),
     pagesCount: num(row.pages_count),
     capturesCount: num(row.captures_count),
@@ -136,7 +135,6 @@ export async function recentSites(limit = 12, offset = 0): Promise<SiteCard[]> {
 }
 
 export async function getSite(domain: string): Promise<SiteSummary | null> {
-  if (isBlockedHost(domain)) return null;
   const [row] = await reader().rows<Row>("get_site", { p_domain: domain });
   if (!row) return null;
   return {
@@ -149,7 +147,6 @@ export async function getSite(domain: string): Promise<SiteSummary | null> {
 }
 
 export async function sitePages(domain: string): Promise<SitePage[]> {
-  if (isBlockedHost(domain)) return [];
   const rows = await reader().rows<Row>("site_pages", { p_domain: domain });
   return rows.map((row) => ({
     path: String(row.path),
@@ -162,7 +159,6 @@ export async function sitePages(domain: string): Promise<SitePage[]> {
 
 /** Les pages d'un site dans l'ordre des adresses, par morceaux, avec leur dernière version. */
 export async function sitePageList(domain: string, limit: number, offset: number): Promise<SitePageCard[]> {
-  if (isBlockedHost(domain)) return [];
   const rows = await reader().rows<Row>("site_page_list", { p_domain: domain, p_limit: limit, p_offset: offset });
   return rows.map((row) => ({
     path: String(row.path),
@@ -176,7 +172,6 @@ export async function sitePageList(domain: string, limit: number, offset: number
 
 /** La dernière version visible de chaque page du site (la mégalopole), dans l'ordre des adresses. */
 export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "views" | "pageTitle" | "pageVersions" | "domain">>> {
-  if (isBlockedHost(domain)) return [];
   const rows = await reader().rows<Row>("site_city", { p_domain: domain });
   return rows.map((row) => ({
     slug: String(row.slug),
@@ -192,16 +187,16 @@ export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "
 
 /** Parmi ces domaines, ceux qui ont des villes sur DOMCity. */
 export async function knownSites(domains: string[]): Promise<KnownSite[]> {
-  const allowed = domains.slice(0, 60).filter((domain) => !isBlockedHost(domain));
-  if (allowed.length === 0) return [];
-  const rows = await reader().rows<Row>("known_sites", { p_domains: allowed });
+  const wanted = domains.slice(0, 60);
+  if (wanted.length === 0) return [];
+  const rows = await reader().rows<Row>("known_sites", { p_domains: wanted });
   return rows.map((row) => ({ domain: String(row.domain), pages: num(row.pages_count) }));
 }
 
 /** Un résultat par site ; les pages dont le titre répond sont rangées sous leur site. */
 export async function searchSites(query: string, limit = 12): Promise<SearchHit[]> {
   const rows = await reader().rows<Row>("search_sites", { p_query: query, p_limit: limit });
-  return rows.filter((row) => !isBlockedHost(String(row.domain))).map((row) => {
+  return rows.map((row) => {
     const pages = (typeof row.pages === "string" ? JSON.parse(row.pages) : (row.pages ?? [])) as Row[];
     return {
       domain: String(row.domain),
@@ -213,4 +208,14 @@ export async function searchSites(query: string, limit = 12): Promise<SearchHit[
       pagesMatched: num(row.pages_matched),
     };
   });
+}
+
+/** La liste entière des sites refusés : domaine (ou extension) → catégorie. */
+export async function blocklist(): Promise<Map<string, BlockCategory>> {
+  const rows = await reader().rows<Row>("blocklist", {});
+  const list = new Map<string, BlockCategory>();
+  for (const row of rows) {
+    if (isBlockCategory(row.category)) list.set(String(row.domain), row.category);
+  }
+  return list;
 }

@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatChars, formatCount, type LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
-import { isBlockedUrl } from "@/format/blocklist";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
@@ -41,7 +40,7 @@ export function Inspector({
 }) {
   const added = info.ownText || info.gallery;
   // Une image d'un site refusé n'est ni montrée ni décrite (son texte alternatif peut être aussi cru qu'elle).
-  const refused = Boolean(info.img?.src && isBlockedUrl(info.img.src));
+  const refused = info.img?.refused === true;
   const parent = info.path.length > 1 ? info.path[info.path.length - (added ? 1 : 2)] : null;
   const rows: Array<[string, ReactNode]> = [
     ["Texte propre", formatChars(info.text)],

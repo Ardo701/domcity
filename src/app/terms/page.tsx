@@ -35,8 +35,10 @@ export default function TermsPage() {
         </li>
         <li>Les pages locales ou d&apos;un réseau interne ne peuvent pas être publiées.</li>
         <li>
-          Les sites pour adultes ne deviennent pas des villes : DOMCity en refuse une liste, ainsi que toute page qui se
-          déclare réservée aux adultes, et n&apos;affiche jamais les images de ces sites.
+          Certains sites ne deviennent pas des villes : sites pour adultes ou violents, banques et services financiers,
+          messageries et autres pages de données personnelles (impôts, santé, comptes), jeux d&apos;argent, sites
+          dangereux. DOMCity en tient une liste, refuse aussi toute page qui se déclare réservée aux adultes, et
+          n&apos;affiche jamais les images de ces sites.
         </li>
       </ul>
 

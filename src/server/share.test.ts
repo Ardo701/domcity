@@ -64,9 +64,15 @@ describe("fichiers envoyés", () => {
     }
   });
 
-  it("refuse de publier un site refusé, ou une page qui se déclare réservée aux adultes", async () => {
-    for (const url of ["https://fr.pornhub.com/", "https://www.exemple.xxx/page"]) {
-      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ status: 403 });
+  it("refuse de publier un site refusé (la liste de la base), ou une page qui se déclare réservée aux adultes", async () => {
+    const cases: Array<[string, RegExp]> = [
+      ["https://fr.pornhub.com/", /sites pour adultes/],
+      ["https://www.exemple.xxx/page", /sites pour adultes/],
+      ["https://mabanque.bnpparibas/fr/connexion", /banques/],
+      ["https://mail.google.com/mail/u/0/", /messageries/],
+    ];
+    for (const [url, message] of cases) {
+      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ status: 403, message: expect.stringMatching(message) });
     }
     await expect(shareCity({ ...DOC, page: { adult: true } }, null)).rejects.toThrow(/réservée aux adultes/);
   });
@@ -160,26 +166,70 @@ describe("les sites au premier plan (base locale)", () => {
   });
 });
 
-describe("un site refusé après avoir été publié (base locale)", () => {
-  it("n'apparaît plus nulle part : ville, site, galerie, recherche, départs", async () => {
-    // Écrit directement dans la base, comme une ville publiée avant que son site entre dans la liste.
-    const slug = await store.createCapture({
-      domain: "pornhub.com",
-      path: "/",
-      source: "bookmarklet",
-      title: "Essai",
-      sizeBytes: 10,
-      stats: statsOf(DOC),
-      deleteTokenHash: hashToken("jeton-de-test-refuse"),
-    });
-    expect(await store.publishCapture(slug)).toBe(true);
+describe("les sites refusés (base locale)", () => {
+  /** La base locale ouverte par le serveur : on y tient la liste comme on le ferait dans Supabase. */
+  const sql = async (text: string, params: unknown[] = []) => {
+    const pools = (globalThis as unknown as { __domcityPg?: Map<string, Promise<{ query(sql: string, params?: unknown[]): Promise<unknown> }>> })
+      .__domcityPg;
+    await (await pools!.get(dataDir)!).query(text, params);
+  };
 
+  it("retire de la ville stockée les images et les départs des sites refusés", async () => {
+    const doc: CityDoc = {
+      ...DOC,
+      url: "https://forum-essai.fr/fil",
+      linksTo: { sites: [["pornhub.com", 3], ["wikipedia.org", 1]] },
+      root: {
+        tag: "body",
+        children: [
+          { tag: "img", img: { src: "https://ei.phncdn.com/v/a.jpg", alt: "texte cru", w: 320, h: 180 } },
+          { tag: "img", img: { src: "https://forum-essai.fr/logo.png", w: 300, h: 100 } },
+        ],
+      },
+    };
+    const { slug, token } = await shareCity(doc, null);
+    const stored = readUploadedCity((await readLocalFile(cityKey(slug)))!);
+    expect(stored.root.children!.map((node) => node.img)).toEqual([
+      { src: "", w: 320, h: 180, refused: true },
+      { src: "https://forum-essai.fr/logo.png", w: 300, h: 100 },
+    ]);
+    expect(stored.linksTo?.sites).toEqual([["wikipedia.org", 1]]);
+    await deleteSharedCity(slug, token);
+  });
+
+  it("la base refuse elle-même de créer la ville d'un site de la liste", async () => {
+    await expect(
+      store.createCapture({
+        domain: "fr.pornhub.com",
+        path: "/",
+        source: "bookmarklet",
+        title: "Essai",
+        sizeBytes: 10,
+        stats: statsOf(DOC),
+        deleteTokenHash: hashToken("jeton-de-test-refuse"),
+      }),
+    ).rejects.toThrow(/blocked_domain/);
+  });
+
+  it("un site ajouté à la liste après sa publication n'apparaît plus nulle part, puis revient s'il en sort", async () => {
+    const { slug } = await shareCity({ ...DOC, url: "https://plus-tard.fr/", title: "Plus tard" }, null);
+    expect(await store.getCapture(slug)).not.toBeNull();
+
+    await sql("insert into public.blocked_domains (domain, category, note) values ('plus-tard.fr', 'danger', 'essai')");
     expect(await store.getCapture(slug)).toBeNull();
-    expect(await store.getSite("pornhub.com")).toBeNull();
-    expect(await store.sitePageList("pornhub.com", 60, 0)).toEqual([]);
-    expect(await store.siteCity("pornhub.com")).toEqual([]);
-    expect((await store.recentSites(60)).map((site) => site.domain)).not.toContain("pornhub.com");
-    expect((await store.searchSites("pornhub")).map((hit) => hit.domain)).not.toContain("pornhub.com");
-    expect(await store.knownSites(["pornhub.com"])).toEqual([]);
+    expect(await store.getSite("plus-tard.fr")).toBeNull();
+    expect(await store.sitePageList("plus-tard.fr", 60, 0)).toEqual([]);
+    expect(await store.sitePages("plus-tard.fr")).toEqual([]);
+    expect(await store.siteCity("plus-tard.fr")).toEqual([]);
+    expect(await store.pageVersions("plus-tard.fr", "/")).toEqual([]);
+    expect((await store.recentSites(60)).map((site) => site.domain)).not.toContain("plus-tard.fr");
+    expect((await store.searchSites("plus-tard")).map((hit) => hit.domain)).not.toContain("plus-tard.fr");
+    expect(await store.knownSites(["plus-tard.fr"])).toEqual([]);
+    expect((await store.blocklist()).get("plus-tard.fr")).toBe("danger");
+    await expect(shareCity({ ...DOC, url: "https://plus-tard.fr/autre" }, null)).rejects.toMatchObject({ status: 403 });
+
+    await sql("delete from public.blocked_domains where domain = 'plus-tard.fr'");
+    expect(await store.getCapture(slug)).not.toBeNull();
+    expect(await store.knownSites(["plus-tard.fr"])).toEqual([{ domain: "plus-tard.fr", pages: 1 }]);
   });
 });

@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site, miniature automatique, bouton du favori en blanc, sites refusés).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site, miniature automatique, bouton du favori en blanc, sites refusés, puis leur liste dans la base : banques, données personnelles, jeux d'argent, sites dangereux).
 
 ## 1. Le concept
 
@@ -27,7 +27,7 @@
 | Anti-DDoS | Vercel (inclus, tous plans) pour le site ; Cloudflare pour les fichiers | Vercel déconseille un proxy Cloudflare devant lui (il perd la visibilité du trafic) |
 | Langue | **Français pour l'instant, anglais plus tard** ; les nouvelles adresses sont en anglais (`/create`, `/account`, `/explore`, `/site/…`) | L'application sera traduite : ses adresses n'auront pas à changer. Les autres (`/nouveau`, `/c/…/supprimer`) changeront avec la traduction. `/c/` (ville partagée) et `/w/` (Wikipédia) restent courts : ce sont les liens qu'on partage |
 | Recherche et galerie | **Par site** (amazon.com, fr.wikipedia.org), plus ville par ville | Une mégalopole a plusieurs villes : un site relevé vingt fois remplissait la galerie. Les pages dont le titre répond à la recherche sont rangées sous leur site et mènent droit à leur ville |
-| Sites pour adultes | **Refusés** : une liste de domaines tenue par le moteur, plus toute page qui se déclare réservée aux adultes ; leurs images ne sont jamais chargées, même dans la ville d'un autre site | Demande de l'utilisateur : pas d'images obscènes dans les villes ni dans la galerie. Voir « Sites refusés » (section 9) |
+| Sites refusés | **Une liste dans la base** (table `blocked_domains`, ~1 550 entrées tenues à la main) en six catégories : sites pour adultes, violence, banques et services financiers, données personnelles, jeux d'argent, sites dangereux ; plus toute page qui se déclare réservée aux adultes. Toutes traitées pareil : ni ville, ni publication, images jamais chargées, même dans la ville d'un autre site | Demande de l'utilisateur : pas d'images obscènes, pas de pages de banque (« comme les sites pour adultes »). Dans la base, la liste s'allonge sans redéployer et la base refuse elle-même la publication. Voir « Sites refusés dans la base » (section 9) et `docs/sites-refuses.md` |
 | Rendu de la ville | **Ville plate et réaliste** : rues, trottoirs, pâtés denses, bâtiments composés, mobilier urbain (et non plus des socles empilés par profondeur) | Demande de l'utilisateur : l'ancien rendu faisait « compartimenté, très cubique, pas une grande ville ». Les rues n'ont pas à correspondre à un élément de la page : elles séparent les blocs et découpent les longs pâtés, parfois pour le seul décor |
 
 ### Principe clé : les données ne changent pas, le moteur si
@@ -42,7 +42,7 @@ Une ville stockée est une **description** de la page (JSON), jamais un dessin. 
 - On stocke la **quantité** de texte, jamais le texte, **sauf** les titres h1 à h3 (raccourcis à 120 caractères), nécessaires pour graver les monuments. L'utilisateur l'a validé ; la liste des titres est montrée avant le partage.
 - Les adresses sont nettoyées : pas de `?query` ni de `#ancre`, `www.` retiré.
 - Le lien secret de suppression contient un jeton après le `#` (jamais envoyé au serveur dans l'adresse). La base ne garde que son empreinte SHA-256.
-- Rien ne quitte le navigateur tant que l'utilisateur ne clique pas sur « Publier ».
+- Rien ne quitte le navigateur tant que l'utilisateur ne clique pas sur « Publier ». Pour savoir si un site est refusé, le navigateur télécharge la liste entière des sites refusés (`/api/blocklist`) et vérifie lui-même : DOMCity n'apprend pas quelle page est relevée.
 - Le favori ne fait que lire : jamais le texte des paragraphes, ni ce qui est tapé dans les formulaires, ni les cookies. Avant publication d'un relevé, il montre l'adresse publiée, les titres, et laisse modifier le titre.
 - Les liens d'une page vers les autres pages de son site ne sont gardés que sous forme d'**empreinte** (FNV-1a sur 32 bits du chemin, `src/format/links.ts`), jamais en clair : la mégalopole calcule l'empreinte de ses pages et voit lesquelles sont visées. Un chemin privé (un dépôt, un dossier client) ne se lit donc pas dans une ville partagée. Les **domaines** des autres sites visés sont gardés en clair (60 au plus) : ce sont les destinations des vols (validé par l'utilisateur). Un intranet ou une adresse IP n'est jamais noté. L'aperçu avant partage le dit.
 
@@ -84,7 +84,7 @@ src/
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
 │   ├── c/[slug]/                ville partagée (+ supprimer/ : lien secret)
 │   ├── site/[domain]/           la page d'un site : ses pages (par morceaux de 60), l'accueil manquant ; megalopolis/ : la mégalopole (toutes ses pages assemblées)
-│   └── api/                     captures (POST), captures/[slug] (DELETE), report, view, search, sites/known, dev-files
+│   └── api/                     captures (POST), captures/[slug] (DELETE), report, view, search, sites/known, blocklist, dev-files
 ├── format/                      format de ville (types, zod, limites, adresses, dictionnaire HTML → ville)
 ├── capture/                     page web → ville (sans dépendance, compilé dans le favori) ; Wikipédia
 ├── bookmarklet/                 le favori : main.ts (point d'entrée), protocol.ts (échange avec /nouveau), href.ts, generated.ts (compilé)
@@ -127,6 +127,7 @@ Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1
 `linksTo` (Wikipédia et favori, depuis l'étape 4) : `pages` (empreintes des chemins des pages du même site visées, 1 000 au plus, les plus visées d'abord, la page elle-même exclue) et `sites` (`[domaine, nombre de liens]`, 60 au plus). Facultatif : les villes relevées avant ne le savent pas (pas d'autoroute ni de vols pour elles tant qu'elles ne sont pas relevées à nouveau). Favori en version 2 (un bandeau propose de réinstaller l'ancien).
 `img.broken` (favori, depuis l'étape 5) : l'image était cassée dans la page au moment du relevé (chargement fini, rien d'affiché ; ni une image en chargement différé pas encore demandée, ni un SVG sans taille). Favori en version 3.
 `page.adult` (favori, depuis les sites refusés) : la page se déclare réservée aux adultes (balise `rating`). Une telle ville n'est jamais construite ni publiée. Favori en version 4.
+`img.refused` (depuis les sites refusés dans la base) : l'image venait d'un site refusé ; son adresse et son texte ont été retirés (`src` vide), elle garde sa place et sa taille et l'affiche dit « Image masquée ». Posé par le serveur au partage, et par le navigateur à l'ouverture d'une ville (`withoutBlocked`, qui retire aussi les sites refusés de `linksTo.sites`).
 Limites : 30 000 éléments, profondeur 64, 2 Mo compressé. Validation zod dans `src/format/schema.ts`.
 
 Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés. Avec le favori, github.com/vercel/next.js : 3 244 éléments relevés en 13 ms, 24 Ko de JSON, 6 Ko compressés.
@@ -177,8 +178,9 @@ Migrations dans `supabase/migrations/`, testées sur PGlite :
 2. `20261002160000_sharing_reads.sql` : `get_capture`, `recent_captures`, `get_site`, `site_pages`.
 3. `20261003120000_megalopolis.sql` : `known_sites(domaines[])`, parmi les sites liés, ceux qui ont des villes sur DOMCity (le tableau des départs propose d'aller les voir).
 4. `20261003180000_sites_first.sql` : `search_sites` (un résultat par site, ses 3 pages qui répondent le mieux avec leur dernière version), `recent_sites` (la galerie, avec la miniature de l'accueil ou à défaut de la page la plus récente), `site_page_list` (les pages d'un site par morceaux). Retire `search_cities` et `recent_captures`.
+5. `20261003200000_blocked_domains.sql` : la table `blocked_domains` (domaine ou extension, catégorie, note), illisible pour les visiteurs ; `domain_suffixes`, `is_blocked_domain` (un domaine couvre ses sous-domaines), `blocklist()` (la liste entière, pour le navigateur et le serveur). `create_capture` refuse un site de la liste (`blocked_domain`) ; toutes les fonctions de lecture l'ignorent (mêmes signatures, une condition de plus). Remplit la liste de départ (`docs/sites-refuses.md`).
 
-Vérifier une base : `supabase/verification.sql` (SQL Editor, relançable). Il contrôle la structure (extensions, tables, RLS, fonctions, droits des visiteurs et de l'API), puis fait un partage d'essai de bout en bout sur `verification.domcity.invalid` (créer, publier, chercher, visiter, limite d'envois, signalements, suppression) et l'efface ; une ligne par contrôle, « ok » ou « ÉCHEC ». Un test le passe sur une base neuve.
+Vérifier une base : `supabase/verification.sql` (SQL Editor, relançable). Il contrôle la structure (extensions, tables, RLS, fonctions, droits des visiteurs et de l'API), la liste des sites refusés (remplie, ce qu'elle refuse ou non, `create_capture` qui refuse), puis fait un partage d'essai de bout en bout sur `verification.domcity.invalid` (créer, publier, chercher, refuser puis rendre, visiter, limite d'envois, signalements, suppression) et l'efface ; une ligne par contrôle, « ok » ou « ÉCHEC ». Un test le passe sur une base neuve.
 
 Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalements de personnes différentes masquent une version (la page retombe sur la précédente) ; une version est `pending` tant que ses fichiers ne sont pas dans R2. Ne jamais modifier une migration déjà appliquée : en ajouter une nouvelle.
 
@@ -192,6 +194,7 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 | `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur, **côté navigateur seulement** : aucune limite côté serveur (voir « Urgent ») |
 | `GET /api/search?q=` | Recherche par site (« amzon » trouve amazon.com ; « croissant », la page sous son site) | Lecture seule, **sans limite** (voir « Urgent ») |
 | `GET /api/sites/known?d=a.com,b.org` | Parmi ces domaines, ceux qui ont des villes | Lecture seule, 60 domaines au plus |
+| `GET /api/blocklist` | La liste entière des sites refusés, `{ adult: [...], bank: [...] }` | Lecture seule, gardée 5 minutes par le navigateur et le réseau de Vercel (`s-maxage`) : Supabase n'est appelé qu'une fois toutes les 5 minutes |
 | `GET /api/dev-files/...` | Sert les fichiers en mode local | Développement uniquement |
 
 ## 9. État d'avancement
@@ -307,9 +310,22 @@ Demandées par l'utilisateur avant l'étape 6.
   1. **Une liste de domaines** (environ 80 : vidéos, webcams, abonnements, studios, dessins, et les serveurs d'images de ces sites, dont les vignettes s'accrochent ailleurs) et les extensions `.xxx`, `.porn`, `.adult`, `.sex`. Un domaine couvre ses sous-domaines. Pas de mots clés : « sex » refuserait essex.ac.uk, « porn » la ville de Pornic, « xxx » le magasin XXXLutz.
   2. **La page se déclare réservée aux adultes** : le favori (version 4) lit la balise `<meta name="rating">` (« adult » ou le label RTA, que posent la plupart des sites pour adultes pour les moteurs de recherche et les contrôles parentaux) et le note (`page.adult`). Cela couvre les sites absents de la liste.
   3. **Les images d'un site refusé ne sont jamais chargées**, même accrochées dans la ville d'un autre site (un forum, un blog) : l'affiche dit « Image masquée · site refusé par DOMCity », sans son texte alternatif (il peut être aussi cru que l'image) ; l'inspecteur ne la montre pas. La miniature, rendue par le moteur, ne peut donc pas la contenir.
+  (Depuis, la liste est dans la base : voir « Sites refusés dans la base » ci-dessous. Le reste de ce paragraphe décrit la première version.)
   Où ça s'applique : `/nouveau` affiche « Site refusé » au lieu de construire la ville (rien n'est gardé, pas de bouton « Installer le favori ») ; le serveur refuse le partage (403, même message) ; toutes les lectures (ville partagée, page du site, mégalopole, galerie, recherche, départs) ignorent un site refusé, même publié avant d'entrer dans la liste (`store.ts`). Ses lignes restent dans la base et ses fichiers dans R2 jusqu'à ce qu'on les efface à la main. La page Créer une ville, les conditions d'utilisation et la confidentialité le disent.
   Limites : la liste ne sera jamais complète, et une page d'un site absent de la liste, sans balise `rating`, passe (le signalement reste le recours) ; les sites mixtes (Reddit, X, Tumblr) ne sont pas refusés ; une ville forgée hors du favori peut mentir sur son adresse (ses images d'un site refusé restent masquées) ; les images de Wikipédia ne sont pas filtrées. Ce qu'un envoi forgé permet encore : voir « URGENT : contourner les sites refusés » (section 10).
   Vérifié : 95 tests (domaines et sous-domaines, faux amis comme Pornic ou XXXLutz, balise `rating` relevée, réception refusée sans rien garder, partage refusé, site publié avant la liste absent de toutes les lectures), TypeScript, ESLint. Dans le navigateur : la page « Site refusé » ; une ville d'exemple.org avec une image d'un serveur refusé (affiche « Image masquée », aucune requête vers ce serveur, inspecteur sans image ni texte alternatif).
+
+### Sites refusés dans la base ✅
+Demande de l'utilisateur : bloquer aussi les banques (« comme les sites pour adultes ») et les autres sites potentiellement dangereux, avec la liste dans la base pour qu'on ne contourne pas le blocage en supprimant du code. La liste est faite à la main, « le maximum de choses ».
+- **Précision donnée à l'utilisateur** : retirer du code dans son propre navigateur ne contournait déjà rien (le serveur vérifiait au partage et aux lectures) ; le vrai contournement reste l'envoi forgé (voir « URGENT : contourner les sites refusés »). Ce que la base apporte : ajouter un site sans redéployer, des catégories, une liste longue, et la base qui refuse elle-même.
+- **La liste** (`blocked_domains`, migration 5) : 1 553 entrées en six catégories, chacune rangée sous une rubrique (la note) pour pouvoir retirer une rubrique d'un coup : sites pour adultes (371 : vidéos, webcams, créateurs, studios, dessins, forums, récits, rencontres, serveurs d'images et régies publicitaires pour adultes, extensions `.xxx`, `.porn`, `.adult`, `.sex`), violence (20), banques et services financiers (769 : banques françaises et caisses du Crédit agricole, néobanques, crédit, Europe, Royaume-Uni, États-Unis, Canada, Amérique latine, Afrique, Asie, paiement, bourse, cryptomonnaies, assurances, solvabilité, extensions `.bank` et des banques), données personnelles (192 : messageries, discussions, comptes, stockage, mots de passe, impôts, sécurité sociale, santé, scolarité, espaces clients, rencontres ; entrées précises comme `mail.google.com`, pas `google.com`), jeux d'argent (107), sites dangereux (94 : pistage d'adresses IP, logiciels espions, téléchargements piratés). Le détail et la façon de la tenir : `docs/sites-refuses.md` (produit avec la migration ; ensuite, la liste vit dans Supabase).
+- **La base refuse** : `create_capture` lève `blocked_domain` pour un site de la liste ; les fonctions de lecture (ville, site, pages, mégalopole, versions, galerie, recherche, sites connus) l'ignorent. Le filtre fait en JavaScript dans `store.ts` est retiré (il laissait aussi la galerie montrer moins de 9 sites).
+- **Le serveur** relit la liste à chaque partage (`blocklist()`), refuse la page (403, message selon la catégorie) et retire de la ville stockée les images et les départs des sites refusés (`withoutBlocked`, `img.refused`).
+- **Le navigateur** télécharge la liste entière (`/api/blocklist`, ~1 550 domaines) une fois par page et vérifie seul : `/nouveau` affiche « Site refusé » (rien n'est gardé), et toute ville ouverte (relevé, ville partagée, Wikipédia, mégalopole) perd ses images et départs refusés avant d'être bâtie. On a préféré la liste entière à une question par site : DOMCity n'apprend pas quelle page est relevée, la promesse « rien ne part avant Publier » tient. Si la liste ne répond pas, la ville se construit quand même sur cet écran (la publication vérifie toujours sur le serveur).
+- **Coût** : un partage lit la liste (1 553 lignes) ; une lecture ajoute un test par site (quelques lectures d'index) ; le navigateur télécharge une trentaine de Ko (une dizaine compressés), gardés 5 minutes. La vraie limite est la taille de la liste : les grandes listes publiques (millions de domaines) ne tiendraient ni dans la base gratuite ni dans le navigateur.
+- Textes : page Créer une ville (limite « Sites refusés »), conditions d'utilisation (les six catégories), confidentialité (la liste téléchargée par le navigateur).
+Vérifié : 106 tests (correspondance et catégories, faux amis, même réponse dans le navigateur et dans la base, liste illisible pour les visiteurs, entrées mal écrites refusées, partage refusé par catégorie, images et départs retirés de la ville stockée, `create_capture` qui refuse, site ajouté puis retiré de la liste, `/nouveau` sans rien garder, liste injoignable), `verification.sql` sur une base neuve, TypeScript, ESLint, compilation de production. Dans le navigateur (base locale) : une banque relevée → « Site refusé », seule requête `/api/blocklist` ; un forum avec une image d'un serveur refusé → affiche « Image masquée » sur sa façade, aucune requête vers ce serveur, inspecteur sans image ni texte ; ville partagée et mégalopole Wikipédia inchangées.
+**À faire par l'utilisateur** : appliquer la migration 5 dans Supabase **avant** que ce code soit déployé (le code déjà en ligne fonctionne avec la nouvelle base ; le nouveau code a besoin de `blocklist()`), puis relancer `verification.sql`.
 
 ### Pour activer le partage en production (fait le 3 octobre 2026, sauf l'éditeur)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -353,7 +369,8 @@ Relevé le 3 octobre 2026, à la demande de l'utilisateur (« on peut contourner
 - Modifier le code dans son propre navigateur pour sauter le refus : seul son écran change, sans risque pour les autres.
 
 **Ce qui tient quand même** :
-- Les images des sites de la liste restent masquées pour tous les visiteurs : le contrôle se fait à l'affichage, dans le navigateur de chaque visiteur, avec le code de DOMCity.
+- Les images des sites de la liste restent masquées pour tous les visiteurs : le contrôle se fait à l'affichage, dans le navigateur de chaque visiteur, avec le code de DOMCity. Depuis la liste dans la base, le serveur les retire aussi de la ville au partage.
+- La base refuse elle-même de créer la ville d'un site de la liste, et ses lectures l'ignorent : seule l'adresse mensongère passe.
 - La limite de 10 partages par heure (côté serveur).
 
 **Les trous, à corriger** :
@@ -383,7 +400,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; les impasses (rues rattachées par un seul bout) n'ont pas encore de raquette de retournement.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
-- Sites refusés : tenir la liste à jour (des listes publiques, comme la catégorie « adult » des listes de l'université Toulouse 1 Capitole, comptent des millions de domaines : trop lourdes pour le navigateur, envisageables côté serveur) ; effacer de la base et de R2 les villes d'un site qui entre dans la liste ; filtrer les images explicites de Wikipédia si besoin.
+- Sites refusés : tenir la liste à jour dans Supabase (des listes publiques, comme la catégorie « adult » des listes de l'université Toulouse 1 Capitole, comptent des millions de domaines : trop lourdes pour la base gratuite et pour le navigateur ; il faudrait alors vérifier par empreintes partielles, ou interroger un DNS filtrant comme celui de Cloudflare au partage) ; effacer de la base et de R2 les villes d'un site qui entre dans la liste (la requête est dans `docs/sites-refuses.md`) ; filtrer les images explicites de Wikipédia si besoin ; les sites de phishing changent trop vite pour une liste à la main.
 - Miniatures : figées au partage, elles vieillissent quand le dessin change. Les refaire toutes d'un coup (une page de développement comme `/dev/figure`, une route d'administration en production) ; noter la version du moteur avec chacune.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
 - Favori : utiliser `rect` pour ranger la ville selon la mise en page réelle (ordre visuel plutôt qu'ordre du code) ; lire les cadres (`iframe`) du même site ; les shadow DOM fermés restent invisibles.
@@ -398,7 +415,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 95 tests
+npm test           # 106 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

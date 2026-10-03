@@ -22,7 +22,9 @@ describe("le script de vérification de la base (supabase/verification.sql)", ()
       expect(rows.length).toBeGreaterThan(15);
       expect(rows.filter((r) => r.statut !== "ok")).toEqual([]);
     }
-    const left = await db.query<{ n: number }>("select (select count(*) from public.sites) + (select count(*) from public.rate_events) as n");
+    const left = await db.query<{ n: number }>(
+      "select (select count(*) from public.sites) + (select count(*) from public.rate_events) + (select count(*) from public.blocked_domains where note = 'vérification') as n",
+    );
     expect(Number(left.rows[0].n)).toBe(0);
     await db.close();
   });

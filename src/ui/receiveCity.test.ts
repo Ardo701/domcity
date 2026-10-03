@@ -29,12 +29,20 @@ function reply(source: unknown, data: unknown, origin: string) {
 }
 
 describe("réception d'une ville dans /nouveau", () => {
+  const blocklist = vi.fn<(url: string) => Promise<Response>>();
+
   beforeEach(() => {
     sessionStorage.clear();
     window.history.replaceState(null, "", "/nouveau");
+    // La liste des sites refusés, telle que la sert /api/blocklist.
+    blocklist.mockReset().mockImplementation(async () => Response.json({ adult: ["pornhub.com"], bank: ["bnpparibas.com"] }));
+    vi.stubGlobal("fetch", blocklist);
   });
 
-  afterEach(() => setOpener(null));
+  afterEach(() => {
+    setOpener(null);
+    vi.unstubAllGlobals();
+  });
 
   it("appelle le favori, accepte sa ville et confirme la réception", async () => {
     const opener = { postMessage: vi.fn() };
@@ -62,6 +70,7 @@ describe("réception d'une ville dans /nouveau", () => {
   it("refuse un site de la liste, ou une page qui se déclare réservée aux adultes, sans rien garder", async () => {
     const cases: Array<[CityDoc, string]> = [
       [{ ...CITY, url: "https://fr.pornhub.com/video" }, "https://fr.pornhub.com"],
+      [{ ...CITY, url: "https://mabanque.bnpparibas.com/comptes" }, "https://mabanque.bnpparibas.com"],
       [{ ...CITY, page: { adult: true } }, "https://exemple.org"],
     ];
     for (const [city, origin] of cases) {
@@ -72,6 +81,17 @@ describe("réception d'une ville dans /nouveau", () => {
       await expect(pending).rejects.toMatchObject({ title: "Site refusé", offerInstall: false });
       expect(sessionStorage.getItem("domcity:nouveau")).toBeNull();
     }
+    // Le navigateur a téléchargé la liste : il n'a rien envoyé de la page visitée.
+    expect(blocklist).toHaveBeenCalledWith("/api/blocklist");
+  });
+
+  it("construit quand même la ville si la liste ne peut pas être lue (rien ne sera publié sans le serveur)", async () => {
+    blocklist.mockImplementation(async () => new Response("", { status: 503 }));
+    const opener = { postMessage: vi.fn() };
+    setOpener(opener);
+    const pending = (await freshReceive())();
+    reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city: CITY }, "https://exemple.org");
+    expect((await pending).doc).toEqual(CITY);
   });
 
   it("signale un favori d'une version précédente", async () => {

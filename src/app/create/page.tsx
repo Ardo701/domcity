@@ -185,6 +185,14 @@ export default function CreatePage() {
                   </dd>
                 </div>
                 <div>
+                  <dt>Sites refusés</dt>
+                  <dd>
+                    Sites pour adultes ou violents, banques, messageries, impôts, santé, jeux d&apos;argent, sites
+                    dangereux : DOMCity n&apos;en fait pas de ville. Votre navigateur vérifie lui-même, avec la liste
+                    qu&apos;il télécharge : rien de la page ne part.
+                  </dd>
+                </div>
+                <div>
                   <dt>Villes publiées</dt>
                   <dd>
                     Elles portent la mention « relevé par un visiteur » : DOMCity ne peut pas vérifier qu&apos;une ville

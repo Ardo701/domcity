@@ -3,6 +3,7 @@ import { cityRefusal } from "@/format/blocklist";
 import { validateCityDoc } from "@/format/schema";
 import type { CityDoc } from "@/format/types";
 import { siteHost } from "@/format/url";
+import { loadBlocklist } from "./blocklist";
 
 export interface ReceivedCity {
   doc: CityDoc;
@@ -33,8 +34,18 @@ let pending: Promise<ReceivedCity> | null = null;
  * même si l'écran est monté deux fois (mode strict de React en développement).
  */
 export function receiveCity(): Promise<ReceivedCity> {
-  pending ??= receive();
+  pending ??= receive().then(screen);
   return pending;
+}
+
+/** Les sites refusés (la liste de la base, vérifiée ici même) : pas de ville, et rien n'est gardé. */
+async function screen(received: ReceivedCity): Promise<ReceivedCity> {
+  const refusal = cityRefusal(received.doc, await loadBlocklist());
+  if (refusal) {
+    forget();
+    throw new ReceiveError("Site refusé", refusal, false);
+  }
+  return keep(received);
 }
 
 async function receive(): Promise<ReceivedCity> {
@@ -48,7 +59,7 @@ async function receive(): Promise<ReceivedCity> {
     } catch {
       throw new ReceiveError("Relevé illisible", "L'adresse de cette page est incomplète ou abîmée. Relancez le favori depuis la page à relever.");
     }
-    return keep(check(unpacked.data), unpacked.version);
+    return { doc: check(unpacked.data), outdated: unpacked.version < BOOKMARKLET_VERSION };
   }
 
   // Rechargement (ou retour) : la ville reçue tout à l'heure. Pas avant : un onglet ouvert depuis
@@ -85,7 +96,7 @@ async function receive(): Promise<ReceivedCity> {
           throw new ReceiveError("Relevé refusé", "Cette ville ne vient pas de la page qu'elle prétend décrire.");
         }
         opener.postMessage({ type: MESSAGES.received }, event.origin);
-        resolve(keep(doc, Number(message.version) || 0));
+        resolve({ doc, outdated: (Number(message.version) || 0) < BOOKMARKLET_VERSION });
       } catch (error) {
         reject(error);
       }
@@ -112,13 +123,10 @@ function check(data: unknown): CityDoc {
   if (!result.ok || result.doc.source !== "bookmarklet") {
     throw new ReceiveError("Relevé illisible", "La ville reçue ne suit pas le format de DOMCity. Réinstallez le favori, puis réessayez.");
   }
-  const refusal = cityRefusal(result.doc);
-  if (refusal) throw new ReceiveError("Site refusé", refusal, false);
   return result.doc;
 }
 
-function keep(doc: CityDoc, version: number): ReceivedCity {
-  const received = { doc, outdated: version < BOOKMARKLET_VERSION };
+function keep(received: ReceivedCity): ReceivedCity {
   try {
     sessionStorage.setItem(SAVED_KEY, JSON.stringify(received));
   } catch {
@@ -127,13 +135,21 @@ function keep(doc: CityDoc, version: number): ReceivedCity {
   return received;
 }
 
+function forget() {
+  try {
+    sessionStorage.removeItem(SAVED_KEY);
+  } catch {
+    // stockage indisponible : rien n'y a été gardé
+  }
+}
+
 function readSaved(): ReceivedCity | null {
   try {
     const raw = sessionStorage.getItem(SAVED_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw) as ReceivedCity;
     const result = validateCityDoc(saved.doc);
-    return result.ok && !cityRefusal(result.doc) ? { doc: result.doc, outdated: Boolean(saved.outdated) } : null;
+    return result.ok ? { doc: result.doc, outdated: Boolean(saved.outdated) } : null;
   } catch {
     return null;
   }

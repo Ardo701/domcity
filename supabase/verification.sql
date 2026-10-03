@@ -6,8 +6,9 @@
 -- le relancer autant de fois qu'on veut.
 --
 -- 1. La structure : extensions, tables, sécurité, fonctions, droits des visiteurs.
--- 2. Un partage d'essai sur verification.domcity.invalid, de bout en bout
---    (créer, publier, chercher, visiter, signaler, supprimer), effacé à la fin.
+-- 2. La liste des sites refusés : remplie, et ce qu'elle refuse ou non.
+-- 3. Un partage d'essai sur verification.domcity.invalid, de bout en bout
+--    (créer, publier, chercher, visiter, refuser, signaler, supprimer), effacé à la fin.
 --    Si une étape plante, tout est annulé : rien ne reste dans la base.
 -- =============================================================================
 
@@ -17,11 +18,12 @@ language plpgsql
 as $$
 declare
   v_domain  constant text := 'verification.domcity.invalid';
-  v_tables  constant text[] := array['sites', 'pages', 'captures', 'capture_secrets', 'reports', 'rate_events'];
+  v_tables  constant text[] := array['sites', 'pages', 'captures', 'capture_secrets', 'reports', 'rate_events', 'blocked_domains'];
   v_funcs   constant text[] := array[
     'new_slug', 'refresh_counters', 'on_report', 'create_capture', 'publish_capture', 'delete_capture',
     'report_capture', 'hit_rate_limit', 'site_city', 'page_versions', 'record_view', 'get_capture',
-    'get_site', 'site_pages', 'known_sites', 'search_sites', 'recent_sites', 'site_page_list'];
+    'get_site', 'site_pages', 'known_sites', 'search_sites', 'recent_sites', 'site_page_list',
+    'domain_suffixes', 'is_blocked_domain', 'blocklist'];
   v_writes  constant text[] := array[
     'public.create_capture(text, text, text, text, integer, jsonb, bytea, smallint)',
     'public.publish_capture(text)',
@@ -38,7 +40,9 @@ declare
     'public.known_sites(text[])',
     'public.search_sites(text, integer)',
     'public.recent_sites(integer, integer)',
-    'public.site_page_list(text, integer, integer)'];
+    'public.site_page_list(text, integer, integer)',
+    'public.is_blocked_domain(text)',
+    'public.blocklist()'];
   v_token   constant bytea := extensions.digest('jeton-de-verification', 'sha256');
   v_missing text;
   v_slug    text;
@@ -46,8 +50,9 @@ declare
   v_ok      boolean;
 begin
   -- Un essai précédent interrompu ne doit pas fausser celui-ci.
-  delete from public.sites where domain in (v_domain, 'pirate.domcity.invalid');
+  delete from public.sites where domain in (v_domain, 'pirate.domcity.invalid', 'sous.refus.domcity.invalid');
   delete from public.rate_events where action = 'verification-domcity';
+  delete from public.blocked_domains where domain in (v_domain, 'refus.domcity.invalid');
 
   -- 1. Structure ---------------------------------------------------------------
 
@@ -59,7 +64,7 @@ begin
   detail := coalesce('manquante : ' || v_missing, '');
   return next;
 
-  etape := 'Les 6 tables';
+  etape := 'Les 7 tables';
   select string_agg(t, ', ') into v_missing
     from unnest(v_tables) t
    where to_regclass('public.' || t) is null;
@@ -77,7 +82,7 @@ begin
   detail := coalesce('désactivée sur : ' || v_missing, '');
   return next;
 
-  etape := 'Les 18 fonctions';
+  etape := 'Les 21 fonctions';
   select string_agg(f, ', ') into v_missing
     from unnest(v_funcs) f
    where not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = f);
@@ -104,9 +109,9 @@ begin
   detail := coalesce('modifiable par anon : ' || v_missing, '');
   return next;
 
-  etape := 'Visiteurs : secrets, signalements, limites illisibles';
+  etape := 'Visiteurs : secrets, signalements, limites, sites refusés illisibles';
   select string_agg(t, ', ') into v_missing
-    from unnest(array['capture_secrets', 'reports', 'rate_events']) t
+    from unnest(array['capture_secrets', 'reports', 'rate_events', 'blocked_domains']) t
    where has_table_privilege('anon', 'public.' || t, 'select');
   statut := case when v_missing is null then 'ok' else 'ÉCHEC' end;
   detail := coalesce('lisible par anon : ' || v_missing, '');
@@ -150,7 +155,51 @@ begin
   end;
   return next;
 
-  -- 2. Un partage d'essai -------------------------------------------------------
+  -- 2. Les sites refusés ----------------------------------------------------------
+
+  etape := 'Sites refusés : la liste est remplie';
+  select count(*) into v_n from public.blocked_domains;
+  select string_agg(c, ', ') into v_missing
+    from unnest(array['adult', 'violence', 'bank', 'private', 'gambling', 'danger']) c
+   where not exists (select 1 from public.blocked_domains b where b.category = c);
+  statut := case when v_n >= 1000 and v_missing is null then 'ok' else 'ÉCHEC' end;
+  detail := v_n || ' entrées' || coalesce(', catégorie vide : ' || v_missing, '');
+  return next;
+
+  etape := 'Sites refusés : sous-domaines, extensions, entrées précises';
+  select string_agg(h, ', ') into v_missing
+    from unnest(array['fr.pornhub.com', 'rule34.xxx', 'mabanque.bnpparibas', 'mail.google.com', 'www.betclic.fr']) h
+   where not public.is_blocked_domain(h);
+  select string_agg(h, ', ') into detail
+    from unnest(array['google.com', 'www.google.com', 'pornic.fr', 'essex.ac.uk', 'fr.wikipedia.org']) h
+   where public.is_blocked_domain(h);
+  statut := case when v_missing is null and detail is null then 'ok' else 'ÉCHEC' end;
+  detail := concat_ws(' ; ', 'pas refusé : ' || v_missing, 'refusé à tort : ' || detail);
+  return next;
+
+  etape := 'Sites refusés : la base refuse de créer leur ville';
+  insert into public.blocked_domains (domain, category, note) values ('refus.domcity.invalid', 'danger', 'vérification');
+  begin
+    perform public.create_capture('sous.refus.domcity.invalid', '/', 'bookmarklet', 'Refusée', 1000,
+                                  '{}'::jsonb, v_token, 1::smallint);
+    statut := 'ÉCHEC';
+    detail := 'la ville a été créée';
+  exception when others then
+    statut := case when sqlerrm like 'blocked_domain%' then 'ok' else 'ÉCHEC' end;
+    detail := case when statut = 'ok' then '' else sqlerrm end;
+  end;
+  delete from public.blocked_domains where domain = 'refus.domcity.invalid';
+  return next;
+
+  etape := 'Visiteurs : la liste entière, par sa fonction';
+  set local role anon;
+  select count(*) into v_n from public.blocklist();
+  reset role;
+  statut := case when v_n = (select count(*) from public.blocked_domains) then 'ok' else 'ÉCHEC' end;
+  detail := '';
+  return next;
+
+  -- 3. Un partage d'essai -------------------------------------------------------
 
   etape := 'Partage : créer une version';
   v_slug := public.create_capture(v_domain, '/essai', 'bookmarklet', 'Page de vérification DOMCity', 1000,
@@ -187,6 +236,19 @@ begin
   select v_n + count(*) into v_n from public.site_page_list(v_domain) p where p.latest_slug = v_slug;
   statut := case when v_n = 2 then 'ok' else 'ÉCHEC' end;
   detail := '';
+  return next;
+
+  etape := 'Sites refusés : un site ajouté à la liste disparaît des lectures, puis revient';
+  insert into public.blocked_domains (domain, category, note) values (v_domain, 'danger', 'vérification');
+  select count(*) into v_n from public.get_capture(v_slug);
+  select v_n + count(*) into v_n from public.recent_sites(60) s where s.domain = v_domain;
+  select v_n + count(*) into v_n from public.search_sites('verificaton') s where s.domain = v_domain;
+  select v_n + count(*) into v_n from public.site_page_list(v_domain);
+  select v_n + count(*) into v_n from public.site_city(v_domain);
+  select v_n + count(*) into v_n from public.known_sites(array[v_domain]);
+  delete from public.blocked_domains where domain = v_domain;
+  statut := case when v_n = 0 and exists (select 1 from public.get_capture(v_slug)) then 'ok' else 'ÉCHEC' end;
+  detail := case when v_n = 0 then '' else v_n || ' lectures le montrent encore' end;
   return next;
 
   etape := 'Visite comptée';
@@ -229,12 +291,15 @@ begin
   detail := '';
   return next;
 
-  -- Ménage : le site et la page d'essai (et celui d'un visiteur, si l'écriture est passée), les envois comptés.
-  delete from public.sites where domain in (v_domain, 'pirate.domcity.invalid');
+  -- Ménage : le site et la page d'essai (et celui d'un visiteur ou d'un site refusé, si l'écriture est passée),
+  -- les envois comptés, les entrées d'essai de la liste.
+  delete from public.sites where domain in (v_domain, 'pirate.domcity.invalid', 'sous.refus.domcity.invalid');
   delete from public.rate_events where action = 'verification-domcity';
+  delete from public.blocked_domains where domain in (v_domain, 'refus.domcity.invalid');
 
   etape := 'Ménage : rien ne reste de l''essai';
-  select count(*) into v_n from public.sites where domain in (v_domain, 'pirate.domcity.invalid');
+  select count(*) into v_n from public.sites where domain in (v_domain, 'pirate.domcity.invalid', 'sous.refus.domcity.invalid');
+  select v_n + count(*) into v_n from public.blocked_domains where domain in (v_domain, 'refus.domcity.invalid');
   statut := case when v_n = 0 then 'ok' else 'ÉCHEC' end;
   detail := '';
   return next;

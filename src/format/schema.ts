@@ -24,6 +24,7 @@ const cityNodeSchema: z.ZodType<CityNode> = z.lazy(() =>
         w: z.number().min(0).max(100_000).optional(),
         h: z.number().min(0).max(100_000).optional(),
         broken: z.literal(true).optional(),
+        refused: z.literal(true).optional(),
       })
       .optional(),
     links: z

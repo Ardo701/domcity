@@ -49,7 +49,8 @@ export function emblemOf(node: CityNode): Emblem | undefined {
   const img = node.img;
   const size = Math.max(img?.w ?? 0, img?.h ?? 0);
   const small = size > 0 && size < ICON_SIZE;
-  if (!small && (img?.src || size > 0)) return undefined;
+  // Une image d'un site refusé a perdu son adresse, pas sa place : elle reste une affiche.
+  if (!small && (img?.src || img?.refused || size > 0)) return undefined;
   const file = (img?.src ?? "").split(/[?#]/)[0].split("/").pop() ?? "";
   const wide = (img?.w ?? 0) > (img?.h ?? 0) * 1.15;
   return wide && (FLAG_NAME.test(file) || FLAG_NAME.test(img?.alt ?? "")) ? "flag" : "sign";

@@ -19,6 +19,11 @@ export interface CityImage {
   h?: number;
   /** Image cassée dans la page au moment du relevé (le navigateur n'a pas pu l'afficher). Favori. */
   broken?: true;
+  /**
+   * Image d'un site refusé par DOMCity : son adresse et son texte ont été retirés (`src` vide),
+   * l'affiche dit « Image masquée ». Posé à la publication et à l'ouverture d'une ville.
+   */
+  refused?: true;
 }
 
 export interface CityLinks {
