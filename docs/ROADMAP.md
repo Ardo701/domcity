@@ -187,8 +187,8 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 | `POST /api/captures` | Partager (multipart : `source`, `lang` + `title` ou `city` gzip, `thumbnail` JPEG) | Même origine, 10 partages / heure / IP, gzip borné, zod, JPEG vérifié, pages locales ou d'intranet refusées |
 | `DELETE /api/captures/[slug]` | Supprimer avec `{ token }` | Même origine, 30 / heure |
 | `POST /api/captures/[slug]/report` | Signaler `{ reason, details? }` | Même origine, 20 / heure, un seul par IP et par ville |
-| `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur |
-| `GET /api/search?q=` | Recherche par site (« amzon » trouve amazon.com ; « croissant », la page sous son site) | Lecture seule |
+| `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur, **côté navigateur seulement** : aucune limite côté serveur (voir « Urgent ») |
+| `GET /api/search?q=` | Recherche par site (« amzon » trouve amazon.com ; « croissant », la page sous son site) | Lecture seule, **sans limite** (voir « Urgent ») |
 | `GET /api/sites/known?d=a.com,b.org` | Parmi ces domaines, ceux qui ont des villes | Lecture seule, 60 domaines au plus |
 | `GET /api/dev-files/...` | Sert les fichiers en mode local | Développement uniquement |
 
@@ -311,6 +311,28 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 4. Compléter l'éditeur du site (nom, statut, adresse, contact, directeur de la publication) dans `src/ui/publisher.ts` : les pages légales l'affichent.
 
 ## 10. Étapes suivantes
+
+### URGENT : protections contre le spam (avant d'annoncer le site)
+Relevé le 3 octobre 2026, à la demande de l'utilisateur (« est-ce qu'il y a des rate limits pour éviter de spam la base ? »). Rien n'est encore corrigé.
+
+**Ce qui protège déjà** (limites par visiteur, reconnu par l'empreinte salée de son IP, `clientActor` dans `src/server/security.ts` ; compteurs dans la table `rate_events` via `hit_rate_limit`) :
+- Publier : 10 par heure et par IP (`/api/captures`).
+- Supprimer : 30 par heure, et seulement avec le lien secret.
+- Signaler : 20 par heure, un seul signalement par IP et par ville.
+- Ces trois écritures ne sont acceptées que depuis `domcity.app` (`sameOrigin`).
+- Tailles bornées : ville de 2 Mo compressée au plus (32 Mo décompressée, 30 000 éléments, profondeur 64), validée par zod ; miniature JPEG de 1200 × 630, 800 Ko au plus.
+- Aucune écriture directe dans la base depuis l'extérieur (RLS, droits retirés à `anon` ; contrôlé par `supabase/verification.sql`).
+- Vercel filtre les attaques par saturation (DDoS), sur tous les plans.
+
+**Les trous, à corriger** :
+1. **Visites sans limite côté serveur** : le « une fois par session » est décidé par le navigateur. Un script peut appeler `/api/captures/[slug]/view` en boucle : pas de nouvelle ligne, mais le compteur de visites est gonflé (galerie, chiffres d'un site) et Supabase travaille à chaque appel. Pistes : une visite par IP et par ville sur une période, et vérifier l'origine.
+2. **Recherche sans limite** (`/api/search`) : lecture seule, mais un script peut la marteler et charger Supabase. Son `cache-control: public, max-age=30` ne vaut que pour le navigateur (pas de `s-maxage` : le CDN de Vercel ne la garde pas). Pistes : limite par IP, cache côté CDN.
+3. **IPv6 contourne la limite de 10 partages** : un abonné a souvent un bloc /64 entier (des milliards d'adresses), et chaque adresse compte comme un visiteur différent. Piste : compter par bloc /64 pour l'IPv6 (`clientActor`).
+4. **Aucun plafond global** : avec beaucoup d'adresses (proxys, réseau de machines), 10 partages par heure chacune. Pire cas (villes de 2 Mo, miniatures de 800 Ko) : les 10 Go gratuits de R2 et les 500 Mo de Supabase peuvent se remplir ; avec des villes normales (10 à 30 Ko, miniature ~150 Ko), il en faut des dizaines de milliers. Piste : un plafond pour tout le site (par exemple N partages par heure, tous visiteurs confondus), possible avec `hit_rate_limit` et un acteur commun, sans nouvelle migration.
+5. **Règle du pare-feu Vercel pas encore posée** sur `/api/captures` : elle couperait l'excès avant même que le code tourne (ce qu'on peut régler dépend du plan Vercel : à vérifier dans son tableau de bord). Attack Challenge Mode en cas d'attaque.
+
+En cas d'abus d'ici là : signalement (masquée à 3), suppression à la main dans Supabase (la ligne du site, en cascade) et dans R2.
+
 
 ### Étape 6 : mise en ligne
 Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. `www.domcity.app` redirige vers `domcity.app` (308 permanente, chemin et paramètres gardés ; CNAME vers Vercel en nuage gris). Supabase (les 4 migrations), R2 (bucket `domcity-villes` sur `files.domcity.app`, règle CORS) et les variables de Vercel sont en place : le partage est allumé, la galerie répond (vide). Vérifié de l'extérieur : `files.domcity.app` passe par Cloudflare, la règle CORS accepte `domcity.app` et `localhost:3000` et refuse les autres sites. Reste : un premier vrai partage, l'éditeur (`src/ui/publisher.ts`), le dépôt GitHub à rendre public, la règle du pare-feu Vercel.
