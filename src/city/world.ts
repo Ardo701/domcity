@@ -1,19 +1,19 @@
 /**
- * Ce que montre la vue 3D : une ville seule, ou plusieurs assemblées (la mégalopole).
+ * What the 3D view shows: a single city, or several assembled (the megalopolis).
  *
- * Chaque ville se construit dans ses propres coordonnées et avec ses propres numéros de lots :
- * ses tirages au sort (formes, couleurs, arbres, voitures) dépendent de ces numéros et de ces
- * positions, elle est donc identique seule et dans la mégalopole. La vue la pose à sa place
- * (`offset`) et décale ses numéros (`base`) dans un plan commun, qui sert au survol et à
- * l'inspecteur.
+ * Each city is built in its own coordinates and with its own lot numbers:
+ * its random draws (shapes, colors, trees, cars) depend on these numbers and these
+ * positions, so it is identical alone and in the megalopolis. The view puts it in its place
+ * (`offset`) and shifts its numbers (`base`) into a shared plan, used for hovering and by
+ * the inspector.
  */
 
 import type { Airport, CityLayout, CityStats, Industry, Lot, Surveillance } from "./layout";
 
 /**
- * Ce que le survol désigne sans que ce soit un élément de la page : un aéroport ou un aérodrome
- * (les liens vers d'autres sites), les usines (les scripts), les caméras (les traqueurs). Leurs
- * numéros suivent le dernier lot.
+ * What hovering points at without it being an element of the page: an airport or an airfield
+ * (the links to other sites), the factories (the scripts), the cameras (the trackers). Their
+ * numbers follow the last lot.
  */
 export type Special =
   | { kind: "airport"; airport: Airport }
@@ -21,24 +21,24 @@ export type Special =
   | { kind: "surveillance"; surveillance: Surveillance };
 
 export interface WorldPart {
-  /** En coordonnées locales, numéros de lots locaux. */
+  /** In local coordinates, local lot numbers. */
   layout: CityLayout;
   offset: { x: number; z: number };
-  /** Numéro, dans le plan commun, du premier lot de cette partie. */
+  /** Number, in the shared plan, of this part's first lot. */
   base: number;
-  /** Une ville de la mégalopole : elle se simplifie de loin. Faux pour la campagne et les autoroutes. */
+  /** A megalopolis city: it simplifies from afar. False for the countryside and the highways. */
   city: boolean;
 }
 
 export interface World {
-  /** Le plan commun : lots, rues et aéroport en coordonnées du monde, numéros décalés. */
+  /** The shared plan: lots, streets and airport in world coordinates, shifted numbers. */
   layout: CityLayout;
   parts: WorldPart[];
-  /** Aéroports, aérodromes, usines et caméras : leur numéro dans le plan commun et leur partie. */
+  /** Airports, airfields, factories and cameras: their number in the shared plan and their part. */
   specials: Array<{ id: number; part: number; special: Special }>;
 }
 
-/** Ce qu'une ville a hors de ses lots, avec ses numéros à elle. */
+/** What a city has outside its lots, with its own numbers. */
 function specialsOf(layout: CityLayout): Special[] {
   const list: Special[] = [];
   if (layout.airport) list.push({ kind: "airport", airport: layout.airport });
@@ -47,13 +47,13 @@ function specialsOf(layout: CityLayout): Special[] {
   return list;
 }
 
-/** Le survol désigne-t-il autre chose qu'un élément de la page (aéroport, usines, caméras) ? */
+/** Does hovering point at something other than an element of the page (airport, factories, cameras)? */
 export const isSpecial = (part: { kind: string } | null): part is Special => part !== null && part.kind !== "road";
 
 const idOf = (special: Special) =>
   special.kind === "airport" ? special.airport.id : special.kind === "industry" ? special.industry.id : special.surveillance.id;
 
-/** Une ville seule : le plan commun est le sien. */
+/** A single city: the shared plan is its own. */
 export function singleWorld(layout: CityLayout): World {
   return {
     layout,
@@ -64,7 +64,7 @@ export function singleWorld(layout: CityLayout): World {
 
 const shift = <T extends { x: number; z: number }>(item: T, dx: number, dz: number): T => ({ ...item, x: item.x + dx, z: item.z + dz });
 
-/** Un aéroport déplacé, avec tout ce qu'il contient. */
+/** A moved airport, with everything it contains. */
 const shiftAirport = (a: Airport, dx: number, dz: number, id: number): Airport => ({
   ...shift(a, dx, dz),
   id,
@@ -77,9 +77,9 @@ const shiftAirport = (a: Airport, dx: number, dz: number, id: number): Airport =
 });
 
 /**
- * Assemble les villes (à leur place) et le pays qui les relie (déjà en coordonnées du monde,
- * sans lots). Ni l'aéroport, ni les aérodromes, ni les usines, ni les caméras ne sont des lots :
- * ils prennent les numéros qui suivent le dernier lot, l'aéroport du pays d'abord.
+ * Assembles the cities (in their place) and the country that links them (already in world coordinates,
+ * without lots). Neither the airport, nor the airfields, nor the factories, nor the cameras are lots:
+ * they take the numbers that follow the last lot, the country's airport first.
  */
 export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: number; z: number } }>, land: CityLayout): World {
   const lots: Lot[] = [];
@@ -109,7 +109,7 @@ export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: n
         z: lot.z + dz,
       });
     }
-    // Le survol cherche la rue sous le pointeur parmi celles du lot touché.
+    // Hovering looks for the street under the pointer among those of the lot it touches.
     for (const road of layout.roads) merged.roads.push({ ...shift(road, dx, dz), owner: owner(road.owner) });
     for (const channel of layout.channels) merged.channels.push({ ...shift(channel, dx, dz), owner: owner(channel.owner) });
     const b = layout.bounds;
@@ -123,7 +123,7 @@ export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: n
     }
     parts.push({ layout, offset, base, city: true });
   }
-  // L'aéroport du pays prend le numéro qui suit le dernier lot.
+  // The country's airport takes the number that follows the last lot.
   const specials: World["specials"] = [];
   if (land.airport) {
     const airport: Airport = { ...land.airport, id: lots.length };
@@ -131,8 +131,8 @@ export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: n
     merged.airport = airport;
     specials.push({ id: airport.id, part: parts.length, special: { kind: "airport", airport } });
   }
-  // Puis ceux de chaque ville, dans l'ordre des villes. La scène d'une ville ajoute sa base aux
-  // numéros : chacun y est donc noté moins sa base.
+  // Then those of each city, in city order. A city's scene adds its base to the
+  // numbers: each one is therefore stored minus its base.
   let next = lots.length + 1;
   parts.forEach((part, i) => {
     const { layout } = part;
@@ -157,7 +157,7 @@ export function assembleWorld(cities: Array<{ layout: CityLayout; offset: { x: n
   return { layout: merged, parts, specials };
 }
 
-/** La partie (ville) d'un lot du plan commun, ou -1. */
+/** The part (city) of a lot of the shared plan, or -1. */
 export function partOf(world: World, lotId: number): number {
   for (let i = world.parts.length - 1; i >= 0; i -= 1) {
     const part = world.parts[i];

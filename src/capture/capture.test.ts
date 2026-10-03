@@ -46,7 +46,7 @@ function find(node: CityNode, predicate: (n: CityNode) => boolean): CityNode | u
 }
 
 describe("captureDocument", () => {
-  it("garde la structure et l'ordre de la page", () => {
+  it("keeps the structure and order of the page", () => {
     const city = capture();
     expect(city.root.tag).toBe("body");
     expect(city.root.children?.map((n) => n.tag)).toEqual(["section", "section"]);
@@ -54,21 +54,21 @@ describe("captureDocument", () => {
     expect(first.children?.map((n) => n.tag)).toEqual(["h1", "p", "div", "hr", "table"]);
   });
 
-  it("compte le texte sans les scripts ni les styles, et remonte le texte des éléments transparents", () => {
+  it("counts text without scripts or styles, and moves up the text of transparent elements", () => {
     const city = capture();
     const p = find(city.root, (n) => n.tag === "p")!;
-    // les espaces en bord de nœud texte ne comptent pas : 20 + 12 + 10 + 1
+    // spaces at the edges of a text node do not count: 20 + 12 + 10 + 1
     expect(p.text).toBe(43);
     expect(JSON.stringify(city)).not.toContain("tracking");
   });
 
-  it("garde le texte des titres h1 à h3", () => {
+  it("keeps the text of h1 to h3 headings", () => {
     const city = capture();
     expect(find(city.root, (n) => n.tag === "h1")?.heading).toBe("Croissant (viennoiserie)");
     expect(find(city.root, (n) => n.tag === "h2")?.heading).toBe("Histoire");
   });
 
-  it("résout les images, ignore les pixels espions", () => {
+  it("resolves images, ignores tracking pixels", () => {
     const city = capture();
     const infobox = find(city.root, (n) => n.label === ".infobox")!;
     expect(infobox.children).toHaveLength(1);
@@ -80,21 +80,21 @@ describe("captureDocument", () => {
     });
   });
 
-  it("dans un tableau, ne garde que les images", () => {
+  it("in a table, keeps only the images", () => {
     const city = capture();
     const table = find(city.root, (n) => n.tag === "table")!;
     expect(table.children?.map((n) => n.tag)).toEqual(["img"]);
     expect(table.text).toBe("Calories".length + "beaucoup".length);
   });
 
-  it("compte les liens internes et externes sur le parent gardé", () => {
+  it("counts internal and external links on the kept parent", () => {
     const city = capture();
     expect(find(city.root, (n) => n.tag === "p")?.links).toEqual({ internal: 1, external: 0 });
     const paris = find(city.root, (n) => n.tag === "li" && (n.text ?? 0) > 6)!;
     expect(paris.links).toEqual({ internal: 0, external: 1 });
   });
 
-  it("note où mènent les liens : l'empreinte des pages du site, le domaine des autres sites", () => {
+  it("notes where links lead: fingerprints of the site's pages, domains of other sites", () => {
     expect(capture().linksTo).toEqual({ pages: [linkKey("/wiki/Viennoiserie")], sites: [["example.com", 1]] });
 
     const city = capture(`<body>
@@ -109,7 +109,7 @@ describe("captureDocument", () => {
     expect(validateCityDoc(city).ok).toBe(true);
   });
 
-  it("saute les identifiants générés", () => {
+  it("skips generated identifiers", () => {
     const city = capture();
     expect(city.root.children![0].label).toBeUndefined();
     const empty = city.root.children![1].children!.at(-1)!;
@@ -118,25 +118,25 @@ describe("captureDocument", () => {
     expect(empty.text).toBeUndefined();
   });
 
-  it("produit un fichier valide", () => {
+  it("produces a valid file", () => {
     const result = validateCityDoc(capture());
     expect(result.ok).toBe(true);
   });
 
-  it("trouve la vraie image d'un chargement différé", () => {
+  it("finds the real image of a lazy load", () => {
     const city = capture(`<body><img src="data:image/gif;base64,R0lGOD" data-src="/vraie.jpg" width="300" height="200"></body>`);
     expect(city.root.children![0].img?.src).toBe("https://fr.wikipedia.org/vraie.jpg");
   });
 
-  it("résiste à un DOM très profond", () => {
+  it("withstands a very deep DOM", () => {
     const deep = `<body>${"<div>".repeat(5000)}fond${"</div>".repeat(5000)}</body>`;
     const city = capture(deep);
     expect(validateCityDoc(city).ok).toBe(true);
   });
 });
 
-describe("captureDocument sur la page affichée (live)", () => {
-  it("traverse display: contents et les enveloppes sans surface, ignore ce qui est masqué", () => {
+describe("captureDocument on the displayed page (live)", () => {
+  it("goes through display: contents and wrappers without area, ignores what is hidden", () => {
     document.body.innerHTML = `
       <div id="enveloppe" style="display: contents"><section id="dedans"><p>Bonjour tout le monde</p></section></div>
       <div id="vide"><p>Dans une boîte sans surface</p></div>
@@ -154,7 +154,7 @@ describe("captureDocument sur la page affichée (live)", () => {
     }
   });
 
-  it("note les images cassées, pas celles qui attendent leur chargement différé", () => {
+  it("notes broken images, not those waiting for their lazy load", () => {
     document.body.innerHTML = `
       <img id="cassee" src="https://exemple.org/disparue.jpg" alt="disparue">
       <img id="attente" src="https://exemple.org/plus-bas.jpg" loading="lazy">
@@ -181,7 +181,7 @@ describe("captureDocument sur la page affichée (live)", () => {
     }
   });
 
-  it("note qu'une page se déclare réservée aux adultes (balise rating), et seulement elle", () => {
+  it("notes that a page declares itself adults only (rating tag), and only that page", () => {
     document.body.innerHTML = `<p>Bonjour</p>`;
     const restore = mimicBrowserLayout(() => ({ left: 0, top: 0, width: 200, height: 30 }));
     const adult = (meta: string) => {

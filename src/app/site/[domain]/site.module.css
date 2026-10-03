@@ -1,4 +1,4 @@
-/* La page d'un site : son domaine, ses chiffres, ses pages. */
+/* A site's page: its domain, its figures, its pages. */
 
 .domain {
   font-size: clamp(40px, 7vw, 96px);
@@ -50,7 +50,7 @@
   color: var(--ink-3);
 }
 
-/* Les morceaux de la liste, quand le site a beaucoup de pages. */
+/* The chunks of the list, when the site has many pages. */
 .pager {
   display: flex;
   flex-wrap: wrap;

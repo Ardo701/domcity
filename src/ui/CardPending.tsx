@@ -5,8 +5,8 @@ import styles from "./Gallery.module.css";
 import { LogoLoader } from "./LogoLoader";
 
 /**
- * Sur la miniature d'une carte, pendant que sa page se charge : l'image se grise et le repère se bâtit, puis tombe.
- * Toujours présent (rien ne bouge dans la carte) ; l'animation n'est montée qu'au clic, pour repartir du début.
+ * On a card's thumbnail, while its page loads: the image turns gray and the logo builds itself, then falls.
+ * Always present (nothing moves in the card); the animation is only mounted on click, to restart from the beginning.
  */
 export function CardPending() {
   const { pending } = useLinkStatus();

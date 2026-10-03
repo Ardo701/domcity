@@ -1,22 +1,22 @@
 import { readBlocklist, type Blocklist } from "@/format/blocklist";
 
 /**
- * La liste des sites refusés, téléchargée une fois par page (le navigateur et Vercel la gardent
- * quelques minutes). Le navigateur vérifie seul : rien de la page visitée ne part chez DOMCity.
+ * The list of refused sites, downloaded once per page (the browser and Vercel keep it for
+ * a few minutes). The browser checks on its own: nothing about the visited page goes to DOMCity.
  *
- * Si le serveur ne répond pas (réseau coupé, partage pas configuré), la liste est vide : la ville se
- * construit quand même, sur cet écran seulement. La publication, elle, vérifie toujours sur le serveur.
+ * If the server does not answer (network down, sharing not configured), the list is empty: the city
+ * is built anyway, on this screen only. Publishing, for its part, always checks on the server.
  */
 let pending: Promise<Blocklist> | null = null;
 
 export function loadBlocklist(): Promise<Blocklist> {
   pending ??= fetch("/api/blocklist")
     .then(async (response) => {
-      if (!response.ok) throw new Error(`liste des sites refusés : ${response.status}`);
+      if (!response.ok) throw new Error(`refused sites list: ${response.status}`);
       return readBlocklist(await response.json());
     })
     .catch(() => {
-      // Réessayer à la prochaine ville plutôt que garder un échec.
+      // Retry on the next city rather than keeping a failure.
       pending = null;
       return new Map();
     });

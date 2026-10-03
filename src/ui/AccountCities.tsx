@@ -18,12 +18,12 @@ function sharedOn(iso: string) {
     : date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-/** L'adresse lisible : sans « https:// », ni la barre finale d'une page d'accueil. */
+/** The readable address: without "https://", nor a home page's trailing slash. */
 const readableUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 /**
- * L'adresse de la page relevée. Les villes publiées avant qu'on la garde ne l'ont pas : on la lit une fois dans le
- * fichier de la ville (sur R2, déjà nettoyée par le serveur), puis on la garde. Faute de mieux, l'adresse de la ville.
+ * The address of the captured page. Cities published before it was kept do not have it: it is read once from the
+ * city file (on R2, already cleaned by the server), then kept. Failing that, the city's address.
  */
 function usePageUrl(city: MyCity, filesBase: string): string | null {
   const [found, setFound] = useState<string | null>(null);
@@ -46,7 +46,7 @@ function usePageUrl(city: MyCity, filesBase: string): string | null {
   return failed ? sharedCityPath(city.slug) : null;
 }
 
-/** Copie le lien public de la ville, celui qu'on partage. */
+/** Copies the city's public link, the one that gets shared. */
 function CopyLink({ city }: { city: MyCity }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {
@@ -66,8 +66,8 @@ function CopyLink({ city }: { city: MyCity }) {
 }
 
 /**
- * Une ville publiée, en carte comme dans la galerie : sa miniature et son titre (qui mènent à la ville), copier son
- * lien, la supprimer. Une ville sans miniature, ou supprimée depuis un autre navigateur, garde les hachures de la galerie.
+ * A published city, as a card like in the gallery: its thumbnail and title (which lead to the city), copy its
+ * link, delete it. A city without a thumbnail, or deleted from another browser, keeps the gallery's hatching.
  */
 function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
   const [broken, setBroken] = useState(false);
@@ -104,11 +104,11 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
   );
 }
 
-/** Les villes publiées depuis ce navigateur : les revoir, garder leur lien secret, les supprimer. */
+/** The cities published from this browser: see them again, keep their secret link, delete them. */
 export function AccountCities({ filesBase }: { filesBase: string }) {
   const cities = useMyCities();
 
-  // Pas encore lues (rendu serveur, première image) : rien plutôt qu'un « aucune ville » trompeur.
+  // Not read yet (server rendering, first frame): nothing rather than a misleading "no city".
   if (cities === null) return <div className={styles.pending} />;
 
   if (cities.length === 0) {

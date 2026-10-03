@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-// Une fausse API Supabase qui, comme la vraie, ne rend jamais plus de 1 000 lignes par réponse.
+// A fake Supabase API that, like the real one, never returns more than 1,000 rows per response.
 const MAX_ROWS = 1000;
 const LIST = Array.from({ length: 2345 }, (_, i) => ({ domain: `site-${String(i).padStart(4, "0")}.com`, category: "adult" }));
 const calls: Array<[number, number]> = [];
@@ -39,8 +39,8 @@ beforeAll(async () => {
   ({ rpc } = await import("./db"));
 });
 
-describe("lectures sur Supabase", () => {
-  it("lit toutes les lignes, page par page, au-delà du plafond de 1 000 de l'API", async () => {
+describe("reads on Supabase", () => {
+  it("reads every row, page by page, beyond the API's 1,000 row cap", async () => {
     const rows = await rpc("public")!.rows<{ domain: string }>("blocklist", {});
     expect(rows).toHaveLength(LIST.length);
     expect(rows.at(-1)).toEqual(LIST.at(-1));
@@ -51,7 +51,7 @@ describe("lectures sur Supabase", () => {
     ]);
   });
 
-  it("une petite réponse ne coûte qu'une requête", async () => {
+  it("a small response costs only one request", async () => {
     calls.length = 0;
     expect(await rpc("public")!.rows("get_capture", { p_slug: "abc" })).toEqual([{ slug: "abc" }]);
     expect(calls).toHaveLength(1);

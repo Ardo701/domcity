@@ -1,31 +1,31 @@
 /**
- * Le favori DOMCity : relève la page affichée et l'envoie à DOMCity.
+ * The DOMCity bookmarklet: captures the displayed page and sends it to DOMCity.
  *
- * Compilé en une seule ligne par scripts/build-bookmarklet.mts. Le code entier est
- * dans le favori : rien n'est chargé ni injecté dans la page, ce qui le fait marcher
- * aussi sur les sites qui l'interdisent (GitHub, X…). Il ne fait que lire.
+ * Compiled into a single line by scripts/build-bookmarklet.mts. The whole code is
+ * in the bookmarklet: nothing is loaded or injected into the page, which makes it work
+ * even on sites that forbid it (GitHub, X...). It only reads.
  */
 
 import { captureDocument } from "@/capture/capture";
 import type { CityDoc } from "@/format/types";
 import { BOOKMARKLET_VERSION, HASH_KEY, MESSAGES, NEW_CITY_PATH, packCity } from "./protocol";
 
-/** Remplacé par l'adresse de DOMCity quand la page « Installer » fabrique le lien. */
+/** Replaced by the DOMCity address when the "Installer" page builds the link. */
 const ORIGIN = "__DOMCITY_ORIGIN__";
 
-/** Temps d'écoute de l'onglet DOMCity, le temps qu'il charge, même lentement. */
+/** How long to listen to the DOMCity tab while it loads, even slowly. */
 const LISTEN_MS = 120_000;
-/** Un onglet fermé si vite ne l'a pas été par la personne : le site a coupé le lien. */
+/** A tab closed this fast was not closed by the person: the site cut the link. */
 const CUT_MS = 15_000;
 
 function say(message: string) {
   alert(`DOMCity : ${message}`);
 }
 
-/** Plan B : la ville part dans l'ancre de l'adresse, et s'ouvre dans cet onglet. */
+/** Plan B: the city travels in the address fragment, and opens in this tab. */
 async function openHere(city: CityDoc) {
   try {
-    // Le favori tourne sur d'autres sites que DOMCity : la navigation de Next n'existe pas ici.
+    // The bookmarklet runs on sites other than DOMCity: Next navigation does not exist here.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     location.href = `${ORIGIN}${NEW_CITY_PATH}#${HASH_KEY}${await packCity(city)}`;
   } catch {
@@ -39,8 +39,8 @@ function run() {
     return;
   }
 
-  // L'onglet s'ouvre tout de suite, tant que le clic compte comme un geste de la personne :
-  // plus tard, le bloqueur de fenêtres l'arrêterait.
+  // The tab opens right away, while the click still counts as a user gesture:
+  // later, the popup blocker would stop it.
   let tab: Window | null = null;
   try {
     tab = window.open(`${ORIGIN}${NEW_CITY_PATH}`, "_blank");
@@ -86,7 +86,7 @@ function run() {
     const elapsed = Date.now() - start;
     if (opened.closed) {
       stop();
-      // Certains sites isolent les fenêtres qu'ils ouvrent (en-tête COOP) : on ouvre la ville ici.
+      // Some sites isolate the windows they open (COOP header): we open the city here.
       if (elapsed < CUT_MS && sentAt === 0) void openHere(city);
     } else if (elapsed > LISTEN_MS) {
       stop();

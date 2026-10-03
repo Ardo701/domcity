@@ -16,10 +16,10 @@ import type { CaptureSource } from "@/format/types";
 import { Bytea, rpc } from "./db";
 
 /**
- * Les opérations sur les villes partagées, au-dessus des fonctions SQL.
- * Les lectures passent avec les droits d'un visiteur ; les écritures avec la clé secrète.
- * Aucune lecture ne rend un site refusé (table `blocked_domains`) : les fonctions SQL l'ignorent,
- * même publié avant d'entrer dans la liste. Ses villes restent dans la base jusqu'à ce qu'on les efface.
+ * Operations on shared cities, on top of the SQL functions.
+ * Reads go through with a visitor's privileges; writes with the secret key.
+ * No read returns a refused site (table `blocked_domains`): the SQL functions ignore it,
+ * even if published before it entered the list. Its cities stay in the database until they are deleted.
  */
 
 type Row = Record<string, unknown>;
@@ -30,13 +30,13 @@ const stats = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : (v ?? {})
 
 function reader() {
   const db = rpc("public");
-  if (!db) throw new Error("partage non configuré");
+  if (!db) throw new Error("sharing not configured");
   return db;
 }
 
 function writer() {
   const db = rpc("admin");
-  if (!db) throw new Error("partage non configuré");
+  if (!db) throw new Error("sharing not configured");
   return db;
 }
 
@@ -78,7 +78,7 @@ export async function reportCapture(slug: string, reason: ReportReason, details:
   });
 }
 
-/** Vrai si la limite est atteinte. */
+/** True if the limit is reached. */
 export async function hitRateLimit(actor: string, action: string, max: number, window: string) {
   return writer().scalar<boolean>("hit_rate_limit", {
     p_actor: new Bytea(actor),
@@ -121,7 +121,7 @@ export async function pageVersions(domain: string, path: string): Promise<CityVe
   }));
 }
 
-/** Les sites mis à jour le plus récemment (la galerie). */
+/** The most recently updated sites (the gallery). */
 export async function recentSites(limit = 12, offset = 0): Promise<SiteCard[]> {
   const rows = await reader().rows<Row>("recent_sites", { p_limit: limit, p_offset: offset });
   return rows.map((row) => ({
@@ -157,7 +157,7 @@ export async function sitePages(domain: string): Promise<SitePage[]> {
   }));
 }
 
-/** Les pages d'un site dans l'ordre des adresses, par morceaux, avec leur dernière version. */
+/** The pages of a site in address order, in chunks, with their latest version. */
 export async function sitePageList(domain: string, limit: number, offset: number): Promise<SitePageCard[]> {
   const rows = await reader().rows<Row>("site_page_list", { p_domain: domain, p_limit: limit, p_offset: offset });
   return rows.map((row) => ({
@@ -170,7 +170,7 @@ export async function sitePageList(domain: string, limit: number, offset: number
   }));
 }
 
-/** La dernière version visible de chaque page du site (la mégalopole), dans l'ordre des adresses. */
+/** The latest visible version of each page of the site (the megalopolis), in address order. */
 export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "views" | "pageTitle" | "pageVersions" | "domain">>> {
   const rows = await reader().rows<Row>("site_city", { p_domain: domain });
   return rows.map((row) => ({
@@ -185,7 +185,7 @@ export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "
   }));
 }
 
-/** Parmi ces domaines, ceux qui ont des villes sur DOMCity. */
+/** Among these domains, those that have cities on DOMCity. */
 export async function knownSites(domains: string[]): Promise<KnownSite[]> {
   const wanted = domains.slice(0, 60);
   if (wanted.length === 0) return [];
@@ -193,7 +193,7 @@ export async function knownSites(domains: string[]): Promise<KnownSite[]> {
   return rows.map((row) => ({ domain: String(row.domain), pages: num(row.pages_count) }));
 }
 
-/** Un résultat par site ; les pages dont le titre répond sont rangées sous leur site. */
+/** One result per site; the pages whose title matches are listed under their site. */
 export async function searchSites(query: string, limit = 12): Promise<SearchHit[]> {
   const rows = await reader().rows<Row>("search_sites", { p_query: query, p_limit: limit });
   return rows.map((row) => {
@@ -210,7 +210,7 @@ export async function searchSites(query: string, limit = 12): Promise<SearchHit[
   });
 }
 
-/** La liste entière des sites refusés : domaine (ou extension) → catégorie. */
+/** The whole list of refused sites: domain (or extension) → category. */
 export async function blocklist(): Promise<Map<string, BlockCategory>> {
   const rows = await reader().rows<Row>("blocklist", {});
   const list = new Map<string, BlockCategory>();

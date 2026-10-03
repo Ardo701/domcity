@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function DeleteCityPage(props: PageProps<"/city/[slug]/delete">) {
   const { slug } = await props.params;
   if (!sharingEnabled() || !SLUG_PATTERN.test(slug)) notFound();
-  // Une ville masquée par les signalements n'est plus lisible, mais son auteur peut toujours la supprimer.
+  // A city hidden by reports can no longer be read, but its author can still delete it.
   const city = await getCapture(slug);
   return (
     <Sheet kicker="Lien secret" title="Supprimer une ville">

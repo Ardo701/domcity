@@ -9,9 +9,9 @@ import { KindSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
 
 /**
- * Le tableau des départs : les sites que visent les liens de la page (ou de tout le site, dans
- * la mégalopole ; ou d'une seule page, pour un aérodrome), du plus visé au moins visé. Ceux qui
- * ont des villes sur DOMCity s'ouvrent.
+ * The departures board: the sites targeted by the page's links (or the whole site's, in
+ * the megalopolis; or a single page's, for an airfield), from most to least targeted. Those that
+ * have cities on DOMCity can be opened.
  */
 export function Departures({ airport, scope, onClose }: { airport: Airport; scope: string; onClose: () => void }) {
   const [known, setKnown] = useState<Map<string, number>>(new Map());

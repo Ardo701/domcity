@@ -5,7 +5,7 @@ const TYPES: Record<string, string> = {
   jpg: "image/jpeg",
 };
 
-/** En développement seulement : sert les fichiers des villes stockés dans .data/files (le rôle de R2 en production). */
+/** Development only: serves the city files stored in .data/files (the role of R2 in production). */
 export async function GET(_request: Request, ctx: RouteContext<"/api/dev-files/[...key]">) {
   const { key } = await ctx.params;
   const path = key.join("/");

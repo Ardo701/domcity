@@ -1,11 +1,11 @@
 /**
- * La vue 3D : rendu, caméra, deux façons de se déplacer, survol et sélection.
+ * The 3D view: rendering, camera, two ways of moving around, hover and selection.
  *
- * - Vue aérienne : glisser pour se déplacer, clic droit pour tourner, molette pour zoomer.
- * - Promenade : ZQSD (ou WASD) pour avancer, Espace et Maj pour monter et descendre.
- *   On regarde avec la souris capturée ; si le navigateur refuse, en glissant.
+ * - Aerial view: drag to move, right click to rotate, wheel to zoom.
+ * - Walk: ZQSD (or WASD) to move forward, Space and Shift to go up and down.
+ *   You look around with the captured mouse; if the browser refuses, by dragging.
  *
- * Le rendu ne se fait que quand quelque chose bouge : la batterie dit merci.
+ * Rendering only happens when something moves: the battery says thanks.
  */
 
 import * as THREE from "three";
@@ -29,25 +29,25 @@ import {
 import { singleWorld, type Special, type World, type WorldPart } from "./world";
 
 export type ViewMode = "aerial" | "walk";
-/** off : on lit le mode d'emploi · locked : souris capturée · free : on regarde en glissant. */
+/** off: reading the instructions · locked: mouse captured · free: looking by dragging. */
 export type WalkState = "off" | "locked" | "free";
 
-/** Mesure du rendu, pour le compteur FPS. */
+/** Rendering measurements, for the FPS meter. */
 export interface ViewStats {
-  /** Images dessinées pendant la dernière seconde. */
+  /** Frames drawn during the last second. */
   fps: number;
-  /** Intervalle moyen entre deux images (ms). */
+  /** Average interval between two frames (ms). */
   frameMs: number;
-  /** Temps moyen passé à préparer une image côté processeur (ms). */
+  /** Average time spent preparing a frame on the CPU (ms). */
   renderMs: number;
   triangles: number;
   calls: number;
 }
 
 /**
- * Ce que désigne le survol quand ce n'est pas le lot lui-même : une rue qu'il a fait tracer, ou
- * un aéroport, un aérodrome, des usines, des caméras (qui ne sont pas des lots : leurs numéros
- * suivent le dernier).
+ * What hovering points at when it is not the lot itself: a street it had drawn, or
+ * an airport, an airfield, factories, cameras (which are not lots: their numbers
+ * follow the last one).
  */
 export type HoverPart = { kind: "road"; style: RoadStyle } | Special | null;
 
@@ -57,16 +57,16 @@ export interface ViewEvents {
   onModeChange?: (mode: ViewMode) => void;
   onWalkChange?: (state: WalkState) => void;
   onImageStatus?: (lotId: number, status: ImageStatus) => void;
-  /** Clic sur un aéroport ou un aérodrome (qui n'a pas de fiche d'élément) : le tableau des départs. */
+  /** Click on an airport or an airfield (which has no element card): the departures board. */
   onAirport?: (airport: Airport) => void;
 }
 
 const PAPER = "#EEEAE1";
 
-/** Les meshes qu'on repeint aux vraies couleurs du site : murs, toits, sols. Pas les rues, l'eau, les affiches. */
+/** The meshes repainted in the site's true colors: walls, roofs, grounds. Not streets, water, posters. */
 const PAINTABLE = new Set(["facade", "plain", "gable", "pyramid", "cylinder", "cone", "dome", "ground"]);
 
-/** Lumière selon le temps : soleil, ciel, reflets, et le papier de la planche qui s'assombrit un peu. */
+/** Light according to the weather: sun, sky, reflections, and the sheet's paper darkening a little. */
 const WEATHER_LIGHT: Record<Weather, { sun: number; sunColor: string; sky: number; skyColor: string; environment: number; paper: string }> = {
   clear: { sun: 3.3, sunColor: "#FFF0DA", sky: 0.7, skyColor: "#FFF7EA", environment: 0.55, paper: PAPER },
   fair: { sun: 3.0, sunColor: "#FFF0DA", sky: 0.72, skyColor: "#FFF7EA", environment: 0.5, paper: PAPER },
@@ -75,9 +75,9 @@ const WEATHER_LIGHT: Record<Weather, { sun: number; sunColor: string; sky: numbe
   storm: { sun: 0.75, sunColor: "#DDE0E6", sky: 1.0, skyColor: "#C9CDD4", environment: 0.3, paper: "#D3D2CE" },
 };
 const GROUND = "#E7E2D7";
-/** Hauteur des yeux du promeneur. */
+/** Eye height of the walker. */
 const EYE = 1.9;
-/** Plan proche minimal (promenade, caméra au ras des toits). */
+/** Minimum near plane (walk, camera flush with the roofs). */
 const NEAR = 0.3;
 const HOVER = new THREE.Color(HIGHLIGHT_COLOR);
 const MOVE_KEYS = new Set([
@@ -85,16 +85,16 @@ const MOVE_KEYS = new Set([
   "Space", "ShiftLeft", "ShiftRight",
 ]);
 
-/** Une partie du monde dans la scène : une ville (ou la campagne de la mégalopole), posée à sa place. */
+/** A part of the world in the scene: a city (or the megalopolis countryside), placed where it belongs. */
 interface PartView {
   part: WorldPart;
   scene: CityScene;
-  /** Centre et rayon dans le monde, pour juger de la distance. */
+  /** Center and radius in the world, to judge distance. */
   center: THREE.Vector3;
   radius: number;
-  /** Mobilier affiché (de près). */
+  /** Street furniture shown (up close). */
   detailed: boolean;
-  /** Affiches et icônes demandées (la première fois qu'on s'approche). */
+  /** Posters and icons requested (the first time we get close). */
   decorated: boolean;
 }
 
@@ -105,12 +105,12 @@ interface Flight {
   toTarget: THREE.Vector3;
   start: number;
   duration: number;
-  /** Tourner autour de la cible (le long d'un arc) plutôt que de filer en ligne droite. */
+  /** Turn around the target (along an arc) rather than going in a straight line. */
   orbit?: boolean;
 }
 
 export class CityView {
-  /** Le plan commun : celui de la ville, ou de toute la mégalopole. */
+  /** The shared plan: that of the city, or of the whole megalopolis. */
   layout: CityLayout;
   private world: World;
   private readonly container: HTMLElement;
@@ -128,7 +128,7 @@ export class CityView {
   private readonly pointer = new THREE.Vector2();
   private readonly size: number;
   private readonly center: THREE.Vector3;
-  /** Tout ce qui est dessiné au-dessus du papier tient dans cette boîte (plaques comprises). */
+  /** Everything drawn above the paper fits in this box (plaques included). */
   private readonly cityBox: THREE.Box3;
   private sprites: Array<{ slot: LabelSlot; sprite: THREE.Sprite; anchor: THREE.Vector3 }> = [];
   private fontsReady = false;
@@ -139,11 +139,11 @@ export class CityView {
   private readonly velocity = new THREE.Vector3();
   private readonly reducedMotion: boolean;
   private environment: THREE.Texture | null = null;
-  /** Le papier de la planche et son quadrillage (la figure de l'accueil les remplace par la page). */
+  /** The sheet's paper and its grid (the home page figure replaces them with the page). */
   private paper: { ground: THREE.Mesh; grids: THREE.Object3D[] } | null = null;
   private sun: THREE.DirectionalLight | null = null;
   private skyLight: THREE.HemisphereLight | null = null;
-  /** Vraies couleurs du site : les couleurs d'origine des instances repeintes, pour revenir en arrière. */
+  /** The site's true colors: the original colors of the repainted instances, to go back. */
   private realColors = false;
   private originalColors = new Map<THREE.InstancedMesh, Float32Array>();
 
@@ -152,7 +152,7 @@ export class CityView {
   private look: { x: number; y: number; moved: number } | null = null;
   private frame = 0;
   private dirty = true;
-  /** Compteur FPS affiché : on redessine à chaque image pour mesurer vraiment. */
+  /** FPS meter shown: we redraw every frame to measure for real. */
   private measuring = false;
   private renderTimes: number[] = [];
   private renderCosts: number[] = [];
@@ -166,8 +166,8 @@ export class CityView {
   private savedAerial: { position: THREE.Vector3; target: THREE.Vector3 } | null = null;
   private disposed = false;
   /**
-   * Cap de la caméra en degrés : de combien tourner la flèche du nord pour qu'elle montre le haut
-   * de la page (0 : il est en haut de l'écran, 90 : à droite).
+   * Camera heading in degrees: how much to turn the north arrow so that it points to the top
+   * of the page (0: it is at the top of the screen, 90: on the right).
    */
   heading = 0;
 
@@ -183,27 +183,27 @@ export class CityView {
     const { bounds } = layout;
     this.size = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ, 40);
     this.center = new THREE.Vector3((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2);
-    // Assez large pour les grues de chantier (26 au plus), antennes et plaques des titres.
+    // Wide enough for the construction cranes (26 at most), antennas and heading plaques.
     const margin = Math.max(30, this.size * 0.1);
     this.cityBox = new THREE.Box3(
       new THREE.Vector3(bounds.minX - margin, 0, bounds.minZ - margin),
       new THREE.Vector3(bounds.maxX + margin, bounds.maxY + margin, bounds.maxZ + margin),
     );
 
-    // Rendu
+    // Rendering
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    // La ville ne bouge pas : les ombres sont calculées une seule fois.
+    // The city does not move: shadows are computed only once.
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.domElement.className = "domcity-canvas";
     this.renderer.domElement.setAttribute("aria-label", "Ville en 3D");
     container.appendChild(this.renderer.domElement);
 
-    // Ciel de papier, brume pour la profondeur
+    // Paper sky, haze for depth
     this.scene.background = new THREE.Color(PAPER);
     this.scene.fog = new THREE.Fog(PAPER, this.size * 1.8, this.size * 4.8);
 
@@ -214,12 +214,12 @@ export class CityView {
     this.addGround();
     this.addLights();
     this.addSky();
-    // Une ville seule a le temps qu'il fait sur sa page ; la mégalopole garde une lumière neutre
-    // (chaque ville y a ses nuages).
+    // A single city has the weather of its page; the megalopolis keeps a neutral light
+    // (each city there has its clouds).
     const ambiance = this.world.parts.length === 1 ? layout.ambiance : undefined;
     if (ambiance) this.applyWeather(ambiance.weather);
 
-    // Contrôles
+    // Controls
     this.aerial = new MapControls(this.camera, this.renderer.domElement);
     this.aerial.enableDamping = true;
     this.aerial.dampingFactor = 0.09;
@@ -230,7 +230,7 @@ export class CityView {
     this.aerial.zoomToCursor = true;
     this.aerial.addEventListener("change", this.invalidate);
 
-    // Événements
+    // Events
     const canvas = this.renderer.domElement;
     canvas.addEventListener("pointermove", this.handlePointerMove);
     canvas.addEventListener("pointerdown", this.handlePointerDown);
@@ -271,7 +271,7 @@ export class CityView {
     if (mode === "walk") {
       this.savedAerial = { position: this.camera.position.clone(), target: this.aerial.target.clone() };
       this.aerial.enabled = false;
-      // On pose le promeneur sur le périphérique sud, à hauteur d'homme, face au nord (le haut de la page).
+      // The walker is placed on the south ring road, at eye level, facing north (the top of the page).
       const { bounds } = this.layout;
       this.camera.position.set(this.center.x, EYE, bounds.maxZ - 10);
       this.camera.lookAt(this.center.x, EYE + 1.5, this.center.z);
@@ -296,7 +296,7 @@ export class CityView {
     this.invalidate();
   }
 
-  /** Démarre la promenade (doit suivre un clic) : souris capturée si possible, sinon on regarde en glissant. */
+  /** Starts the walk (must follow a click): mouse captured if possible, otherwise looking by dragging. */
   startWalk() {
     if (this.mode !== "walk") this.setMode("walk");
     const canvas = this.renderer.domElement;
@@ -308,7 +308,7 @@ export class CityView {
     }
   }
 
-  /** Remet le nord (le haut de la page) en haut de l'écran, sans changer de point de vue ni de distance. */
+  /** Puts north (the top of the page) back at the top of the screen, without changing viewpoint or distance. */
   faceNorth() {
     if (this.mode === "walk") {
       const euler = new THREE.Euler(0, 0, 0, "YXZ").setFromQuaternion(this.camera.quaternion);
@@ -323,7 +323,7 @@ export class CityView {
     this.flyTo(position, target, true, true);
   }
 
-  /** Vue d'ensemble depuis le sud, assez loin pour que toute la ville tienne à l'écran. */
+  /** Overview from the south, far enough for the whole city to fit on screen. */
   resetView(animate = true) {
     const { bounds } = this.layout;
     const target = new THREE.Vector3(this.center.x, bounds.maxY * 0.1, this.center.z + this.size * 0.04);
@@ -332,7 +332,7 @@ export class CityView {
     const distance = (this.size * 0.6) / Math.sin(Math.min(vertical, horizontal) / 2);
     const direction = new THREE.Vector3(0, 0.62, 0.79).normalize();
     const reach = Math.min(distance, this.aerial.maxDistance);
-    // La brume commence derrière la ville vue d'ensemble, quelle que soit la forme de l'écran.
+    // The haze starts behind the city seen in the overview, whatever the shape of the screen.
     const fog = this.scene.fog as THREE.Fog;
     fog.near = Math.max(this.size * 1.2, reach * 0.95);
     fog.far = fog.near + this.size * 3;
@@ -340,7 +340,7 @@ export class CityView {
   }
 
   select(lotId: number | null, focus = false) {
-    // L'aéroport n'est pas un élément de la page : rien à inspecter.
+    // The airport is not an element of the page: nothing to inspect.
     if (lotId !== null && !this.layout.lots[lotId]) return;
     if (lotId === this.selected) {
       if (focus && lotId !== null) this.focus(lotId);
@@ -356,7 +356,7 @@ export class CityView {
     this.invalidate();
   }
 
-  /** Montre toute une zone (une ville de la mégalopole), vue du sud comme la vue d'ensemble. */
+  /** Shows a whole area (a megalopolis city), seen from the south like the overview. */
   frameArea(area: { x: number; z: number; w: number; d: number }) {
     if (this.mode !== "aerial") return;
     const size = Math.max(area.w, area.d, 30);
@@ -368,7 +368,7 @@ export class CityView {
     this.flyTo(target.clone().addScaledVector(direction, Math.min(distance, this.aerial.maxDistance)), target, true);
   }
 
-  /** Approche la caméra d'un lot, en gardant l'angle de vue actuel. */
+  /** Brings the camera closer to a lot, keeping the current viewing angle. */
   focus(lotId: number) {
     if (this.mode !== "aerial") return;
     const lot = this.layout.lots[lotId];
@@ -381,11 +381,11 @@ export class CityView {
   }
 
   /**
-   * La miniature d'une ville partagée (aperçu sur les réseaux, galerie). C'est toujours la même
-   * prise de vue, faite par le moteur et jamais choisie par la personne qui partage : toute la
-   * ville en axonométrie, vue du sud-ouest comme la figure de l'accueil, posée avec ses ombres sur
-   * le papier millimétré. Rien de ce qu'on a touché dans la vue : ni sélection, ni survol, ni
-   * vraies couleurs.
+   * The thumbnail of a shared city (social preview, gallery). It is always the same
+   * shot, taken by the engine and never chosen by the person sharing: the whole
+   * city in axonometry, seen from the southwest like the home page figure, laid with its shadows on
+   * the graph paper. Nothing touched in the view: no selection, no hover, no
+   * true colors.
    */
   async thumbnail(): Promise<Blob | null> {
     const { width, height } = THUMBNAIL;
@@ -409,7 +409,7 @@ export class CityView {
     out.height = height;
     const ctx = out.getContext("2d");
     if (!ctx) return null;
-    // Le papier de la planche et son quadrillage, comme .graph-paper dans la page.
+    // The sheet's paper and its grid, like .graph-paper in the page.
     ctx.fillStyle = "#eeeae1";
     ctx.fillRect(0, 0, width, height);
     for (const [step, alpha] of [
@@ -420,7 +420,7 @@ export class CityView {
       for (let x = 0; x < width; x += step) ctx.fillRect(x, 0, 1, height);
       for (let y = 0; y < height; y += step) ctx.fillRect(0, y, width, 1);
     }
-    // La maquette au milieu ; une ville tout en hauteur est réduite pour tenir.
+    // The model in the middle; a very tall city is scaled down to fit.
     const scale = Math.min(1, (height - margin * 2) / shot.height);
     const w = shot.width * scale;
     const h = shot.height * scale;
@@ -430,8 +430,8 @@ export class CityView {
   }
 
   /**
-   * Compteur FPS : tant qu'il est affiché, la ville est redessinée à chaque image
-   * (au repos, elle ne l'est que quand quelque chose bouge, et le compteur tomberait à zéro).
+   * FPS meter: while it is shown, the city is redrawn every frame
+   * (at rest, it is only redrawn when something moves, and the meter would drop to zero).
    */
   setMeasuring(on: boolean) {
     this.measuring = on;
@@ -451,7 +451,7 @@ export class CityView {
     return { fps: recent.length, frameMs, renderMs, ...this.lastInfo };
   }
 
-  /** Dessine tout de suite, même si l'onglet est caché (essais, captures). */
+  /** Draws right away, even if the tab is hidden (experiments, captures). */
   renderNow() {
     this.aerial.update();
     this.updateLabels();
@@ -459,10 +459,10 @@ export class CityView {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** L'image de la vue telle qu'elle est (essais de rendu). */
+  /** The image of the view as it is (rendering experiments). */
   capture(): Promise<Blob | null> {
     this.renderNow();
-    // Copie dans la même tâche que le rendu : le tampon WebGL est encore plein.
+    // Copy in the same task as the rendering: the WebGL buffer is still full.
     const source = this.renderer.domElement;
     const copy = document.createElement("canvas");
     copy.width = source.width;
@@ -472,9 +472,9 @@ export class CityView {
   }
 
   /**
-   * La ville entière en axonométrie (sans perspective), vue du sud-est ou du sud-ouest, sur fond transparent : la figure de l'accueil, régénérée en développement (/dev/figure).
-   * Ni brume, ni papier, ni étiquettes : seules les ombres restent, posées sur la page.
-   * Rend aussi la matrice qui projette un point de la ville sur l'image (pour les repères).
+   * The whole city in axonometry (without perspective), seen from the southeast or the southwest, on a transparent background: the home page figure, regenerated in development (/dev/figure).
+   * No haze, no paper, no labels: only the shadows remain, laid on the page.
+   * Also returns the matrix that projects a point of the city onto the image (for the markers).
    */
   async figure(
     width: number,
@@ -485,7 +485,7 @@ export class CityView {
     }: {
       elevation?: number;
       from?: "south-east" | "south-west";
-      /** Les ombres posées sur la page autour de la maquette (pas pour les vignettes de la légende). */
+      /** The shadows laid on the page around the model (not for the legend thumbnails). */
       shadows?: boolean;
     } = {},
   ): Promise<{ blob: Blob; canvas: HTMLCanvasElement; width: number; height: number; matrix: number[] } | null> {
@@ -501,7 +501,7 @@ export class CityView {
     camera.lookAt(target);
     camera.updateMatrixWorld();
 
-    // Premier cadre, large : la ville, ses nuages, et de quoi recevoir ses ombres.
+    // First frame, wide: the city, its clouds, and enough to receive its shadows.
     const top = Math.max(bounds.maxY, ...(this.layout.ambiance?.clouds ?? []).map((c) => c.y + c.size));
     const reach = this.size * 0.4;
     const box = new THREE.Box3(
@@ -524,7 +524,7 @@ export class CityView {
       return Math.round((width * (upper - bottom)) / (right - left));
     };
 
-    // Ni brume, ni papier, ni étiquettes : seules les ombres restent, posées sur la page.
+    // No haze, no paper, no labels: only the shadows remain, laid on the page.
     const ratio = this.renderer.getPixelRatio();
     const fog = this.scene.fog;
     const background = this.scene.background;
@@ -540,14 +540,14 @@ export class CityView {
     }
     for (const { sprite } of this.sprites) sprite.visible = false;
 
-    // On rend deux fois, sur fond noir puis blanc : l'écart donne la transparence de chaque pixel
-    // (bords adoucis, ombres sur la page), sans toucher au rendu lui-même.
+    // We render twice, on a black then a white background: the difference gives each pixel's transparency
+    // (softened edges, shadows on the page), without touching the rendering itself.
     const render = (w: number, h: number) => {
       this.renderer.setSize(w, h, false);
       const shot = (color: string) => {
         this.scene.background = new THREE.Color(color);
         this.renderer.render(this.scene, camera);
-        // Copie dans la même tâche que le rendu : le tampon WebGL est encore plein.
+        // Copy in the same task as the rendering: the WebGL buffer is still full.
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
@@ -567,7 +567,7 @@ export class CityView {
       return pixels;
     };
 
-    // Une première image, petite, dit où la ville est vraiment dessinée ; la vraie la cadre au plus près.
+    // A first small image tells where the city is really drawn; the real one frames it as tightly as possible.
     const probe = 480;
     const probeHeight = frame(seen.min.x, seen.max.x, seen.min.y, seen.max.y);
     const scaled = Math.round((probeHeight * probe) / width);
@@ -618,15 +618,15 @@ export class CityView {
     return blob ? { blob, canvas: out, width, height, matrix } : null;
   }
 
-  /** Place la caméra (vue aérienne), sans animation. */
+  /** Places the camera (aerial view), without animation. */
   lookFrom(position: [number, number, number], target: [number, number, number]) {
     this.flyTo(new THREE.Vector3(...position), new THREE.Vector3(...target), false);
     this.renderNow();
   }
 
   /**
-   * Remplace ce qui est bâti (on coche ou décoche une page de la mégalopole), sans bouger la caméra.
-   * Les villes gardent leur place : l'étendue de la vue ne change pas.
+   * Replaces what is built (a megalopolis page is checked or unchecked), without moving the camera.
+   * Cities keep their place: the extent of the view does not change.
    */
   setWorld(world: World) {
     if (this.disposed) return;
@@ -645,9 +645,9 @@ export class CityView {
   }
 
   /**
-   * Les vraies couleurs du site (relevées par le favori) : chaque bâtiment, chaque sol de
-   * conteneur prend la couleur de fond de son élément dans la page (ou de son plus proche parent
-   * qui en a une). Le monument garde la sienne. Rien n'est reconstruit : on repeint.
+   * The site's true colors (captured by the bookmarklet): each building, each container
+   * ground takes the background color of its element in the page (or of its nearest parent
+   * that has one). The monument keeps its own. Nothing is rebuilt: we repaint.
    */
   setRealColors(on: boolean) {
     if (on === this.realColors) return;
@@ -664,7 +664,7 @@ export class CityView {
       const page = part.layout.ambiance?.info.background;
       const bgOf: Array<string | undefined> = [];
       for (const lot of lots) {
-        // Les parents viennent avant leurs enfants : leur couleur est déjà connue.
+        // Parents come before their children: their color is already known.
         bgOf[lot.id] = lot.node.bg ?? (lot.parent >= 0 ? bgOf[lot.parent] : page);
         const bg = bgOf[lot.id];
         if (!bg || lot.depth === 0 || lot.kind === "monument") continue;
@@ -699,7 +699,7 @@ export class CityView {
     if (this.hovered !== null) this.paintLot(this.hovered);
   }
 
-  /** Le temps qu'il fait : soleil franc pour une page légère, ciel bas et sombre pour une page lourde. */
+  /** The weather: bright sun for a light page, low dark sky for a heavy page. */
   private applyWeather(weather: Weather) {
     const light = WEATHER_LIGHT[weather];
     if (this.sun) {
@@ -754,7 +754,7 @@ export class CityView {
   }
 
   // -------------------------------------------------------------------------
-  // Décor
+  // Decor
   // -------------------------------------------------------------------------
 
   private addGround() {
@@ -766,7 +766,7 @@ export class CityView {
     this.scene.add(ground);
     this.extras.push(ground);
 
-    // Papier millimétré : une ligne tous les 10 m, une plus marquée tous les 50 m.
+    // Graph paper: a line every 10 m, a stronger one every 50 m.
     const divisions = Math.round(extent / 10);
     const grid = new THREE.GridHelper(divisions * 10, divisions, "#15151A", "#15151A");
     const gridMaterial = grid.material as THREE.LineBasicMaterial;
@@ -790,8 +790,8 @@ export class CityView {
   }
 
   /**
-   * Un ciel de fin de matinée, rendu une fois en carte d'environnement :
-   * les vitres et l'eau le reflètent. L'arrière-plan reste le papier de la planche.
+   * A late-morning sky, rendered once as an environment map:
+   * windows and water reflect it. The background stays the sheet's paper.
    */
   private addSky() {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -835,7 +835,7 @@ export class CityView {
 
     const sun = new THREE.DirectionalLight("#FFF0DA", 3.1);
     this.sun = sun;
-    // Soleil à l'ouest, un peu au sud : les ombres s'allongent vers l'est, du côté où l'on regarde.
+    // Sun in the west, slightly south: shadows stretch eastward, toward where we look.
     sun.position.set(this.center.x - this.size * 0.6, this.size * 0.8, this.center.z + this.size * 0.32);
     sun.target.position.copy(this.center);
     sun.castShadow = true;
@@ -854,7 +854,7 @@ export class CityView {
     this.scene.add(sun, sun.target);
   }
 
-  /** Chaque partie du monde dans la scène, à sa place, ses lots renumérotés dans le plan commun. */
+  /** Each part of the world in the scene, in its place, its lots renumbered in the shared plan. */
   private buildParts() {
     for (const part of this.world.parts) {
       const scene = buildCityScene(part.layout, this.materials, part.base);
@@ -888,8 +888,8 @@ export class CityView {
   }
 
   /**
-   * Dans la mégalopole, une ville lointaine se simplifie (ni arbres, ni voitures, ni lampadaires)
-   * et ses images ne se chargent que quand on s'en approche. Une ville seule est toujours complète.
+   * In the megalopolis, a distant city simplifies (no trees, cars or street lamps)
+   * and its images only load when we get close. A single city is always complete.
    */
   private updateParts(force = false) {
     const position = this.camera.position;
@@ -907,7 +907,7 @@ export class CityView {
     }
   }
 
-  /** Plaques des monuments, affiches des panneaux et icônes, une fois les polices prêtes. */
+  /** Monument plaques, billboard posters and icons, once the fonts are ready. */
   private async decorate() {
     await ensureFonts();
     if (this.disposed) return;
@@ -924,7 +924,7 @@ export class CityView {
         const { texture, ratio } = plaqueTexture(text, slot.level);
         const material = new THREE.SpriteMaterial({ map: texture, depthWrite: false, fog: false });
         const sprite = new THREE.Sprite(material);
-        // La plaque du titre principal suit la taille de sa ville, pas celle de toute la mégalopole.
+        // The main heading's plaque follows the size of its city, not that of the whole megalopolis.
         const size = view.part.city ? view.radius * 1.4 : this.size;
         const height = slot.level === 1 ? Math.max(4.5, size * 0.03) : slot.level === 2 ? 2.6 : 1.5;
         sprite.scale.set(height * ratio, height, 1);
@@ -960,7 +960,7 @@ export class CityView {
         this.events.onImageStatus?.(board.id, status);
         this.invalidate();
       };
-      // Une image d'un site refusé n'a plus d'adresse : elle n'est jamais demandée à son site.
+      // An image from a refused site no longer has an address: it is never requested from its site.
       if (refused) {
         apply(unavailableTexture(board.ratio, "refused"), "refused");
         continue;
@@ -968,7 +968,7 @@ export class CityView {
       void this.enqueue(async () => {
         if (!alive()) return;
         try {
-          if (!src) throw new Error("pas d'adresse");
+          if (!src) throw new Error("no address");
           apply(await loadImageTexture(src), "shown");
         } catch {
           const status = src ? await probeImage(src) : "missing";
@@ -977,8 +977,8 @@ export class CityView {
       });
     }
 
-    // Les icônes ensuite : petites et nombreuses, elles se peignent dans l'atlas commun.
-    // Celles des sites refusés n'ont plus d'adresse : elles gardent la plaque vierge.
+    // The icons next: small and numerous, they are painted into the shared atlas.
+    // Those from refused sites no longer have an address: they keep the blank plate.
     const { atlas, owners } = scene.emblems;
     atlas.sources.forEach((src, i) => {
       const index = i + 1;
@@ -1008,7 +1008,7 @@ export class CityView {
   }
 
   // -------------------------------------------------------------------------
-  // Couleurs
+  // Colors
   // -------------------------------------------------------------------------
 
   private inSelection(lotId: number): boolean {
@@ -1062,15 +1062,15 @@ export class CityView {
   }
 
   // -------------------------------------------------------------------------
-  // Boucle
+  // Loop
   // -------------------------------------------------------------------------
 
   /**
-   * Plan proche aussi loin que possible. La profondeur n'a qu'une précision limitée, répartie
-   * surtout près de la caméra : avec un plan proche à 30 cm, la ville vue de loin ne sait plus
-   * départager deux surfaces presque à la même hauteur (chaussée et sol, affiche et cadre)
-   * et elles scintillent. Rien n'est dessiné entre la caméra et la ville : on avance le plan
-   * proche jusqu'à mi-chemin.
+   * Near plane as far as possible. Depth has only limited precision, spread
+   * mostly near the camera: with a near plane at 30 cm, the city seen from afar can no longer
+   * tell apart two surfaces at almost the same height (roadway and ground, poster and frame)
+   * and they flicker. Nothing is drawn between the camera and the city: the near
+   * plane is moved forward to halfway.
    */
   private fitDepth() {
     const position = this.camera.position;
@@ -1124,7 +1124,7 @@ export class CityView {
     this.lastInfo = { triangles: info.triangles, calls: info.calls };
   };
 
-  /** La droite de l'écran est toujours à l'horizontale (ni la vue aérienne ni la promenade ne penchent) : elle donne le cap. */
+  /** The screen's right is always horizontal (neither the aerial view nor the walk tilts): it gives the heading. */
   private updateHeading() {
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
     this.heading = THREE.MathUtils.radToDeg(Math.atan2(-right.z, right.x));
@@ -1136,7 +1136,7 @@ export class CityView {
     const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
     this.aerial.target.lerpVectors(flight.fromTarget, flight.toTarget, eased);
     if (flight.orbit) {
-      // Par le plus court des deux arcs, à hauteur et distance glissantes.
+      // By the shorter of the two arcs, with gliding height and distance.
       const from = flight.fromPosition.clone().sub(flight.fromTarget);
       const to = flight.toPosition.clone().sub(flight.toTarget);
       const start = Math.atan2(from.x, from.z);
@@ -1185,7 +1185,7 @@ export class CityView {
     const damping = Math.exp(-10 * delta);
     this.velocity.multiplyScalar(damping).addScaledVector(input, speed * (1 - damping));
     if (this.velocity.lengthSq() < 1e-4) return;
-    // Avancer à l'horizontale, quelle que soit l'inclinaison du regard.
+    // Move horizontally, whatever the tilt of the gaze.
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
     forward.setY(0).normalize();
@@ -1196,7 +1196,7 @@ export class CityView {
     this.dirty = true;
   }
 
-  /** L'aéroport, l'aérodrome, les usines ou les caméras qui portent ce numéro. */
+  /** The airport, airfield, factories or cameras that carry this number. */
   private specialAt(id: number): Special | undefined {
     return this.world.specials.find((entry) => entry.id === id)?.special;
   }
@@ -1221,7 +1221,7 @@ export class CityView {
         break;
       }
     }
-    // Le terrain nu (le socle d'une ville, la campagne) n'est pas une cible intéressante au survol.
+    // Bare terrain (a city's base, the countryside) is not an interesting hover target.
     if (lotId !== null && (lotId < 0 || this.layout.lots[lotId]?.depth === 0)) lotId = null;
     if (fromPointer) {
       const rect = this.renderer.domElement.getBoundingClientRect();
@@ -1235,7 +1235,7 @@ export class CityView {
     }
   }
 
-  /** Le genre de la rue sous ce point, parmi celles qu'a fait tracer ce lot. Le tablier d'un pont n'en est pas une. */
+  /** The kind of the street under this point, among those this lot had drawn. A bridge deck is not one. */
   private roadAt(lotId: number, point: THREE.Vector3): RoadStyle | null {
     const margin = 0.05;
     const road = this.layout.roads.find(
@@ -1250,7 +1250,7 @@ export class CityView {
   }
 
   // -------------------------------------------------------------------------
-  // Entrées
+  // Inputs
   // -------------------------------------------------------------------------
 
   private resize = () => {
@@ -1371,7 +1371,7 @@ export class CityView {
     return document.pointerLockElement === this.renderer.domElement;
   }
 
-  /** Tourne la tête : lacet autour de la verticale, tangage borné pour ne pas faire la culbute. */
+  /** Turns the head: yaw around the vertical, pitch clamped to avoid somersaults. */
   private turn(dx: number, dy: number, sensitivity: number) {
     const euler = new THREE.Euler(0, 0, 0, "YXZ").setFromQuaternion(this.camera.quaternion);
     euler.y -= dx * sensitivity;

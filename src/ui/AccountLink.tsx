@@ -4,7 +4,7 @@ import Link from "next/link";
 import styles from "./Account.module.css";
 import { useMyCities } from "./savedCities";
 
-/** Le bouton vers le compte, avec le nombre de villes publiées depuis ce navigateur quand il y en a. */
+/** The button to the account, with the number of cities published from this browser when there are some. */
 export function AccountLink() {
   const count = useMyCities()?.length ?? 0;
   return (

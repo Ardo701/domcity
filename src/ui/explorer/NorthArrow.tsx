@@ -4,18 +4,18 @@ import { useEffect, useRef, type RefObject } from "react";
 import type { CityView } from "@/city/view";
 import styles from "./explorer.module.css";
 
-/** Distance du « N » au centre de la rose, en pixels. */
+/** Distance from the "N" to the center of the compass rose, in pixels. */
 const LETTER = 25;
 
 /**
- * Le nord de la ville, c'est le haut de la page. La flèche tourne avec la caméra pour le montrer
- * où qu'on regarde ; le « N » la suit en restant droit. Un clic remet le nord en haut de l'écran.
+ * The city's north is the top of the page. The arrow turns with the camera to show it
+ * wherever we look; the "N" follows it while staying upright. A click puts north back at the top of the screen.
  */
 export function NorthArrow({ viewRef }: { viewRef: RefObject<CityView | null> }) {
   const needle = useRef<SVGGElement>(null);
   const letter = useRef<SVGTextElement>(null);
 
-  // La vue ne redessine que quand la caméra bouge : on lit son cap à chaque image, sans repasser par React.
+  // The view only redraws when the camera moves: its heading is read every frame, without going through React.
   useEffect(() => {
     let frame = 0;
     let last = Number.NaN;

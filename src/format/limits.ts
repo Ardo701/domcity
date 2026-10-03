@@ -1,6 +1,6 @@
 /**
- * Limites d'une ville. Elles protègent le rendu 3D et, plus tard, l'API de partage.
- * Fichier séparé de schema.ts pour que la capture (et donc le bookmarklet) n'embarque pas zod.
+ * Limits of a city. They protect the 3D rendering and the sharing API.
+ * Separate file from schema.ts so that the capture (and therefore the bookmarklet) does not embed zod.
  */
 export const LIMITS = {
   maxNodes: 30_000,
@@ -10,7 +10,7 @@ export const LIMITS = {
   maxLabel: 60,
   maxUrl: 2_048,
   maxThirdParty: 60,
-  /** Pages du même site visées par les liens (empreintes), et sites visés. */
+  /** Pages of the same site targeted by the links (fingerprints), and targeted sites. */
   maxLinkedPages: 1_000,
   maxLinkedSites: 60,
 } as const;

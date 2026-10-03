@@ -1,14 +1,14 @@
 /**
- * Nettoyage des adresses : `https://www.amazon.com/livres/?ref=abc#top`
- * et `http://amazon.com/livres` désignent la même page.
+ * Address cleanup: `https://www.amazon.com/livres/?ref=abc#top`
+ * and `http://amazon.com/livres` designate the same page.
  */
 
 export interface PageAddress {
-  /** Adresse propre : https://domaine/chemin */
+  /** Clean address: https://domain/path */
   url: string;
-  /** Domaine en minuscules, sans « www. » */
+  /** Lowercase domain, without "www." */
   domain: string;
-  /** Chemin sans ?query ni #ancre, sans / final (sauf la racine). */
+  /** Path without ?query or #anchor, without a trailing / (except the root). */
   path: string;
 }
 
@@ -35,10 +35,10 @@ export function normalizePageUrl(input: string): PageAddress | null {
   return { url: `https://${domain}${path}`, domain, path };
 }
 
-/** Étiquettes de second niveau qui font partie du suffixe : bbc.co.uk, abc.net.au, service-public.gouv.fr… */
+/** Second-level labels that are part of the suffix: bbc.co.uk, abc.net.au, service-public.gouv.fr... */
 const SECOND_LEVEL = new Set(["co", "com", "net", "org", "gov", "gouv", "edu", "ac", "or", "ne", "go", "gob", "mil", "nic"]);
 
-/** Domaine racine, approché sans liste officielle : lemonde.fr pour static.lemonde.fr, bbc.co.uk pour news.bbc.co.uk. */
+/** Root domain, approximated without the official list: lemonde.fr for static.lemonde.fr, bbc.co.uk for news.bbc.co.uk. */
 export function rootDomain(hostname: string): string {
   const labels = siteHost(hostname).split(".");
   if (labels.length <= 2) return labels.join(".");
@@ -50,7 +50,7 @@ export function rootDomain(hostname: string): string {
 
 const PRIVATE_SUFFIXES = [".local", ".localhost", ".internal", ".intranet", ".lan", ".home", ".corp", ".test", ".example", ".invalid", ".arpa"];
 
-/** Faux pour les adresses locales ou d'intranet (localhost, 192.168.1.2, nas.local…) : elles ne se partagent pas. */
+/** False for local or intranet addresses (localhost, 192.168.1.2, nas.local...): they are not shared. */
 export function isPublicHost(hostname: string): boolean {
   const host = siteHost(hostname);
   if (!host.includes(".") || host.includes(":") || host.startsWith("[")) return false;
@@ -58,7 +58,7 @@ export function isPublicHost(hostname: string): boolean {
   return !PRIVATE_SUFFIXES.some((suffix) => host.endsWith(suffix));
 }
 
-/** Vrai si le lien mène au même site que la page (www. ignoré). */
+/** True if the link leads to the same site as the page (www. ignored). */
 export function isSameSite(pageHostname: string, linkHostname: string): boolean {
   return siteHost(pageHostname) === siteHost(linkHostname);
 }

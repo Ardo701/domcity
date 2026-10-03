@@ -1,10 +1,10 @@
 -- =============================================================================
--- DOMCity : les notes de la liste des sites refusés, en anglais
+-- DOMCity: the notes of the refused sites list, in English
 --
--- La colonne note de blocked_domains dit sous quelle rubrique une entrée est rangée.
--- La migration précédente l'avait remplie en français ; comme category, elle est en
--- anglais (Videos, French banks…). Les entrées ajoutées à la main ne sont pas touchées.
--- Relançable : une fois traduites, les notes ne correspondent plus à rien ici.
+-- The note column of blocked_domains says under which heading an entry is filed.
+-- The previous migration filled it in French; like category, it is in
+-- English (Videos, French banks...). Entries added by hand are not touched.
+-- Re-runnable: once translated, the notes no longer match anything here.
 -- =============================================================================
 
 update public.blocked_domains b

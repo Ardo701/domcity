@@ -37,7 +37,7 @@ const STEPS = [
   },
 ];
 
-// La galerie se met à jour toutes les minutes.
+// The gallery updates every minute.
 export const revalidate = 60;
 
 export default async function Home() {

@@ -6,7 +6,7 @@ const display = Big_Shoulders({
   variable: "--font-display",
   subsets: ["latin"],
   axes: ["opsz"],
-  // Pas de métriques de repli connues pour cette police : la pile de repli est dans globals.css.
+  // No known fallback metrics for this font: the fallback stack is in globals.css.
   adjustFontFallback: false,
 });
 

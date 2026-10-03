@@ -12,7 +12,7 @@ type State =
   | { phase: "ready"; received: ReceivedCity }
   | { phase: "error"; title: string; message: string; refused: boolean };
 
-/** La ville envoyée par le favori : on l'attend, on la vérifie, puis on la construit. */
+/** The city sent by the bookmarklet: we wait for it, check it, then build it. */
 export function NewCity({ canShare }: { canShare: boolean }) {
   const [state, setState] = useState<State>({ phase: "waiting" });
 
@@ -61,7 +61,7 @@ export function NewCity({ canShare }: { canShare: boolean }) {
           <section className={styles.error} role="alert">
             <h2>{state.title}</h2>
             <p>{state.message}</p>
-            {/* L'action principale prend le bouton de l'accueil : installer le favori, ou partir d'un site refusé. */}
+            {/* The main action takes the home page button: install the bookmarklet, or leave a refused site. */}
             <div className={styles.actionsRow}>
               {state.refused ? (
                 <InkLink href="/" size="small">

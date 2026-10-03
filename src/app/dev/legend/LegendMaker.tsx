@@ -5,17 +5,17 @@ import { layoutCity } from "@/city/layout";
 import { excerpt } from "./excerpt";
 import { LEGEND_SPECS } from "./specs";
 
-/** Côté d'une vignette dans la planche (affichée jusqu'à 64 px : nette sur un écran haute densité). */
+/** Side of a thumbnail in the sheet (displayed up to 64 px: sharp on a high-density screen). */
 const CELL = 128;
 const COLUMNS = 8;
-/** Marge autour de la maquette dans sa case, et épaisseur du trait d'encre qui la cerne. */
+/** Margin around the model in its cell, and thickness of the ink line around it. */
 const PAD = 7;
 const LINE = 2.5;
 const INK = [21, 21, 26];
 
 /**
- * La vignette dans sa case : la maquette centrée, cernée d'un trait d'encre (sa silhouette
- * épaissie, sous elle), comme les figures de la planche.
+ * The thumbnail in its cell: the model centered, outlined with an ink line (its silhouette
+ * thickened, underneath it), like the figures of the sheet.
  */
 function inked(source: HTMLCanvasElement): HTMLCanvasElement {
   const room = CELL - PAD * 2;
@@ -31,7 +31,7 @@ function inked(source: HTMLCanvasElement): HTMLCanvasElement {
   artCtx.imageSmoothingQuality = "high";
   artCtx.drawImage(source, x, y, w, h);
 
-  // La silhouette, sans les voiles trop légers (fumée, pluie) qui feraient un trait flou.
+  // The silhouette, without the very light veils (smoke, rain) that would make a blurry line.
   const shape = artCtx.getImageData(0, 0, CELL, CELL);
   for (let i = 0; i < shape.data.length; i += 4) {
     shape.data[i] = INK[0];
@@ -56,14 +56,14 @@ function inked(source: HTMLCanvasElement): HTMLCanvasElement {
 
 export function LegendMaker() {
   const stage = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState("Construction des vignettes…");
+  const [status, setStatus] = useState("Building the thumbnails...");
   const [cells, setCells] = useState<Array<{ key: string; url: string }>>([]);
 
   useEffect(() => {
     let disposed = false;
     void (async () => {
       const { CityView } = await import("@/city/view");
-      // Pour régler les exemples depuis la console.
+      // To tune the samples from the console.
       (window as unknown as { __legend?: unknown }).__legend = { specs: LEGEND_SPECS, layoutCity, excerpt };
       const only = new URLSearchParams(window.location.search).get("only")?.split(",");
       const specs = LEGEND_SPECS.filter((spec) => !only || only.includes(spec.key));
@@ -71,11 +71,11 @@ export function LegendMaker() {
       await document.fonts.ready;
       for (const spec of specs) {
         if (disposed || !stage.current) return;
-        setStatus(`Rendu : ${spec.key} (${done.length + 1} / ${specs.length})`);
+        setStatus(`Rendering: ${spec.key} (${done.length + 1} / ${specs.length})`);
         const city = layoutCity(spec.doc);
         spec.prepare?.(city);
         const part = excerpt(city, spec.region(city));
-        // Chaque image accrochée donne une nouvelle de son chargement : on attend la dernière.
+        // Each hung image reports when it has loaded: we wait for the last one.
         const expected = part.lots.filter((lot) => lot.panel && !lot.container).length;
         const loaded = new Set<number>();
         let ready = () => {};
@@ -91,12 +91,12 @@ export function LegendMaker() {
         await new Promise((resolve) => setTimeout(resolve, 200));
         const figure = await view.figure(CELL * 3, { from: spec.from ?? "south-west", elevation: spec.elevation, shadows: false });
         view.dispose();
-        if (!figure) return setStatus(`Échec du rendu : ${spec.key}`);
+        if (!figure) return setStatus(`Rendering failed: ${spec.key}`);
         const canvas = inked(figure.canvas);
         done.push({ key: spec.key, canvas });
         setCells((list) => [...list, { key: spec.key, url: canvas.toDataURL() }]);
       }
-      if (disposed || only) return setStatus(only ? "Essai terminé (rien d'enregistré)" : "");
+      if (disposed || only) return setStatus(only ? "Trial done (nothing saved)" : "");
 
       const rows = Math.ceil(done.length / COLUMNS);
       const sheet = document.createElement("canvas");
@@ -105,15 +105,15 @@ export function LegendMaker() {
       const ctx = sheet.getContext("2d")!;
       done.forEach(({ canvas }, i) => ctx.drawImage(canvas, (i % COLUMNS) * CELL, Math.floor(i / COLUMNS) * CELL));
       const blob = await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, "image/webp", 0.88));
-      if (!blob) return setStatus("Échec de l'image");
+      if (!blob) return setStatus("Image failed");
       const form = new FormData();
       form.set("image", blob, "legende.webp");
       form.set("meta", JSON.stringify({ cell: CELL, columns: COLUMNS, order: done.map((d) => d.key) }));
       const response = await fetch("/api/dev-legend", { method: "POST", body: form });
       setStatus(
         response.ok
-          ? `Enregistrée : public/figures/legende.webp (${sheet.width} × ${sheet.height}, ${Math.round(blob.size / 1024)} Ko)`
-          : `Échec de l'enregistrement (${response.status})`,
+          ? `Saved: public/figures/legende.webp (${sheet.width} × ${sheet.height}, ${Math.round(blob.size / 1024)} KB)`
+          : `Saving failed (${response.status})`,
       );
     })();
     return () => {

@@ -1,22 +1,22 @@
 /**
- * Les matériaux de la ville. Les détails (fenêtres, marquages, dalles, pelouses)
- * sont dessinés dans les shaders, à l'échelle réelle de chaque instance : une
- * façade de 30 m a ses 26 étages, quelle que soit la boîte étirée qui la porte.
+ * The city's materials. The details (windows, markings, paving slabs, lawns)
+ * are drawn in the shaders, at the real scale of each instance: a
+ * 30 m facade has its 26 floors, whatever the stretched box that carries it.
  *
- * La couleur de l'instance reste la couleur dominante (mur, asphalte, gazon) :
- * c'est elle que le survol et la sélection remplacent par le jaune balise.
+ * The instance color stays the dominant color (wall, asphalt, grass):
+ * it is the one that hover and selection replace with beacon yellow.
  */
 
 import * as THREE from "three";
 import { GraffitiAtlas } from "./textures";
 
-/** Styles de façade, passés par instance (aFacade.x). */
+/** Facade styles, passed per instance (aFacade.x). */
 export const FACADE = { glass: 0, office: 1, brick: 2, stucco: 3, house: 4, stone: 5 } as const;
-/** Styles de sol (aGround.x). */
+/** Ground styles (aGround.x). */
 export const GROUND = { base: 0, sidewalk: 1, plaza: 2, grass: 3, lawn: 4, crops: 5, dirt: 6, wharf: 7, quay: 8 } as const;
-/** Styles de chaussée (aRoad.x). */
+/** Roadway styles (aRoad.x). */
 export const ROAD = { ring: 0, avenue: 1, street: 2, lane: 3, path: 4, runway: 5, taxiway: 6, highway: 7 } as const;
-/** Sens d'une chaussée pour le marquage (deuxième valeur de aRoad). */
+/** Direction of a roadway for the markings (second value of aRoad). */
 export const ROAD_AXIS = { x: 0, z: 1, bend: 2, cross: 3 } as const;
 
 const NOISE = /* glsl */ `
@@ -33,7 +33,7 @@ float dcBand(float x, float center, float halfWidth) {
 }
 `;
 
-/** Position dans la boîte en unités réelles (depuis le coin nord-ouest, au sol), taille de la boîte, normale locale. */
+/** Position in the box in real units (from the northwest corner, on the ground), box size, local normal. */
 const BOX_VERTEX = /* glsl */ `
 #ifdef USE_INSTANCING
   vec3 dcScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
@@ -79,8 +79,8 @@ function boxShader(
 }
 
 /**
- * Façades : fenêtres, rez-de-chaussée commerçant, acrotère, toit gravillonné.
- * aFacade = (style, hauteur d'étage, graine, commerces).
+ * Facades: windows, ground-floor shops, parapet, gravel roof.
+ * aFacade = (style, floor height, seed, shops).
  */
 const FACADE_FRAGMENT = /* glsl */ `
 vec3 dcN = vDcNormal;
@@ -174,7 +174,7 @@ roughnessFactor = mix(roughnessFactor, 0.14, dcGlass);
 metalnessFactor = mix(metalnessFactor, 0.55, dcGlass * 0.8);
 `;
 
-/** Sols : dalles, pavés, gazon, labours, quais. aGround = (style, graine, -, -). */
+/** Grounds: slabs, cobblestones, grass, plowed fields, quays. aGround = (style, seed, -, -). */
 const GROUND_FRAGMENT = /* glsl */ `
 float dcStyle = vDcExtra.x;
 vec2 p = vDcWorld.xz;
@@ -221,9 +221,9 @@ if (vDcNormal.y > 0.5) {
 diffuseColor.rgb = c;
 `;
 
-/** Chaussées : asphalte, lignes de rive, axe, passages piétons. aRoad = (style, axe : 0 = x, 1 = z, -, -). */
-// Sens (vDcExtra.y) : 0 le long de x, 1 le long de z, 2 virage (quart de disque centré sur
-// le coin du repère local : la traversée devient le rayon, le long devient l'arc), 3 carrefour sans marquage.
+/** Roadways: asphalt, edge lines, center line, crosswalks. aRoad = (style, axis: 0 = x, 1 = z, -, -). */
+// Direction (vDcExtra.y): 0 along x, 1 along z, 2 curve (quarter disc centered on
+// the corner of the local frame: across becomes the radius, along becomes the arc), 3 intersection without markings.
 const ROAD_FRAGMENT = /* glsl */ `
 float dcStyle = vDcExtra.x;
 bool dcAlongX = vDcExtra.y < 0.5;
@@ -298,9 +298,9 @@ if (vDcNormal.y > 0.5) {
 `;
 
 /**
- * Panonceaux et drapeaux : toutes les icônes de la ville sont dessinées dans une seule texture
- * (l'atlas), chaque instance y lit sa case. aIcon = (u, v, largeur, hauteur) de la case.
- * Visible des deux côtés : un drapeau se lit à l'envers de dos, comme un vrai.
+ * Small signs and flags: all the icons of the city are drawn in a single texture
+ * (the atlas), each instance reads its cell there. aIcon = (u, v, width, height) of the cell.
+ * Visible from both sides: a flag reads backwards from behind, like a real one.
  */
 export function emblemMaterial(atlas: THREE.Texture): THREE.MeshStandardMaterial {
   const material = new THREE.MeshStandardMaterial({
@@ -308,7 +308,7 @@ export function emblemMaterial(atlas: THREE.Texture): THREE.MeshStandardMaterial
     roughness: 0.7,
     metalness: 0,
     side: THREE.DoubleSide,
-    // Comme les affiches : la plaque gagne toujours sur son support, même de loin.
+    // Like posters: the plate always wins over its support, even from afar.
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -4,
@@ -323,26 +323,26 @@ export function emblemMaterial(atlas: THREE.Texture): THREE.MeshStandardMaterial
 }
 
 export interface CityMaterials {
-  /** Façades à fenêtres (attribut aFacade). */
+  /** Facades with windows (aFacade attribute). */
   facade: THREE.MeshStandardMaterial;
-  /** Toits, flèches, colonnes, équipements : la couleur de l'instance, sans plus. */
+  /** Roofs, spires, columns, facilities: the instance color, nothing more. */
   plain: THREE.MeshStandardMaterial;
-  /** Formes à couleurs de sommets : arbres, voitures, lampadaires. */
+  /** Shapes with vertex colors: trees, cars, street lamps. */
   painted: THREE.MeshStandardMaterial;
-  /** Sols (attribut aGround). */
+  /** Grounds (aGround attribute). */
   ground: THREE.MeshStandardMaterial;
-  /** Chaussées (attribut aRoad). */
+  /** Roadways (aRoad attribute). */
   road: THREE.MeshStandardMaterial;
   water: THREE.MeshStandardMaterial;
-  /** Le papier autour de la maquette. */
+  /** The paper around the model. */
   paper: THREE.MeshStandardMaterial;
-  /** Nuages et fumées : blancs, mats, sans reflet. */
+  /** Clouds and smoke: white, matte, without reflections. */
   cloud: THREE.MeshStandardMaterial;
-  /** Ce qui brille sans lumière : la diode des caméras, l'éclair. */
+  /** What glows without light: the cameras' LED, the lightning. */
   glow: THREE.MeshBasicMaterial;
-  /** Voiles transparents : champ des caméras, rideaux de pluie (couleur de l'instance). */
+  /** Transparent veils: camera fields, rain curtains (instance color). */
   veil: THREE.MeshBasicMaterial;
-  /** Les graffitis, tirés d'un atlas commun (dessiné une fois les polices prêtes). */
+  /** Graffiti, drawn from a shared atlas (drawn once the fonts are ready). */
   graffiti: THREE.MeshStandardMaterial;
   graffitiAtlas: GraffitiAtlas;
   dispose(): void;

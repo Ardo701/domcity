@@ -7,7 +7,7 @@ import { loadBlocklist } from "./blocklist";
 
 export interface ReceivedCity {
   doc: CityDoc;
-  /** Le favori qui l'a envoyée date d'une version précédente. */
+  /** The bookmarklet that sent it dates from a previous version. */
   outdated: boolean;
 }
 
@@ -15,30 +15,30 @@ export class ReceiveError extends Error {
   constructor(
     readonly title: string,
     message: string,
-    /** Le site est refusé par DOMCity : pas de proposition de (ré)installer le favori. */
+    /** The site is refused by DOMCity: no offer to (re)install the bookmarklet. */
     readonly refused = false,
   ) {
     super(message);
   }
 }
 
-/** Garde la ville reçue le temps de la session de l'onglet : un rechargement ne la perd pas. */
+/** Keeps the received city for the tab's session: a reload does not lose it. */
 const SAVED_KEY = "domcity:nouveau";
-/** Si le favori ne répond pas dans ce délai, la page d'origine a été fermée ou a changé. */
+/** If the bookmarklet does not answer within this delay, the original page was closed or has changed. */
 const WAIT_MS = 20_000;
 
 let pending: Promise<ReceivedCity> | null = null;
 
 /**
- * Reçoit la ville envoyée par le favori. Une seule réception par chargement de page,
- * même si l'écran est monté deux fois (mode strict de React en développement).
+ * Receives the city sent by the bookmarklet. A single reception per page load,
+ * even if the screen is mounted twice (React strict mode in development).
  */
 export function receiveCity(): Promise<ReceivedCity> {
   pending ??= receive().then(screen);
   return pending;
 }
 
-/** Les sites refusés (la liste de la base, vérifiée ici même) : pas de ville, et rien n'est gardé. */
+/** Refused sites (the database list, checked right here): no city, and nothing is kept. */
 async function screen(received: ReceivedCity): Promise<ReceivedCity> {
   const refusal = cityRefusal(received.doc, await loadBlocklist());
   if (refusal) {
@@ -49,7 +49,7 @@ async function screen(received: ReceivedCity): Promise<ReceivedCity> {
 }
 
 async function receive(): Promise<ReceivedCity> {
-  // Plan B du favori : la ville compressée dans l'ancre de l'adresse.
+  // Bookmarklet plan B: the compressed city in the address fragment.
   const hash = window.location.hash;
   if (hash.startsWith(`#${HASH_KEY}`)) {
     window.history.replaceState(null, "", window.location.pathname);
@@ -62,8 +62,8 @@ async function receive(): Promise<ReceivedCity> {
     return { doc: check(unpacked.data), outdated: unpacked.version < BOOKMARKLET_VERSION };
   }
 
-  // Rechargement (ou retour) : la ville reçue tout à l'heure. Pas avant : un onglet ouvert depuis
-  // DOMCity hérite de la mémoire de session de celui qui l'ouvre, avec une autre ville dedans.
+  // Reload (or back): the city received earlier. Not before: a tab opened from
+  // DOMCity inherits the session storage of the one that opens it, with another city in it.
   const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   if (navigation?.type === "reload" || navigation?.type === "back_forward") {
     const saved = readSaved();
@@ -91,7 +91,7 @@ async function receive(): Promise<ReceivedCity> {
       finish();
       try {
         const doc = check(message.city);
-        // La ville doit venir du site qu'elle décrit.
+        // The city must come from the site it describes.
         if (siteHost(new URL(doc.url).hostname) !== siteHost(new URL(event.origin).hostname)) {
           throw new ReceiveError("Relevé refusé", "Cette ville ne vient pas de la page qu'elle prétend décrire.");
         }
@@ -102,7 +102,7 @@ async function receive(): Promise<ReceivedCity> {
       }
     };
     window.addEventListener("message", onMessage);
-    // On appelle le favori jusqu'à ce qu'il réponde : il peut finir son relevé après notre chargement.
+    // We call the bookmarklet until it answers: it may finish its capture after we load.
     const call = () => opener.postMessage({ type: MESSAGES.ready }, "*");
     const ping = setInterval(call, 400);
     const timeout = setTimeout(() => {
@@ -130,7 +130,7 @@ function keep(received: ReceivedCity): ReceivedCity {
   try {
     sessionStorage.setItem(SAVED_KEY, JSON.stringify(received));
   } catch {
-    // stockage plein ou refusé : la ville sera perdue au rechargement, rien de plus
+    // storage full or refused: the city will be lost on reload, nothing more
   }
   return received;
 }
@@ -139,7 +139,7 @@ function forget() {
   try {
     sessionStorage.removeItem(SAVED_KEY);
   } catch {
-    // stockage indisponible : rien n'y a été gardé
+    // storage unavailable: nothing was kept there
   }
 }
 

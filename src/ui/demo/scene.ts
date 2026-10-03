@@ -1,10 +1,10 @@
 /**
- * La démonstration du favori (page Créer une ville) : ce que le serveur prépare et ce que le navigateur anime.
- * La scène est un navigateur dessiné de 640 × 480 ; sous ses barres, la fenêtre de la page fait 640 × 388.
+ * The bookmarklet demo (Créer une ville page): what the server prepares and what the browser animates.
+ * The scene is a drawn 640 × 480 browser; under its bars, the page window is 640 × 388.
  */
 
 export const SCENE = { width: 640, height: 480 };
-/** Les barres du navigateur : onglets, adresse, favoris. La page commence dessous. */
+/** The browser bars: tabs, address, bookmarks. The page starts below. */
 export const BARS = { tabs: 32, toolbar: 34, bookmarks: 26 };
 export const VIEW = { top: BARS.tabs + BARS.toolbar + BARS.bookmarks, width: 640, height: 388 };
 
@@ -15,7 +15,7 @@ export interface PageRect {
   h: number;
 }
 
-/** L'allure d'un élément dans la page d'exemple, avant qu'il devienne un bâtiment. */
+/** The look of an element in the sample page, before it becomes a building. */
 export type Look =
   | { type: "words"; text: string }
   | { type: "title"; text: string; size: number }
@@ -27,12 +27,12 @@ export type Look =
   | { type: "embed" }
   | { type: "none" };
 
-/** Un élément de la page d'exemple et le lot que l'urbanisme en a fait (coordonnées de la ville). */
+/** An element of the sample page and the lot the urban plan made of it (city coordinates). */
 export interface DemoLot {
   tag: string;
   page: PageRect;
   look: Look;
-  /** L'étiquette posée pendant le relevé (`<h1>`…), pour quelques éléments seulement. */
+  /** The label shown during the capture (`<h1>`...), for a few elements only. */
   label?: string;
   x: number;
   y: number;
@@ -40,57 +40,57 @@ export interface DemoLot {
   w: number;
   h: number;
   d: number;
-  /** Couleurs du dessus et des deux flancs visibles (ouest, sud). */
+  /** Colors of the top and the two visible sides (west, south). */
   top: string;
   west: string;
   south: string;
-  /** Ordre de sortie de terre, du plus bas au plus haut (bâtiments seulement). */
+  /** Order of rising from the ground, from lowest to highest (buildings only). */
   rank: number;
-  /** Une affiche accrochée à une façade : son image et le côté où elle regarde. */
+  /** A poster hung on a facade: its image and the side it faces. */
   panel?: { src: string; mount: "west" | "south" };
 }
 
-/** Un sol de la maquette : socle, trottoirs, places, pelouses, eau. */
+/** A ground of the model: base, sidewalks, squares, lawns, water. */
 export interface DemoSlab {
   x: number;
   z: number;
   w: number;
   d: number;
-  /** Altitude du dessus. */
+  /** Altitude of the top. */
   y: number;
   color: string;
 }
 
 export interface DemoCamera {
-  /** Rotation autour de la verticale, en radians (0 : le nord en haut). */
+  /** Rotation around the vertical, in radians (0: north at the top). */
   theta: number;
-  /** Hauteur de vue, en radians (π/2 : vue de dessus, comme un plan). */
+  /** Viewing height, in radians (π/2: seen from above, like a plan). */
   elevation: number;
-  /** Pixels de la scène par unité de la ville. */
+  /** Scene pixels per city unit. */
   scale: number;
-  /** Où tombe l'origine de la ville, dans la fenêtre de la page. */
+  /** Where the city's origin falls, in the page window. */
   ox: number;
   oy: number;
 }
 
 export interface DemoCity {
-  /** Les bâtiments, rangés du fond vers l'avant (ordre de dessin). */
+  /** The buildings, ordered from back to front (drawing order). */
   buildings: DemoLot[];
-  /** Les conteneurs (en-tête, sections, liste…), tracés en pointillés pendant le relevé. */
+  /** The containers (header, sections, list...), drawn in dotted lines during the capture. */
   containers: DemoLot[];
   panels: DemoLot[];
-  /** Le socle, puis les sols posés dessus. */
+  /** The base, then the grounds laid on it. */
   base: DemoSlab;
   ground: DemoSlab[];
-  /** Le plan vu de dessus, puis la caméra de l'image rendue par le moteur. */
+  /** The plan seen from above, then the camera of the image rendered by the engine. */
   plan: DemoCamera;
   final: DemoCamera;
   image: { src: string; x: number; y: number; width: number; height: number };
-  /** Le point survolé sur le monument, dans la fenêtre de la page. */
+  /** The hovered point on the monument, in the page window. */
   hover: [number, number];
 }
 
-/** Un point de la ville vu par une caméra orthographique, en pixels de la fenêtre de la page. */
+/** A point of the city seen by an orthographic camera, in pixels of the page window. */
 export function viewPoint(cam: DemoCamera, x: number, y: number, z: number): [number, number] {
   const cos = Math.cos(cam.theta);
   const sin = Math.sin(cam.theta);
@@ -117,10 +117,10 @@ const channels = (hex: string) => {
 const toHex = (rgb: number[]) =>
   `#${rgb.map((c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, "0")).join("")}`;
 
-/** Une couleur éclaircie (facteur > 1) ou assombrie (< 1). */
+/** A color lightened (factor > 1) or darkened (< 1). */
 export const tone = (hex: string, factor: number) => toHex(channels(hex).map((c) => c * factor));
 
-/** Le mélange de deux couleurs (k = 0 : la première). */
+/** The mix of two colors (k = 0: the first one). */
 export function mixColor(a: string, b: string, k: number): string {
   const ca = channels(a);
   const cb = channels(b);

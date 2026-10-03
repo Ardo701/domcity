@@ -1,9 +1,9 @@
 /**
- * Mode Wikipédia : l'API de Wikipédia autorise les autres sites à lire ses
- * pages (en-tête CORS `*`). Tout se passe donc dans le navigateur, sans proxy.
+ * Wikipedia mode: the Wikipedia API lets other sites read its
+ * pages (CORS header `*`). Everything therefore happens in the browser, without a proxy.
  *
- * Le même code tourne sur le serveur au moment d'un partage : il relève
- * l'article lui-même au lieu de croire la ville envoyée par le navigateur.
+ * The same code runs on the server when a city is shared: it captures
+ * the article itself instead of trusting the city sent by the browser.
  */
 
 import type { CityDoc } from "@/format/types";
@@ -23,12 +23,12 @@ export class WikiNotFoundError extends Error {
   }
 }
 
-/** « Tour Eiffel » → « Tour_Eiffel » (forme utilisée dans les adresses). */
+/** "Tour Eiffel" → "Tour_Eiffel" (the form used in addresses). */
 export function toWikiSlug(title: string): string {
   return title.trim().replace(/\s+/g, "_");
 }
 
-/** Adresse de la ville d'un article sur DOMCity. */
+/** Address of an article's city on DOMCity. */
 export function wikiPath(lang: WikiLang, title: string): string {
   return `/w/${lang}/${encodeURIComponent(toWikiSlug(title))}`;
 }
@@ -37,7 +37,7 @@ export function fromWikiSlug(slug: string): string {
   return slug.replace(/_/g, " ");
 }
 
-/** Reconnaît une adresse d'article collée telle quelle : https://fr.wikipedia.org/wiki/Paris */
+/** Recognizes an article address pasted as is: https://fr.wikipedia.org/wiki/Paris */
 export function parseWikipediaUrl(input: string): { lang: WikiLang; title: string } | null {
   let url: URL;
   try {
@@ -56,9 +56,9 @@ export interface WikiSuggestion {
 }
 
 export interface WikiFetchOptions {
-  /** En-têtes en plus (côté serveur : l'User-Agent demandé par Wikimédia). */
+  /** Extra headers (server side: the User-Agent requested by Wikimedia). */
   headers?: Record<string, string>;
-  /** Analyseur HTML (côté serveur, le navigateur n'en fournit pas). */
+  /** HTML parser (server side, where the browser does not provide one). */
   parse?: (html: string) => Document;
 }
 
@@ -79,7 +79,7 @@ export async function suggestWikipedia(
   return (data[1] ?? []).map((title) => ({ title }));
 }
 
-/** Trouve le titre exact (gère les redirections et les fautes de casse). */
+/** Finds the exact title (handles redirects and case mistakes). */
 export async function resolveWikipediaTitle(
   lang: WikiLang,
   title: string,
@@ -101,7 +101,7 @@ export async function resolveWikipediaTitle(
 
 export interface WikiFetchResult {
   doc: CityDoc;
-  /** Titre exact de l'article (après redirection). */
+  /** Exact title of the article (after redirect). */
   title: string;
 }
 
@@ -124,8 +124,8 @@ export async function fetchWikipediaCity(
 
   const html = await response.text();
   const parsed = options.parse ? options.parse(html) : new DOMParser().parseFromString(html, "text/html");
-  // Sur wikipedia.org, le titre <h1> est affiché au-dessus du contenu, mais l'API ne le renvoie pas.
-  // On le remet en tête de page : c'est lui qui devient le monument principal.
+  // On wikipedia.org, the <h1> title is displayed above the content, but the API does not return it.
+  // We put it back at the top of the page: it becomes the main monument.
   const heading = parsed.createElement("h1");
   heading.textContent = title;
   parsed.body?.prepend(heading);

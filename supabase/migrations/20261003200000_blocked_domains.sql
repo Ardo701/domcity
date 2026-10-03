@@ -1,30 +1,30 @@
 -- =============================================================================
--- DOMCity : les sites refusés, dans la base
+-- DOMCity: refused sites, in the database
 --
---   blocked_domains     la liste : un domaine (ou une extension) et sa catégorie
+--   blocked_domains     the list: a domain (or an extension) and its category
 --   domain_suffixes     fr.pornhub.com → {fr.pornhub.com, pornhub.com, com}
---   is_blocked_domain   vrai si ce domaine, ou un domaine qui le contient, est refusé
---   blocklist           la liste entière (le navigateur la télécharge et vérifie seul :
---                       rien de la page visitée ne part)
+--   is_blocked_domain   true if this domain, or a domain that contains it, is refused
+--   blocklist           the whole list (the browser downloads it and checks on its own:
+--                       nothing about the visited page leaves)
 --
--- La liste vivait dans le code : elle vit ici. On l'allonge dans Supabase (Table Editor
--- ou SQL Editor), sans redéployer, et l'ajout vaut tout de suite partout :
---   - create_capture refuse de créer une ville d'un site de la liste ;
---   - les fonctions de lecture l'ignorent, même publiée avant d'entrer dans la liste.
--- Un domaine couvre ses sous-domaines (pornhub.com refuse fr.pornhub.com) ; une entrée
--- sans point est une extension (xxx refuse tous les sites en .xxx).
+-- The list lived in the code: it lives here. It grows in Supabase (Table Editor
+-- or SQL Editor), without redeploying, and an addition applies everywhere right away:
+--   - create_capture refuses to create a city for a site on the list;
+--   - the read functions ignore it, even if published before it entered the list.
+-- A domain covers its subdomains (pornhub.com refuses fr.pornhub.com); an entry
+-- without a dot is an extension (xxx refuses every site in .xxx).
 --
--- Catégories : adult (sites pour adultes), violence (images choquantes), bank (banques
--- et services financiers), private (données personnelles), gambling (jeux d'argent),
--- danger (pistage, logiciels espions, téléchargements piratés). La liste de départ,
--- remplie à la fin, est détaillée dans docs/sites-refuses.md.
+-- Categories: adult (adult sites), violence (shocking images), bank (banks
+-- and financial services), private (personal data), gambling (gambling),
+-- danger (tracking, spyware, pirated downloads). The starting list,
+-- filled in at the end, is detailed in docs/refused-sites.md.
 --
--- Relançable : si un essai s'est arrêté en route, on recolle le fichier entier.
+-- Re-runnable: if an attempt stopped halfway, paste the whole file again.
 -- =============================================================================
 
--- Charge pg_trgm dans la session. Sans cela, son réglage word_similarity_threshold (posé
--- sur search_sites, plus bas) est encore inconnu, et Supabase refuse de l'enregistrer :
--- « permission denied to set parameter » (le rôle postgres n'y est pas superutilisateur).
+-- Loads pg_trgm in the session. Without it, its word_similarity_threshold setting (set
+-- on search_sites, further down) is still unknown, and Supabase refuses to store it:
+-- "permission denied to set parameter" (the postgres role is not a superuser there).
 do $$
 begin
   perform extensions.word_similarity('domcity', 'domcity');
@@ -43,16 +43,16 @@ create table if not exists public.blocked_domains (
 
 create index if not exists blocked_domains_category_idx on public.blocked_domains (category);
 
--- Réservée à l'API et aux fonctions ci-dessous : aucune policy, aucun droit pour les visiteurs.
+-- Reserved for the API and the functions below: no policy, no privileges for visitors.
 alter table public.blocked_domains enable row level security;
 revoke all on public.blocked_domains from anon, authenticated;
 
 
 -- -----------------------------------------------------------------------------
--- Correspondance
+-- Matching
 -- -----------------------------------------------------------------------------
 
--- Le domaine et tous ceux qui le contiennent, du plus précis au plus large.
+-- The domain and all those that contain it, from most precise to broadest.
 create or replace function public.domain_suffixes(p_domain text)
 returns text[]
 language sql
@@ -65,7 +65,7 @@ as $$
          generate_subscripts(l.labels, 1) as i
 $$;
 
--- Lit la liste sans la montrer : les visiteurs n'ont aucun droit sur la table.
+-- Reads the list without showing it: visitors have no privileges on the table.
 create or replace function public.is_blocked_domain(p_domain text)
 returns boolean
 language sql
@@ -80,7 +80,7 @@ as $$
   )
 $$;
 
--- La liste entière, pour le navigateur (quelques milliers de lignes) et pour le serveur au partage.
+-- The whole list, for the browser (a few thousand rows) and for the server when sharing.
 create or replace function public.blocklist()
 returns table (domain text, category text)
 language sql
@@ -102,9 +102,9 @@ grant execute on function
 
 
 -- -----------------------------------------------------------------------------
--- Écriture : pas de ville pour un site refusé
+-- Writes: no city for a refused site
 -- -----------------------------------------------------------------------------
--- Même signature : les droits (service_role seulement) sont gardés.
+-- Same signature: the privileges (service_role only) are kept.
 create or replace function public.create_capture(
   p_domain            text,
   p_path              text,
@@ -150,8 +150,8 @@ $$;
 
 
 -- -----------------------------------------------------------------------------
--- Lectures : un site refusé n'existe pas, même publié avant d'entrer dans la liste
--- (mêmes signatures, mêmes droits ; seule la condition sur le site s'ajoute)
+-- Reads: a refused site does not exist, even if published before it entered the list
+-- (same signatures, same privileges; only the condition on the site is added)
 -- -----------------------------------------------------------------------------
 
 create or replace function public.get_capture(p_slug text)
@@ -448,10 +448,10 @@ $$;
 
 
 -- -----------------------------------------------------------------------------
--- La liste de départ (docs/sites-refuses.md)
+-- The starting list (docs/refused-sites.md)
 -- -----------------------------------------------------------------------------
 
--- Sites pour adultes
+-- Adult sites
 insert into public.blocked_domains (domain, category, note) values
   ('3movs.com', 'adult', 'Vidéos'),
   ('4tube.com', 'adult', 'Vidéos'),
@@ -826,7 +826,7 @@ insert into public.blocked_domains (domain, category, note) values
   ('xxx', 'adult', 'Extensions réservées aux adultes')
 on conflict (domain) do nothing;
 
--- Violence et images choquantes
+-- Violence and shocking images
 insert into public.blocked_domains (domain, category, note) values
   ('bestgore.com', 'violence', 'Images choquantes'),
   ('bestgore.fun', 'violence', 'Images choquantes'),
@@ -850,7 +850,7 @@ insert into public.blocked_domains (domain, category, note) values
   ('watchpeopledie.tv', 'violence', 'Images choquantes')
 on conflict (domain) do nothing;
 
--- Banques et services financiers
+-- Banks and financial services
 insert into public.blocked_domains (domain, category, note) values
   ('allianzbanque.fr', 'bank', 'Banques françaises'),
   ('arkea.com', 'bank', 'Banques françaises'),
@@ -1623,7 +1623,7 @@ insert into public.blocked_domains (domain, category, note) values
   ('vanguard', 'bank', 'Extensions des banques et assurances')
 on conflict (domain) do nothing;
 
--- Données personnelles
+-- Personal data
 insert into public.blocked_domains (domain, category, note) values
   ('app.tuta.com', 'private', 'Messageries'),
   ('e.mail.ru', 'private', 'Messageries'),
@@ -1819,7 +1819,7 @@ insert into public.blocked_domains (domain, category, note) values
   ('zoosk.com', 'private', 'Rencontres')
 on conflict (domain) do nothing;
 
--- Jeux d'argent
+-- Gambling
 insert into public.blocked_domains (domain, category, note) values
   ('barrierebet.fr', 'gambling', 'Paris sportifs et poker en France'),
   ('betclic.fr', 'gambling', 'Paris sportifs et poker en France'),
@@ -1930,7 +1930,7 @@ insert into public.blocked_domains (domain, category, note) values
   ('poker', 'gambling', 'Extensions des jeux d''argent')
 on conflict (domain) do nothing;
 
--- Sites dangereux
+-- Dangerous sites
 insert into public.blocked_domains (domain, category, note) values
   ('02ip.ru', 'danger', 'Pistage d''adresses IP'),
   ('2no.co', 'danger', 'Pistage d''adresses IP'),

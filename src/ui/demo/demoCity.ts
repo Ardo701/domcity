@@ -6,8 +6,8 @@ import { HERO_SAMPLE } from "@/ui/samples";
 import { VIEW, tone, viewPoint, type DemoCamera, type DemoCity, type DemoLot, type DemoSlab, type Look, type PageRect } from "./scene";
 
 /**
- * La page d'exemple de l'accueil (HERO_SAMPLE) telle qu'un navigateur l'afficherait, élément par élément,
- * dans l'ordre de la page (celui des lots de l'urbanisme). Chaque élément devient son vrai bâtiment.
+ * The home page's sample page (HERO_SAMPLE) as a browser would display it, element by element,
+ * in page order (that of the urban plan's lots). Each element becomes its real building.
  */
 const PAGE: Array<{ tag: string; rect: [number, number, number, number]; look?: Look; label?: string }> = [
   { tag: "body", rect: [0, 0, 640, 388] },
@@ -48,7 +48,7 @@ const PAGE: Array<{ tag: string; rect: [number, number, number, number]; look?: 
   { tag: "div", rect: [28, 370, 120, 8], look: { type: "lines", footer: true } },
 ];
 
-/** Le sol propre d'un conteneur (en-tête, liste, parc, port), quand il en a un. */
+/** A container's own ground (header, list, park, harbor), when it has one. */
 const CONTAINER_GROUND: Partial<Record<Lot["kind"], string>> = {
   gate: GROUND_COLORS.plaza,
   boulevard: GROUND_COLORS.sidewalk,
@@ -57,7 +57,7 @@ const CONTAINER_GROUND: Partial<Record<Lot["kind"], string>> = {
   port: GROUND_COLORS.wharf,
 };
 
-/** Des couleurs proches de celles du moteur, assez pour que la maquette se fonde dans son rendu. */
+/** Colors close to the engine's, enough for the model to blend into its rendering. */
 function colorsOf(lot: Lot): { body: string; top: string } {
   const r = (salt: number) => rand(lot.id, salt);
   switch (lot.kind) {
@@ -83,7 +83,7 @@ function colorsOf(lot: Lot): { body: string; top: string } {
   }
 }
 
-/** La caméra d'une image du moteur, retrouvée dans sa matrice (projection orthographique). */
+/** The camera of an engine image, recovered from its matrix (orthographic projection). */
 function figureCamera(): Omit<DemoCamera, "ox" | "oy"> & { origin: [number, number] } {
   const origin = projectOn(HERO_FIGURE, 0, 0, 0);
   const px = projectOn(HERO_FIGURE, 1, 0, 0);
@@ -103,10 +103,10 @@ function figureCamera(): Omit<DemoCamera, "ox" | "oy"> & { origin: [number, numb
 export function demoCity(): DemoCity {
   const city = layoutCity(HERO_SAMPLE);
   if (city.lots.length !== PAGE.length || city.lots.some((lot, i) => lot.node.tag !== PAGE[i].tag)) {
-    throw new Error("La page de la démonstration ne correspond plus à HERO_SAMPLE");
+    throw new Error("The demo page no longer matches HERO_SAMPLE");
   }
 
-  // L'image du moteur, cadrée dans la fenêtre de la page avec une marge.
+  // The engine's image, framed in the page window with a margin.
   const camera = figureCamera();
   const corners = city.lots.flatMap((lot) =>
     [0, 1].flatMap((i) =>
@@ -167,9 +167,9 @@ export function demoCity(): DemoCity {
 
   const isBuilding = (lot: Lot) => !lot.container && !lot.hung;
   const buildings = city.lots.map((lot, i) => ({ lot, demo: lots[i] })).filter(({ lot }) => isBuilding(lot));
-  // Du plus bas au plus haut : le monument sort de terre en dernier.
+  // From lowest to highest: the monument rises from the ground last.
   [...buildings].sort((a, b) => a.lot.h - b.lot.h).forEach(({ demo }, rank) => (demo.rank = rank));
-  // Du fond vers l'avant, vu du sud-ouest : d'abord l'est et le nord.
+  // From back to front, seen from the southwest: the east and the north first.
   buildings.sort((a, b) => b.lot.x + b.lot.w / 2 - (b.lot.z + b.lot.d / 2) - (a.lot.x + a.lot.w / 2 - (a.lot.z + a.lot.d / 2)));
 
   const slab = (rect: { x: number; z: number; w: number; d: number }, y: number, color: string): DemoSlab => ({

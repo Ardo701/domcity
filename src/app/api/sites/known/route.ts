@@ -3,7 +3,7 @@ import { knownSites } from "@/server/store";
 
 const DOMAIN = /^[a-z0-9.-]{3,253}$/;
 
-/** Parmi les sites liés à une page (?d=github.com,doi.org), ceux qui ont des villes sur DOMCity. */
+/** Among the sites a page links to (?d=github.com,doi.org), the ones that have cities on DOMCity. */
 export async function GET(request: Request) {
   const raw = new URL(request.url).searchParams.get("d") ?? "";
   const domains = [...new Set(raw.split(",").map((d) => d.trim().toLowerCase()))].filter((d) => DOMAIN.test(d)).slice(0, 60);

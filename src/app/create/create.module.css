@@ -6,7 +6,7 @@
   font-size: clamp(46px, 5.6vw, 96px);
 }
 
-/* ---------- La zone de dépôt du favori ---------- */
+/* ---------- The bookmarklet drop zone ---------- */
 
 .dropZone {
   display: flex;
@@ -86,7 +86,7 @@
   text-align: center;
 }
 
-/* ---------- Relevé / jamais relevé ---------- */
+/* ---------- Read / never read ---------- */
 
 .ledger {
   display: grid;
@@ -158,7 +158,7 @@
   );
 }
 
-/* Les catégories de sites refusés, sous leur ligne. */
+/* The categories of refused sites, under their line. */
 .ledger .categories {
   margin-top: 8px;
   gap: 4px;
@@ -180,7 +180,7 @@
   background: var(--signal-deep);
 }
 
-/* ---------- Téléphone et limites ---------- */
+/* ---------- Phone and limits ---------- */
 
 .columns {
   display: grid;

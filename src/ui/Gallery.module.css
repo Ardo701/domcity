@@ -39,7 +39,7 @@
   transition: filter 0.25s ease;
 }
 
-/* Pendant le chargement de la page visée : la miniature grisée, et le repère qui se bâtit puis tombe. */
+/* While the target page loads: the grayed thumbnail, and the logo that builds itself then falls. */
 .pending {
   position: absolute;
   inset: 0;
@@ -51,7 +51,7 @@
   transition: opacity 0.15s ease;
 }
 
-/* Un court délai : une navigation instantanée ne fait pas clignoter la carte. */
+/* A short delay: an instant navigation does not make the card flicker. */
 .pending[data-pending] {
   opacity: 1;
   transition-delay: 0.08s;
@@ -99,7 +99,7 @@
   color: var(--ink-3);
 }
 
-/* Une place vide : ce qui n'est pas encore relevé (la page d'accueil d'un site). */
+/* An empty slot: what is not captured yet (a site's home page). */
 .gap {
   border-style: dashed;
   background: transparent;

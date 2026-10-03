@@ -8,7 +8,7 @@ import { BOOKMARKLET_VERSION, MESSAGES, packCity, unpackCity } from "./protocol"
 
 const ORIGIN = "https://domcity.test";
 
-describe("le favori sur une page", () => {
+describe("the bookmarklet on a page", () => {
   interface FakeTab {
     closed: boolean;
     close: () => void;
@@ -54,7 +54,7 @@ describe("le favori sur une page", () => {
   });
 
   const runBookmarklet = () => {
-    // Ce que fait le navigateur au clic : décoder le lien, puis exécuter le code dans la page.
+    // What the browser does on click: decode the link, then run the code in the page.
     new Function(decodeURIComponent(bookmarkletHref(ORIGIN).slice("javascript:".length)))();
   };
 
@@ -68,7 +68,7 @@ describe("le favori sur une page", () => {
     return result.doc;
   };
 
-  it("ouvre DOMCity, puis n'envoie la ville qu'à DOMCity quand l'onglet est prêt", () => {
+  it("opens DOMCity, then sends the city only to DOMCity once the tab is ready", () => {
     runBookmarklet();
     expect(window.open).toHaveBeenCalledWith(`${ORIGIN}/nouveau`, "_blank");
 
@@ -78,11 +78,11 @@ describe("le favori sur une page", () => {
     send({ type: MESSAGES.ready });
     const city = receivedCity();
     expect(city).toMatchObject({ source: "bookmarklet", title: "Les livres", lang: "fr" });
-    // La page de test est http://localhost:3000/ : adresse nettoyée (https, sans port).
+    // The test page is http://localhost:3000/: cleaned address (https, no port).
     expect(city.url).toBe("https://localhost/");
   });
 
-  it("relève ce qui est affiché : composants web, couleurs, scripts tiers", () => {
+  it("captures what is displayed: web components, colors, third-party scripts", () => {
     runBookmarklet();
     send({ type: MESSAGES.ready });
     const city = receivedCity();
@@ -102,7 +102,7 @@ describe("le favori sur une page", () => {
     expect(city.page).toMatchObject({ scripts: 1, comments: 1, thirdParty: ["www.googletagmanager.com"] });
   });
 
-  it("se tait une fois la ville reçue", () => {
+  it("goes quiet once the city is received", () => {
     runBookmarklet();
     send({ type: MESSAGES.ready });
     send({ type: MESSAGES.received });
@@ -112,7 +112,7 @@ describe("le favori sur une page", () => {
   });
 });
 
-describe("plan B : la ville dans l'ancre de l'adresse", () => {
+describe("plan B: the city in the address fragment", () => {
   const city: CityDoc = {
     format: 1,
     source: "bookmarklet",
@@ -122,13 +122,13 @@ describe("plan B : la ville dans l'ancre de l'adresse", () => {
     root: { tag: "body", children: [{ tag: "h1", text: 10, heading: "Les livres" }] },
   };
 
-  it("fait l'aller-retour sans perte, en caractères sûrs pour une adresse", async () => {
+  it("round-trips without loss, in characters safe for an address", async () => {
     const packed = await packCity(city);
     expect(packed).toMatch(new RegExp(`^${BOOKMARKLET_VERSION}\\.[A-Za-z0-9_-]+$`));
     expect(await unpackCity(packed)).toEqual({ version: BOOKMARKLET_VERSION, data: city });
   });
 
-  it("refuse une ancre illisible", async () => {
+  it("refuses an unreadable fragment", async () => {
     await expect(unpackCity("1.pas du base64")).rejects.toThrow();
     await expect(unpackCity("rien")).rejects.toThrow();
   });

@@ -6,7 +6,7 @@ import { clientActor, jsonError, sameOrigin } from "@/server/security";
 import { captureWikipediaOnServer, readThumbnail, readUploadedCity, shareCity, ShareError } from "@/server/share";
 import { hitRateLimit } from "@/server/store";
 
-/** Partager une ville. Corps multipart : source, (lang + title) ou city (gzip), thumbnail (jpeg). */
+/** Shares a city. Multipart body: source, (lang + title) or city (gzip), thumbnail (jpeg). */
 export async function POST(request: Request) {
   if (!sharingEnabled()) return jsonError(503, "Le partage n'est pas encore configuré.");
   if (!sameOrigin(request)) return jsonError(403, "Requête refusée.");

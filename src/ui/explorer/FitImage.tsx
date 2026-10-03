@@ -1,18 +1,18 @@
 import { useState } from "react";
 
-/** Grossie plus de quatre fois, une image floute : on garde alors ses pixels nets. */
+/** Enlarged more than four times, an image blurs: we then keep its pixels sharp. */
 const SHARP_ZOOM = 4;
 
 export interface Zoom {
   width: number;
   height: number;
-  /** Pixels nets plutôt que lissés. */
+  /** Sharp pixels rather than smoothed ones. */
   sharp: boolean;
 }
 
 /**
- * Agrandit une image trop petite pour être lue, d'un nombre entier de fois pour que
- * tous ses pixels gardent la même taille. Rien si elle est déjà assez grande.
+ * Enlarges an image too small to be read, by a whole number of times so that
+ * all its pixels keep the same size. Nothing if it is already large enough.
  */
 export function zoomFor(width: number, height: number, minSide: number): Zoom | null {
   const side = Math.max(width, height);
@@ -23,8 +23,8 @@ export function zoomFor(width: number, height: number, minSide: number): Zoom | 
 }
 
 /**
- * Une image d'un site, agrandie si elle est petite (icône, drapeau, pictogramme) :
- * son plus grand côté atteint au moins `minSide` pixels.
+ * An image from a site, enlarged if it is small (icon, flag, pictogram):
+ * its longest side reaches at least `minSide` pixels.
  */
 export function FitImage({
   src,
@@ -37,7 +37,7 @@ export function FitImage({
   minSide: number;
   lazy?: boolean;
 }) {
-  // Taille réelle, connue une fois l'image chargée. Liée à son adresse : une autre image repart de zéro.
+  // Real size, known once the image has loaded. Tied to its address: another image starts from zero.
   const [natural, setNatural] = useState<{ src: string; width: number; height: number } | null>(null);
   const zoom = natural?.src === src ? zoomFor(natural.width, natural.height, minSide) : null;
 

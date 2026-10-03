@@ -1,21 +1,21 @@
 /**
- * L'éditeur du site, pour les mentions légales et la page de confidentialité.
- * À compléter avant la mise en ligne : un champ vide s'affiche « à compléter » sur ces pages.
- * Particulier non professionnel : la loi (LCEN, art. 6) permet de ne publier que l'hébergeur,
- * à condition de lui avoir donné son identité ; laisser alors `address` vide et le dire dans `status`.
+ * The site's publisher, for the legal notice and the privacy page.
+ * To fill in before launch: an empty field shows "à compléter" on these pages.
+ * Private individual, non-professional: the law (LCEN, art. 6) allows publishing only the host,
+ * provided they were given your identity; then leave `address` empty and say so in `status`.
  */
 export const PUBLISHER = {
-  /** Nom et prénom, ou raison sociale. */
+  /** Last and first name, or company name. */
   name: "",
-  /** Particulier, auto-entrepreneur (avec SIRET), société (forme, capital, RCS)… */
+  /** Private individual, sole trader (with SIRET), company (legal form, capital, RCS)... */
   status: "",
-  /** Adresse postale. */
+  /** Postal address. */
   address: "",
-  /** Adresse de contact (questions, retraits, données personnelles). */
+  /** Contact address (questions, takedowns, personal data). */
   email: "",
-  /** Directeur ou directrice de la publication (souvent l'éditeur lui-même). */
+  /** Publication director (often the publisher themselves). */
   director: "",
 };
 
-/** Date de la dernière mise à jour des pages légales. */
+/** Date of the last update of the legal pages. */
 export const LEGAL_UPDATED = "3 octobre 2026";

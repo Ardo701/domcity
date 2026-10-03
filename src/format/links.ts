@@ -1,26 +1,26 @@
 /**
- * Les liens d'une page vers les autres pages de son site, pour tracer les autoroutes de la mégalopole.
+ * A page's links to the other pages of its site, to draw the megalopolis highways.
  *
- * On ne garde pas leurs adresses, seulement une empreinte de chacune : la mégalopole calcule
- * l'empreinte de ses propres pages et regarde lesquelles sont visées. Une adresse privée
- * (un dépôt, un dossier client) ne se lit pas dans la ville partagée.
- * Sans dépendance : ce fichier est compilé dans le favori.
+ * Their addresses are not kept, only a fingerprint of each: the megalopolis computes
+ * the fingerprint of its own pages and looks at which ones are targeted. A private address
+ * (a repository, a client folder) cannot be read in the shared city.
+ * No dependencies: this file is compiled into the bookmarklet.
  */
 
-/** Chemin tel que DOMCity range ses pages : sans / doublé ni / final, les caractères décodés. */
+/** Path as DOMCity stores its pages: no doubled or trailing /, characters decoded. */
 export function linkPath(pathname: string): string {
   let path = pathname.replace(/\/{2,}/g, "/");
   if (path.length > 1) path = path.replace(/\/+$/, "");
   if (path === "") path = "/";
   try {
-    // « Champs-%C3%89lys%C3%A9es » et « Champs-Élysées » désignent la même page.
+    // "Champs-%C3%89lys%C3%A9es" and "Champs-Élysées" designate the same page.
     return decodeURI(path);
   } catch {
     return path;
   }
 }
 
-/** Empreinte d'un chemin (FNV-1a, 32 bits) : huit chiffres hexadécimaux. */
+/** Fingerprint of a path (FNV-1a, 32 bits): eight hexadecimal digits. */
 export function linkKey(path: string): string {
   const value = linkPath(path);
   let hash = 0x811c9dc5;

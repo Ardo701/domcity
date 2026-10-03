@@ -3,7 +3,7 @@ import { LEGAL_UPDATED } from "./publisher";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 
-/** Une page légale (mentions, conditions, confidentialité) : en-tête du site, texte, pied de page. */
+/** A legal page (notice, terms, privacy): site header, text, footer. */
 export function LegalPage({ title, lead, children }: { title: string; lead?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className={`${styles.sheet} graph-paper`}>
@@ -21,7 +21,7 @@ export function LegalPage({ title, lead, children }: { title: string; lead?: Rea
   );
 }
 
-/** Une information de l'éditeur, ou un repère bien visible tant qu'elle n'est pas renseignée. */
+/** A piece of publisher information, or a highly visible marker as long as it is not filled in. */
 export function Fill({ value, missing }: { value: string; missing: string }) {
   return value ? <>{value}</> : <mark className={styles.todo}>À compléter : {missing}</mark>;
 }

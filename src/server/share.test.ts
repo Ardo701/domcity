@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CityDoc } from "@/format/types";
 
-// Base locale (PGlite + vraies migrations) dans un dossier jetable.
+// Local database (PGlite + real migrations) in a throwaway folder.
 const dataDir = mkdtempSync(join(tmpdir(), "domcity-test-"));
 process.env.DOMCITY_DATA_DIR = dataDir;
 for (const key of ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "R2_BUCKET"]) delete process.env[key];
@@ -30,7 +30,7 @@ const DOC: CityDoc = {
   },
 };
 
-/** Un en-tête de JPEG (JFIF puis SOF0) qui annonce cette taille. */
+/** A JPEG header (JFIF then SOF0) that announces this size. */
 const jpeg = (width: number, height: number) =>
   new Uint8Array([
     ...[0xff, 0xd8],
@@ -42,29 +42,29 @@ const JPEG = jpeg(1200, 630);
 
 afterAll(() => rmSync(dataDir, { recursive: true, force: true }));
 
-describe("fichiers envoyés", () => {
-  it("accepte une ville valide compressée", () => {
+describe("uploaded files", () => {
+  it("accepts a valid compressed city", () => {
     const doc = readUploadedCity(new Uint8Array(gzipSync(JSON.stringify(DOC))));
     expect(doc.title).toBe("Les livres");
   });
 
-  it("refuse une bombe gzip", () => {
+  it("refuses a gzip bomb", () => {
     const bomb = new Uint8Array(gzipSync(Buffer.alloc(64 * 1024 * 1024, 32)));
     expect(() => readUploadedCity(bomb)).toThrow(ShareError);
   });
 
-  it("refuse une ville mal formée", () => {
+  it("refuses a malformed city", () => {
     const bad = { ...DOC, root: { tag: "BODY<script>" } };
     expect(() => readUploadedCity(new Uint8Array(gzipSync(JSON.stringify(bad))))).toThrow(/Ville invalide/);
   });
 
-  it("refuse de publier une page locale ou d'intranet", async () => {
+  it("refuses to publish a local or intranet page", async () => {
     for (const url of ["http://localhost:3000/admin", "http://192.168.1.20/", "https://nas.local/photos"]) {
       await expect(shareCity({ ...DOC, url }, null)).rejects.toThrow(/locales/);
     }
   });
 
-  it("refuse de publier un site refusé (la liste de la base), ou une page qui se déclare réservée aux adultes", async () => {
+  it("refuses to publish a refused site (the database list), or a page that declares itself adults only", async () => {
     const cases: Array<[string, RegExp]> = [
       ["https://fr.pornhub.com/", /sites pour adultes/],
       ["https://www.exemple.xxx/page", /sites pour adultes/],
@@ -77,16 +77,16 @@ describe("fichiers envoyés", () => {
     await expect(shareCity({ ...DOC, page: { adult: true } }, null)).rejects.toThrow(/réservée aux adultes/);
   });
 
-  it("n'accepte que des miniatures JPEG", () => {
+  it("only accepts JPEG thumbnails", () => {
     expect(readThumbnail(JPEG)).toBe(JPEG);
     expect(() => readThumbnail(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toThrow(/JPEG/);
-    // Une autre image que celle du moteur (une capture d'écran, une photo) n'a pas son format.
+    // An image other than the engine's (a screenshot, a photo) does not have its format.
     expect(() => readThumbnail(jpeg(800, 600))).toThrow(/1200 × 630/);
     expect(() => readThumbnail(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))).toThrow(/1200 × 630/);
   });
 });
 
-describe("partage de bout en bout (base locale)", () => {
+describe("sharing from start to finish (local database)", () => {
   let slug = "";
   let token = "";
   let pageUrl = "";
@@ -95,28 +95,28 @@ describe("partage de bout en bout (base locale)", () => {
     ({ slug, token, pageUrl } = await shareCity(DOC, JPEG));
   }, 60_000);
 
-  it("publie la ville avec une adresse nettoyée", async () => {
+  it("publishes the city with a cleaned address", async () => {
     const city = await store.getCapture(slug);
     expect(city).toMatchObject({ domain: "exemple.org", path: "/livres", title: "Les livres", source: "bookmarklet" });
-    // L'adresse que le navigateur garde dans « Votre compte » : la même, nettoyée.
+    // The address the browser keeps in "Votre compte": the same, cleaned.
     expect(pageUrl).toBe("https://exemple.org/livres");
     expect(city?.stats.thumbnail).toBe(true);
     expect(city?.stats.monuments).toBe(1);
   });
 
-  it("stocke le fichier compressé, relisible", async () => {
+  it("stores the compressed file, readable again", async () => {
     const file = await readLocalFile(cityKey(slug));
     expect(file).not.toBeNull();
     const doc = readUploadedCity(file!);
     expect(doc.url).toBe("https://exemple.org/livres");
   });
 
-  it("la retrouve par la recherche, même avec une faute", async () => {
+  it("finds it through search, even with a typo", async () => {
     const hits = await store.searchSites("exmple");
     expect(hits.some((h) => h.domain === "exemple.org")).toBe(true);
   });
 
-  it("refuse un mauvais jeton, accepte le bon, puis efface tout", async () => {
+  it("refuses a wrong token, accepts the right one, then erases everything", async () => {
     expect(await deleteSharedCity(slug, "mauvais-jeton-de-test-123")).toBe(false);
     expect(await deleteSharedCity(slug, token)).toBe(true);
     expect(await store.getCapture(slug)).toBeNull();
@@ -124,23 +124,23 @@ describe("partage de bout en bout (base locale)", () => {
   });
 });
 
-describe("les sites au premier plan (base locale)", () => {
+describe("sites first (local database)", () => {
   const page = (url: string, title: string): CityDoc => ({ ...DOC, url, title });
   let reinette = "";
   let accueil = "";
 
   beforeAll(async () => {
-    // Une page du site d'abord, sans miniature ; l'accueil ensuite.
+    // A page of the site first, without a thumbnail; the home page next.
     ({ slug: reinette } = await shareCity(page("https://vergers.fr/pommes/reinette", "La reinette"), null));
   }, 60_000);
 
-  it("un site existe dès qu'une de ses pages est partagée, même sans son accueil", async () => {
+  it("a site exists as soon as one of its pages is shared, even without its home page", async () => {
     expect(await store.getSite("vergers.fr")).toMatchObject({ domain: "vergers.fr", pagesCount: 1 });
     const pages = await store.sitePageList("vergers.fr", 60, 0);
     expect(pages).toMatchObject([{ path: "/pommes/reinette", title: "La reinette", slug: reinette, capturesCount: 1 }]);
   });
 
-  it("la galerie montre le site une fois, avec la miniature de son accueil", async () => {
+  it("the gallery shows the site once, with the thumbnail of its home page", async () => {
     ({ slug: accueil } = await shareCity(page("https://vergers.fr/", "Les vergers"), JPEG));
     await shareCity(page("https://vergers.fr/pommes/reinette", "La reinette"), null);
     const sites = (await store.recentSites(60)).filter((site) => site.domain === "vergers.fr");
@@ -149,15 +149,15 @@ describe("les sites au premier plan (base locale)", () => {
     ]);
   });
 
-  it("liste les pages d'un site dans l'ordre des adresses, par morceaux", async () => {
+  it("lists a site's pages in address order, in chunks", async () => {
     const all = await store.sitePageList("vergers.fr", 60, 0);
     expect(all.map((p) => p.path)).toEqual(["/", "/pommes/reinette"]);
     expect(all[1].capturesCount).toBe(2);
-    expect(all[1].slug).not.toBe(reinette); // la dernière version
+    expect(all[1].slug).not.toBe(reinette); // the latest version
     expect((await store.sitePageList("vergers.fr", 1, 1)).map((p) => p.path)).toEqual(["/pommes/reinette"]);
   });
 
-  it("la recherche rend un résultat par site, les pages qui répondent rangées dessous", async () => {
+  it("search returns one result per site, with the matching pages listed underneath", async () => {
     const byTitle = await store.searchSites("reinete");
     const hit = byTitle.find((h) => h.domain === "vergers.fr");
     expect(hit).toMatchObject({ pagesCount: 2, pagesMatched: 1, pages: [{ path: "/pommes/reinette", title: "La reinette" }] });
@@ -169,15 +169,15 @@ describe("les sites au premier plan (base locale)", () => {
   });
 });
 
-describe("les sites refusés (base locale)", () => {
-  /** La base locale ouverte par le serveur : on y tient la liste comme on le ferait dans Supabase. */
+describe("refused sites (local database)", () => {
+  /** The local database opened by the server: the list is maintained there as it would be in Supabase. */
   const sql = async (text: string, params: unknown[] = []) => {
     const pools = (globalThis as unknown as { __domcityPg?: Map<string, Promise<{ query(sql: string, params?: unknown[]): Promise<unknown> }>> })
       .__domcityPg;
     await (await pools!.get(dataDir)!).query(text, params);
   };
 
-  it("retire de la ville stockée les images et les départs des sites refusés", async () => {
+  it("removes images and departures from refused sites from the stored city", async () => {
     const doc: CityDoc = {
       ...DOC,
       url: "https://forum-essai.fr/fil",
@@ -200,7 +200,7 @@ describe("les sites refusés (base locale)", () => {
     await deleteSharedCity(slug, token);
   });
 
-  it("la base refuse elle-même de créer la ville d'un site de la liste", async () => {
+  it("the database itself refuses to create the city of a site on the list", async () => {
     await expect(
       store.createCapture({
         domain: "fr.pornhub.com",
@@ -214,7 +214,7 @@ describe("les sites refusés (base locale)", () => {
     ).rejects.toThrow(/blocked_domain/);
   });
 
-  it("un site ajouté à la liste après sa publication n'apparaît plus nulle part, puis revient s'il en sort", async () => {
+  it("a site added to the list after publishing no longer appears anywhere, then comes back if it leaves the list", async () => {
     const { slug } = await shareCity({ ...DOC, url: "https://plus-tard.fr/", title: "Plus tard" }, null);
     expect(await store.getCapture(slug)).not.toBeNull();
 

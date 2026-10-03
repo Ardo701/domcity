@@ -1,12 +1,12 @@
 import "server-only";
 
 /**
- * Où vivent les villes partagées.
+ * Where shared cities live.
  *
- * - cloud : Supabase (base) + Cloudflare R2 (fichiers). Toutes les variables doivent être là.
- * - local : en développement, une base Postgres embarquée (PGlite) et des fichiers dans .data/.
- *           Les mêmes migrations SQL tournent dessus : on teste le vrai schéma, sans compte.
- * - off   : en production sans configuration, le partage est simplement masqué.
+ * - cloud: Supabase (database) + Cloudflare R2 (files). All variables must be set.
+ * - local: in development, an embedded Postgres database (PGlite) and files in .data/.
+ *          The same SQL migrations run on it: the real schema is tested, without an account.
+ * - off:   in production without configuration, sharing is simply hidden.
  */
 
 export interface CloudConfig {
@@ -64,7 +64,7 @@ export function storeConfig(): StoreConfig {
     };
   }
 
-  // Remplacé à la compilation : en production, la branche locale (et PGlite) disparaît du paquet.
+  // Replaced at build time: in production, the local branch (and PGlite) disappears from the bundle.
   if (process.env.NODE_ENV !== "production") {
     return { mode: "local", dataDir: env("DOMCITY_DATA_DIR") ?? ".data" };
   }
@@ -75,7 +75,7 @@ export function sharingEnabled(): boolean {
   return storeConfig().mode !== "off";
 }
 
-/** Adresse publique du site (liens de partage, aperçus sur les réseaux). */
+/** Public address of the site (share links, social previews). */
 export function siteUrl(request?: Request): string {
   const configured = env("SITE_URL");
   if (configured) return configured.replace(/\/+$/, "");
@@ -83,7 +83,7 @@ export function siteUrl(request?: Request): string {
   return "http://localhost:3000";
 }
 
-/** Sel des empreintes d'IP (limite d'envois, signalements). */
+/** Salt for IP fingerprints (upload limit, reports). */
 export function secretSalt(): string {
   return env("DOMCITY_SECRET") ?? "domcity-dev-salt";
 }

@@ -1,10 +1,10 @@
-/** Ce que le site sait d'une ville partagée (hors le fichier de la ville lui-même). */
+/** What the site knows about a shared city (apart from the city file itself). */
 
 import type { CaptureSource } from "./types";
 
 /**
- * La miniature d'une ville partagée : toujours la maquette entière, rendue par le moteur au
- * moment du partage (`thumbnail` dans src/city/view.ts), au format des aperçus sur les réseaux.
+ * The thumbnail of a shared city: always the whole model, rendered by the engine at
+ * sharing time (`thumbnail` in src/city/view.ts), in the format of social previews.
  */
 export const THUMBNAIL = { width: 1200, height: 630 } as const;
 
@@ -19,7 +19,7 @@ export interface CityStatsSummary {
   maxAltitude: number;
   maxDepth: number;
   elements: number;
-  /** Une miniature a été envoyée avec la ville. */
+  /** A thumbnail was sent with the city. */
   thumbnail?: boolean;
 }
 
@@ -61,12 +61,12 @@ export interface SitePage {
   latestSlug: string | null;
 }
 
-/** Un site dans la galerie, représenté par la miniature d'une de ses pages (son accueil d'abord). */
+/** A site in the gallery, represented by the thumbnail of one of its pages (its home page first). */
 export interface SiteCard extends SiteSummary {
   cover: { slug: string; thumbnail: boolean };
 }
 
-/** Une page sur la page de son site : sa dernière version visible. */
+/** A page on its site's page: its latest visible version. */
 export interface SitePageCard {
   path: string;
   title: string | null;
@@ -76,34 +76,34 @@ export interface SitePageCard {
   stats: Partial<CityStatsSummary>;
 }
 
-/** Une page du site dans la mégalopole : sa dernière version visible. */
+/** A page of the site in the megalopolis: its latest visible version. */
 export interface MegaPageInfo {
   path: string;
   title: string;
   slug: string;
   capturedAt: string;
   source: CaptureSource;
-  /** Éléments de sa ville : on n'affiche d'emblée que ce que la vue tient sans peine. */
+  /** Elements of its city: only what the view handles easily is shown right away. */
   elements: number;
   versions: number;
-  /** Fichier de la ville (JSON compressé). */
+  /** City file (compressed JSON). */
   fileUrl: string;
 }
 
-/** Un site lié qui a des villes sur DOMCity. */
+/** A linked site that has cities on DOMCity. */
 export interface KnownSite {
   domain: string;
   pages: number;
 }
 
-/** Un site trouvé par la recherche, par son domaine ou par le titre de ses pages. */
+/** A site found by the search, by its domain or by the title of its pages. */
 export interface SearchHit {
   domain: string;
   pagesCount: number;
   lastCaptureAt: string | null;
-  /** Les pages dont le titre répond le mieux (3 au plus) : elles mènent droit à leur ville. */
+  /** The pages whose title matches best (3 at most): they lead straight to their city. */
   pages: Array<{ path: string; title: string | null; slug: string }>;
-  /** Toutes les pages du site qui répondent. */
+  /** All the pages of the site that match. */
   pagesMatched: number;
 }
 
@@ -117,10 +117,10 @@ export const REPORT_REASONS = {
 export type ReportReason = keyof typeof REPORT_REASONS;
 
 export const sharedCityPath = (slug: string) => `/city/${slug}`;
-/** Les fichiers d'une ville dans le stockage (R2, ou le dossier local) : la ville et sa miniature. */
+/** The files of a city in storage (R2, or the local folder): the city and its thumbnail. */
 export const cityKey = (slug: string) => `city/${slug}.json.gz`;
 export const thumbKey = (slug: string) => `city/${slug}.jpg`;
-/** Le lien secret : le jeton reste après le #, jamais envoyé au serveur dans l'adresse. */
+/** The secret link: the token stays after the #, never sent to the server in the address. */
 export const deleteCityPath = (slug: string, token: string) => `${sharedCityPath(slug)}/delete#${token}`;
 export const sitePath = (domain: string) => `/site/${encodeURIComponent(domain)}`;
 export const megalopolisPath = (domain: string) => `${sitePath(domain)}/megalopolis`;

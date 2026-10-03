@@ -6,7 +6,7 @@ import { siteCity, sitePages } from "@/server/store";
 import { MegalopolisExplorer } from "@/ui/megalopolis/MegalopolisExplorer";
 import { loadSite, readDomain } from "../load";
 
-/** Au-delà, la mégalopole prend les pages relevées le plus récemment. */
+/** Beyond this, the megalopolis takes the most recently captured pages. */
 const MAX_PAGES = 48;
 
 export async function generateMetadata(props: PageProps<"/site/[domain]/megalopolis">): Promise<Metadata> {
@@ -19,7 +19,7 @@ export async function generateMetadata(props: PageProps<"/site/[domain]/megalopo
   };
 }
 
-/** Toutes les pages d'un site, chacune sa ville, assemblées en une mégalopole. */
+/** All the pages of a site, each its own city, assembled into a megalopolis. */
 export default async function MegalopolisPage(props: PageProps<"/site/[domain]/megalopolis">) {
   const domain = readDomain((await props.params).domain);
   const site = await loadSite(domain);

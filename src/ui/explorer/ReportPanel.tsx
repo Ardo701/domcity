@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { REPORT_REASONS, type ReportReason } from "@/format/shared";
 import styles from "./explorer.module.css";
 
-/** Signaler une ville. Trois signalements de personnes différentes la masquent. */
+/** Reports a city. Three reports from different people hide it. */
 export function ReportPanel({ slug, onClose }: { slug: string; onClose: () => void }) {
   const [reason, setReason] = useState<ReportReason>("offensive");
   const [details, setDetails] = useState("");

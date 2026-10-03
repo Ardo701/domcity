@@ -1,36 +1,36 @@
 -- =============================================================================
--- DOMCity : les sites au premier plan
+-- DOMCity: sites first
 --
--- La recherche et la galerie montrent des sites (amazon.com, fr.wikipedia.org),
--- plus des villes une par une ; la page d'un site liste ses pages.
+-- Search and the gallery show sites (amazon.com, fr.wikipedia.org),
+-- no longer cities one by one; a site's page lists its pages.
 --
---   search_sites    la recherche, un résultat par site ; les pages dont le titre
---                   répond sont rangées sous leur site, avec leur dernière version
---   recent_sites    les sites mis à jour le plus récemment, avec leur miniature
---   site_page_list  les pages d'un site, par morceaux, avec leur dernière version
+--   search_sites    the search, one result per site; the pages whose title
+--                   matches are listed under their site, with their latest version
+--   recent_sites    the most recently updated sites, with their thumbnail
+--   site_page_list  a site's pages, in chunks, with their latest version
 --
--- Remplacent search_cities et recent_captures, retirées.
--- Publiques (lecture seule), comme site_city.
+-- They replace search_cities and recent_captures, which are removed.
+-- Public (read only), like site_city.
 -- =============================================================================
 
 drop function public.search_cities(text, integer);
 drop function public.recent_captures(integer);
 
--- Recherche par domaine (« amzon ») ou par titre de page (« croissant »), tolérante aux fautes.
--- Un site répond par son domaine ou par une de ses pages ; il prend la meilleure note des deux.
+-- Search by domain ("amzon") or by page title ("croissant"), typo-tolerant.
+-- A site matches by its domain or by one of its pages; it takes the best score of the two.
 create function public.search_sites(p_query text, p_limit integer default 12)
 returns table (
   domain          text,
   pages_count     integer,
   last_capture_at timestamptz,
   score           real,
-  pages           jsonb,    -- [{ path, title, slug }] : les 3 pages qui répondent le mieux
-  pages_matched   integer   -- toutes les pages du site qui répondent
+  pages           jsonb,    -- [{ path, title, slug }]: the 3 best-matching pages
+  pages_matched   integer   -- all the pages of the site that match
 )
 language sql
 stable
 set search_path = ''
--- 0.6 par défaut : trop strict pour « amzon » (score 0.44 avec amazon.com)
+-- 0.6 by default: too strict for "amzon" (score 0.44 against amazon.com)
 set pg_trgm.word_similarity_threshold = 0.4
 as $$
   with q as (
@@ -93,9 +93,9 @@ as $$
    limit least(greatest(p_limit, 1), 50)
 $$;
 
--- La galerie : les sites mis à jour le plus récemment.
--- Leur miniature est celle de leur page d'accueil quand elle est relevée,
--- sinon celle de leur page relevée le plus récemment (une version qui en a une, si possible).
+-- The gallery: the most recently updated sites.
+-- Their thumbnail is that of their home page when it is captured,
+-- otherwise that of their most recently captured page (a version that has one, if possible).
 create function public.recent_sites(p_limit integer default 24, p_offset integer default 0)
 returns table (
   domain          text,
@@ -130,8 +130,8 @@ as $$
   offset greatest(p_offset, 0)
 $$;
 
--- Les pages d'un site, dans l'ordre des adresses, avec leur dernière version visible.
--- Par morceaux : un site comme fr.wikipedia.org peut en avoir des milliers.
+-- A site's pages, in address order, with their latest visible version.
+-- In chunks: a site like fr.wikipedia.org can have thousands.
 create function public.site_page_list(p_domain text, p_limit integer default 60, p_offset integer default 0)
 returns table (
   path            text,

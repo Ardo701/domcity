@@ -1,14 +1,14 @@
 /**
- * Textures dessinées ou chargées : affiches des panneaux, panneau « indisponible »,
- * plaques des monuments, atlas des icônes.
+ * Drawn or loaded textures: billboard posters, "unavailable" billboard,
+ * monument plaques, icon atlas.
  */
 
 import * as THREE from "three";
 
-/** « refused » : l'image vient d'un site refusé par DOMCity, elle n'est jamais chargée. */
+/** "refused": the image comes from a site refused by DOMCity, it is never loaded. */
 export type ImageStatus = "loading" | "shown" | "blocked" | "missing" | "refused";
 
-/** Polices du site, lues dans les variables CSS posées par next/font. */
+/** The site's fonts, read from the CSS variables set by next/font. */
 export function fontFamily(variable: "--font-display" | "--font-mono", fallback: string): string {
   if (typeof document === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
@@ -52,13 +52,13 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
   return lines;
 }
 
-/** Teintes calmes des affiches de remplacement : une façade couverte ne doit pas être uniforme. */
+/** Calm tints for placeholder posters: a covered facade must not be uniform. */
 const PLACARDS = ["#E6DFCF", "#DCE2DA", "#E4D8D0", "#D9DEE4", "#E8E1CC", "#DED6E0"];
 
 /**
- * Affiche de remplacement, quand le site de l'image ne la prête pas (ou qu'elle a disparu) :
- * sobre, comme une affiche imprimée. Le texte alternatif de l'image en gros, une mention
- * discrète en bas. Un clic montre toujours la vraie image.
+ * Placeholder poster, when the image's site does not lend it (or it has disappeared):
+ * plain, like a printed poster. The image's alt text in large type, a discreet
+ * note at the bottom. A click always shows the real image.
  */
 export function unavailableTexture(ratio: number, status: ImageStatus, alt?: string): THREE.CanvasTexture {
   const width = 512;
@@ -68,7 +68,7 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  // Le texte alternatif d'une image refusée n'est pas montré : il peut être aussi cru qu'elle.
+  // The alt text of a refused image is not shown: it can be as crude as the image.
   const text = status === "refused" ? "Image masquée" : alt?.trim() || "Image sans légende";
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
@@ -84,7 +84,7 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
     status === "missing" ? "IMAGE INTROUVABLE" : status === "refused" ? "SITE REFUSÉ PAR DOMCITY" : "IMAGE NON AFFICHÉE · CLIC POUR LA VOIR";
   const box = { x: 34, y: 34, w: width - 68, h: height - 104 };
 
-  // Le texte alternatif, aussi gros que la place le permet.
+  // The alt text, as large as the space allows.
   ctx.fillStyle = "#15151A";
   ctx.textBaseline = "top";
   let size = 64;
@@ -106,7 +106,7 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
 const loader = new THREE.TextureLoader();
 loader.setCrossOrigin("anonymous");
 
-/** Charge une image comme texture (il faut que son site l'autorise). */
+/** Loads an image as a texture (its site must allow it). */
 export function loadImageTexture(src: string): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
     loader.load(
@@ -123,9 +123,9 @@ export function loadImageTexture(src: string): Promise<THREE.Texture> {
 }
 
 /**
- * La texture a échoué : l'image existe-t-elle ? Un simple affichage (sans
- * lecture des pixels) est toujours permis. S'il réussit, l'image est bloquée ;
- * sinon, elle a disparu.
+ * The texture failed: does the image exist? A simple display (without
+ * reading the pixels) is always allowed. If it succeeds, the image is blocked;
+ * otherwise, it has disappeared.
  */
 export function probeImage(src: string): Promise<"blocked" | "missing"> {
   return new Promise((resolve) => {
@@ -137,7 +137,7 @@ export function probeImage(src: string): Promise<"blocked" | "missing"> {
   });
 }
 
-/** File d'attente : quelques chargements à la fois, pour ne pas saturer le réseau. */
+/** Queue: a few loads at a time, so as not to saturate the network. */
 export function createQueue(concurrency: number) {
   let active = 0;
   const waiting: Array<() => void> = [];
@@ -165,7 +165,7 @@ export function createQueue(concurrency: number) {
 
 export type PlaqueLevel = 1 | 2 | 3;
 
-/** Plaque d'un monument : papier, filet d'encre, repère orange, titre en capitales. */
+/** A monument's plaque: paper, ink rule, orange marker, title in capitals. */
 export function plaqueTexture(text: string, level: PlaqueLevel): { texture: THREE.CanvasTexture; ratio: number } {
   const display = fontFamily("--font-display", "sans-serif");
   const mono = fontFamily("--font-mono", "monospace");
@@ -208,21 +208,21 @@ export function plaqueTexture(text: string, level: PlaqueLevel): { texture: THRE
   return { texture: canvasTexture(canvas), ratio: width / height };
 }
 
-/** Une case de l'atlas, en pixels, dont une marge pour que les cases voisines ne bavent pas de loin. */
+/** An atlas cell, in pixels, including a margin so that neighboring cells do not bleed from afar. */
 const CELL = 64;
 const GUTTER = 4;
-/** Au-delà, les icônes restantes gardent une plaque vierge (2 048 px de côté au plus). */
+/** Beyond this, the remaining icons keep a blank plate (2,048 px per side at most). */
 const MAX_CELLS = 1024;
 const PLATE = "#F4F1EA";
 
 /**
- * Atlas des icônes : toutes les petites images de la ville (panonceaux, drapeaux) dans une
- * seule texture, une case par adresse. Un seul appel de dessin pour toutes, au lieu d'un par icône.
- * La case 0 reste vierge : la plaque d'une icône sans adresse.
+ * Icon atlas: all the small images of the city (small signs, flags) in a
+ * single texture, one cell per address. A single draw call for all of them, instead of one per icon.
+ * Cell 0 stays blank: the plate of an icon without an address.
  */
 export class IconAtlas {
   readonly texture: THREE.CanvasTexture;
-  /** Adresse de chaque case à partir de la case 1. */
+  /** Address of each cell from cell 1 on. */
   readonly sources: string[];
   private readonly ctx: CanvasRenderingContext2D;
   private readonly columns: number;
@@ -242,23 +242,23 @@ export class IconAtlas {
     this.texture = canvasTexture(canvas);
   }
 
-  /** Numéro de case d'une adresse (0 : plaque vierge). */
+  /** Cell number of an address (0: blank plate). */
   index(src: string | undefined): number {
     if (!src) return 0;
     const at = this.sources.indexOf(src);
     return at < 0 ? 0 : at + 1;
   }
 
-  /** Coin bas-gauche et taille de la partie utile d'une case, en coordonnées de texture. */
+  /** Bottom-left corner and size of the useful part of a cell, in texture coordinates. */
   cell(index: number): [number, number, number, number] {
     const { x, y } = this.origin(index);
     const inner = CELL - GUTTER * 2;
     const { width, height } = this.size;
-    // La texture est retournée à l'envoi : le haut de la toile est en v = 1.
+    // The texture is flipped on upload: the top of the canvas is at v = 1.
     return [(x + GUTTER) / width, 1 - (y + GUTTER + inner) / height, inner / width, inner / height];
   }
 
-  /** Peint l'icône dans sa case, sur la plaque claire (les icônes ont souvent un fond transparent). */
+  /** Paints the icon in its cell, on the light plate (icons often have a transparent background). */
   draw(index: number, image: CanvasImageSource) {
     const { x, y } = this.origin(index);
     const ctx = this.ctx;
@@ -266,14 +266,14 @@ export class IconAtlas {
     ctx.imageSmoothingQuality = "high";
     ctx.fillStyle = PLATE;
     ctx.fillRect(x, y, CELL, CELL);
-    // La marge reçoit l'image étirée : de loin, la case se mélange à ses propres bords.
+    // The margin receives the stretched image: from afar, the cell blends with its own edges.
     ctx.drawImage(image, x, y, CELL, CELL);
     ctx.fillRect(x + GUTTER, y + GUTTER, CELL - GUTTER * 2, CELL - GUTTER * 2);
     ctx.drawImage(image, x + GUTTER, y + GUTTER, CELL - GUTTER * 2, CELL - GUTTER * 2);
     this.texture.needsUpdate = true;
   }
 
-  /** Icône inutilisable : les hachures de chantier des affiches indisponibles, en petit. */
+  /** Unusable icon: the construction hatching of unavailable posters, small. */
   drawUnavailable(index: number) {
     const { x, y } = this.origin(index);
     const ctx = this.ctx;
@@ -304,7 +304,7 @@ export class IconAtlas {
   }
 }
 
-/** Charge une image lisible par la 3D : il faut que son site l'autorise (CORS), sinon échec. */
+/** Loads an image readable by the 3D: its site must allow it (CORS), otherwise it fails. */
 export function loadCorsImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -317,9 +317,9 @@ export function loadCorsImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Les graffitis : ce que les développeurs laissent dans les commentaires du HTML, bombé sur les
- * murs. Le relevé ne garde pas le texte des commentaires : les tags sont les mots qu'on y trouve
- * le plus souvent, toujours les mêmes.
+ * Graffiti: what developers leave in HTML comments, sprayed on the
+ * walls. The capture does not keep the text of comments: the tags are the words found there
+ * most often, always the same ones.
  */
 export const GRAFFITI_TAGS = ["TODO", "FIXME", "<!-- -->", "HACK", "XXX", "WIP", "NE PAS TOUCHER", "V2", "DEBUG", "OLD", "TEMP", "BUG"];
 
@@ -335,7 +335,7 @@ const SPRAYS: Array<[string, string]> = [
   ["#22324A", "#5C8F80"],
 ];
 
-/** Atlas des graffitis : un tag par case, fond transparent (le mur se voit autour). */
+/** Graffiti atlas: one tag per cell, transparent background (the wall shows around it). */
 export class GraffitiAtlas {
   readonly texture: THREE.CanvasTexture;
   private readonly canvas: HTMLCanvasElement;
@@ -347,7 +347,7 @@ export class GraffitiAtlas {
     this.texture = canvasTexture(this.canvas);
   }
 
-  /** Coin bas-gauche et taille d'une case, en coordonnées de texture. */
+  /** Bottom-left corner and size of a cell, in texture coordinates. */
   cell(index: number): [number, number, number, number] {
     const i = index % GRAFFITI_TAGS.length;
     const { width, height } = this.canvas;
@@ -356,7 +356,7 @@ export class GraffitiAtlas {
     return [x / width, 1 - (y + TAG_H) / height, TAG_W / width, TAG_H / height];
   }
 
-  /** Bombe les tags (une fois les polices prêtes) : contour d'encre, remplissage en dégradé, coulures. */
+  /** Sprays the tags (once the fonts are ready): ink outline, gradient fill, drips. */
   draw() {
     const ctx = this.canvas.getContext("2d")!;
     const display = fontFamily("--font-display", "sans-serif");
@@ -380,7 +380,7 @@ export class GraffitiAtlas {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.lineJoin = "round";
-      // Le contour, large et sombre, puis le remplissage en dégradé et un reflet blanc.
+      // The outline, wide and dark, then the gradient fill and a white highlight.
       ctx.lineWidth = 12;
       ctx.strokeStyle = "#15151a";
       ctx.strokeText(tag, 0, 0);
@@ -392,7 +392,7 @@ export class GraffitiAtlas {
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.strokeText(tag, -2, -3);
-      // Coulures sous les lettres.
+      // Drips under the letters.
       const span = ctx.measureText(tag).width;
       ctx.fillStyle = deep;
       for (let k = 0; k < 4; k += 1) {

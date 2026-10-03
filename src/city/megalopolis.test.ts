@@ -44,15 +44,15 @@ const SITE = [
   page("/contact", 3),
 ];
 
-describe("mégalopole", () => {
-  it("range les pages selon leurs adresses, dossier par dossier, sans chevauchement", () => {
+describe("megalopolis", () => {
+  it("arranges pages by their addresses, folder by folder, without overlap", () => {
     expect(["/b", "/a/b", "/", "/a"].sort(comparePaths)).toEqual(["/", "/a", "/a/b", "/b"]);
     const { placement } = megalopolis(SITE);
-    // L'accueil, puis les pages à la racine (/blog, /contact), puis le dossier /docs, les plus grandes d'abord.
+    // The home page, then the pages at the root (/blog, /contact), then the /docs folder, largest first.
     expect(placement.order).toEqual([0, 1, 4, 2, 3]);
-    // La racine en haut à gauche, comme le début d'une page.
+    // The root at the top left, like the start of a page.
     expect(placement.origins[0]).toEqual({ x: CORRIDOR, z: CORRIDOR });
-    // La place de l'accueil comprend son aérodrome (40 liens vers d'autres sites).
+    // The home page's place includes its airfield (40 links to other sites).
     expect(placement.widths[0]).toBe(placement.sides[0] + AERODROME);
     expect(placement.widths[1]).toBe(placement.sides[1]);
     const slots = placement.origins.map((o, i) => ({ ...o, w: placement.widths[i], d: placement.sides[i] }));
@@ -63,18 +63,18 @@ describe("mégalopole", () => {
     }
   });
 
-  it("relie par l'autoroute les pages liées, et seulement elles", () => {
+  it("links linked pages by highway, and only them", () => {
     const { placement, mega } = megalopolis(SITE);
     expect(mega.links).toEqual([[0, 1], [0, 2], [2, 3]]);
     const { roads, joints } = mega.land;
     const highways = roads.filter((road) => road.style === "highway");
     expect(highways.length).toBeGreaterThan(0);
-    // Ni l'autoroute ni ses carrefours ne passent sur une ville.
+    // Neither the highway nor its intersections pass over a city.
     placement.origins.forEach((o, i) => {
       const socle = { ...o, w: placement.sides[i], d: placement.sides[i] };
       for (const way of [...highways, ...joints]) expect(overlap(way, socle)).toBe(false);
     });
-    // Une bretelle par ville liée, branchée sur un coin de son périphérique ouvert vers elle.
+    // One ramp per linked city, connected to a corner of its ring road opened toward it.
     const ramps = roads.filter((road) => road.style === "ring");
     const touched = new Set<number>();
     for (const part of mega.parts) {
@@ -88,7 +88,7 @@ describe("mégalopole", () => {
     expect([...touched].sort()).toEqual([0, 1, 2, 3]);
   });
 
-  it("garde les villes à leur place quand on en masque, et laisse des champs à la place", () => {
+  it("keeps cities in place when some are hidden, and leaves fields in their place", () => {
     const all = megalopolis(SITE);
     const some = megalopolis(SITE, [0, 2, 3]);
     expect(some.mega.parts.map((p) => p.offset)).toEqual(
@@ -101,20 +101,20 @@ describe("mégalopole", () => {
     expect(fields.length + woods.length).toBeGreaterThan(0);
   });
 
-  it("pose le grand aéroport du site à l'est, relié par l'autoroute, avec ses vols", () => {
+  it("puts the site's large airport to the east, linked by the highway, with its flights", () => {
     const { placement, mega } = megalopolis(SITE);
     const airport = mega.land.airport!;
     expect(airport.x).toBeGreaterThanOrEqual(placement.width);
     expect(airport.destinations).toEqual([["github.com", 40]]);
     expect(airport.flights.map((f) => f.domain)).toEqual(["github.com"]);
-    // L'avenue d'accès part d'un carrefour d'autoroute ouvert vers l'est.
+    // The access avenue leaves from a highway intersection opened toward the east.
     const access = mega.land.roads.find((road) => road.style === "avenue")!;
     const hub = mega.land.joints.find((j) => Math.abs(j.x + j.w - access.x) < 0.01 && j.open.east);
     expect(hub).toBeDefined();
     expect(mega.land.bounds.maxX).toBeGreaterThanOrEqual(airport.x + airport.w);
   });
 
-  it("garde à chaque ville assez ouverte son aérodrome, à l'est de son socle, à l'écart des autoroutes", () => {
+  it("gives every open enough city its airfield, east of its base, away from the highways", () => {
     const docs = [page("/", 14, ["/a", "/b"], 40), page("/a", 9, ["/", "/b"], 25), page("/b", 6, ["/"], 3)];
     const { placement, mega } = megalopolis(docs);
     const aerodromes = mega.parts.map((part) => part.city.layout.airport);
@@ -127,23 +127,23 @@ describe("mégalopole", () => {
       if (!a) return;
       const { origins, sides, widths } = placement;
       const page = part.city.page;
-      // En coordonnées du monde : juste à l'est du socle, dans la place réservée.
+      // In world coordinates: just east of the base, in the reserved space.
       const strip = { x: a.x + part.offset.x, z: a.z + part.offset.z, w: a.w, d: a.d };
       expect(strip.x).toBeCloseTo(origins[page].x + sides[page]);
       expect(strip.x + strip.w).toBeLessThanOrEqual(origins[page].x + widths[page] + 0.01);
-      // Ni autoroute, ni carrefour, ni bretelle (aucune ne part vers l'est) sur l'aérodrome.
+      // No highway, intersection or ramp (none heads east) on the airfield.
       for (const way of highways) expect(overlap(way, strip)).toBe(false);
-      // Ses pistes, son hangar et ses avions restent dans sa bande.
+      // Its runways, hangar and planes stay in its strip.
       for (const r of [...a.runways, a.apron, a.terminal]) expect(overlap(r, a)).toBe(true);
       expect(a.runways[0].x + a.runways[0].w).toBeLessThanOrEqual(a.x + a.w);
     });
-    // Masquée, sa place (aérodrome compris) devient campagne.
+    // Hidden, its place (airfield included) becomes countryside.
     const hidden = megalopolis(docs, [1, 2]);
     const slot = { ...placement.origins[0], w: placement.widths[0], d: placement.sides[0] };
     expect(hidden.mega.land.plates.some((plate) => plate.style === "base" && overlap(plate, slot))).toBe(true);
   });
 
-  it("empile les petites villes sous les grandes, sans chevauchement", () => {
+  it("stacks small cities under large ones, without overlap", () => {
     const docs = [page("/", 30), ...Array.from({ length: 8 }, (_, i) => page(`/p${i}`, 2, [`/p${(i + 3) % 8}`, "/"]))];
     const { placement, mega } = megalopolis(docs);
     const socles = placement.origins.map((o, i) => ({ ...o, w: placement.sides[i], d: placement.sides[i] }));
@@ -158,7 +158,7 @@ describe("mégalopole", () => {
     }
   });
 
-  it("prolonge le chenal d'un port jusqu'au bord de la mégalopole, sous les autoroutes", () => {
+  it("extends a harbor's channel to the edge of the megalopolis, under the highways", () => {
     const port = page("/", 10, ["/b"]);
     port.root.children!.push({ tag: "footer", children: [{ tag: "p", text: 200 }, { tag: "p", text: 300 }, { tag: "p", text: 250 }] });
     const { placement, mega } = megalopolis([port, page("/b", 8, ["/"]), page("/c", 5)]);
@@ -170,7 +170,7 @@ describe("mégalopole", () => {
     for (const plate of mega.land.plates.filter((p) => p.y > 0.3)) expect(overlap(plate, channel)).toBe(false);
   });
 
-  it("donne toujours le même plan", () => {
+  it("always gives the same plan", () => {
     const a = megalopolis(SITE).mega;
     const b = megalopolis(SITE).mega;
     expect(JSON.stringify(a.land)).toBe(JSON.stringify(b.land));

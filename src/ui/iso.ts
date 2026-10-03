@@ -1,7 +1,7 @@
 /**
- * Dessin axonométrique (isométrique) en SVG : le langage graphique de DOMCity
- * hors de la 3D. Boîtes cernées d'un trait d'encre, faces ombrées à plat,
- * comme sur une planche d'architecte.
+ * Axonometric (isometric) drawing in SVG: the graphic language of DOMCity
+ * outside the 3D. Boxes outlined with an ink line, flat-shaded faces,
+ * as on an architect's drawing sheet.
  */
 
 const COS30 = Math.cos(Math.PI / 6);
@@ -22,11 +22,11 @@ export interface IsoFace {
 }
 
 export interface IsoBoxOptions {
-  /** Couleur de la face du dessus, si elle diffère (toit). */
+  /** Color of the top face, if it differs (roof). */
   top?: string;
 }
 
-/** Les trois faces visibles d'une boîte : dessus, flanc droit (+x), flanc gauche (+z). */
+/** The three visible faces of a box: top, right side (+x), left side (+z). */
 export function isoBox(
   x: number,
   y: number,

@@ -1,7 +1,7 @@
 import { sharingEnabled } from "@/server/config";
 import { searchSites } from "@/server/store";
 
-/** Recherche dans les sites partagés : « amzon » trouve amazon.com, « croissant » la page de Wikipédia. */
+/** Searches the shared sites: "amzon" finds amazon.com, "croissant" the Wikipedia page. */
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
   if (!sharingEnabled() || q.length < 2) return Response.json({ results: [] });

@@ -2,8 +2,8 @@ import { sharingEnabled } from "@/server/config";
 import { HeaderBar, type SitePage } from "./HeaderBar";
 
 /**
- * L'en-tête des pages du site, le même partout. Le serveur sait seulement si le partage est ouvert
- * (sans lui, ni « Découvrir » ni le compte) ; le reste (défilement, menu du téléphone) se joue dans le navigateur.
+ * The header of the site's pages, the same everywhere. The server only knows whether sharing is on
+ * (without it, neither "Découvrir" nor the account); the rest (scrolling, phone menu) happens in the browser.
  */
 export function SiteHeader({ current }: { current?: SitePage }) {
   return <HeaderBar sharing={sharingEnabled()} current={current} />;

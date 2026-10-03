@@ -2,8 +2,8 @@ import type { Kind } from "@/format/taxonomy";
 import { LEGEND_SPRITE } from "./legendSprite.generated";
 
 /**
- * Une vignette de la légende : un morceau de ville rendu par le vrai moteur 3D (/dev/legend),
- * pris dans une seule image pour toutes. Un test vérifie que chaque genre y a la sienne.
+ * A legend thumbnail: a piece of city rendered by the real 3D engine (/dev/legend),
+ * taken from a single image for all of them. A test checks that each kind has its own.
  */
 function Vignette({ name, size }: { name: string; size: number }) {
   const { src, columns, order } = LEGEND_SPRITE;
@@ -25,12 +25,12 @@ function Vignette({ name, size }: { name: string; size: number }) {
   );
 }
 
-/** La vignette d'un genre, pour la légende et les fiches. */
+/** The thumbnail of a kind, for the legend and the cards. */
 export function KindSwatch({ kind, size = 22 }: { kind: Kind; size?: number }) {
   return <Vignette name={kind} size={size} />;
 }
 
-/** Une rue, qui n'est pas un élément de la page. */
+/** A street, which is not an element of the page. */
 export function RoadSwatch({ size = 22 }: { size?: number }) {
   return <Vignette name="road" size={size} />;
 }

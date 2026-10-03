@@ -6,13 +6,13 @@ import { figureKey, projectOn } from "./figureMeta";
 import { HERO_FIGURE } from "./heroFigure.generated";
 import { HERO_SAMPLE } from "./samples";
 
-describe("figure de l'accueil", () => {
-  it("montre la ville que le moteur bâtit aujourd'hui (sinon : npm run dev, puis ouvrir /dev/figure)", () => {
+describe("home page figure", () => {
+  it("shows the city the engine builds today (otherwise: npm run dev, then open /dev/figure)", () => {
     expect(figureKey(layoutCity(HERO_SAMPLE))).toBe(HERO_FIGURE.layout);
     expect(existsSync(join(process.cwd(), "public", HERO_FIGURE.src.replace(/\?.*$/, "")))).toBe(true);
   });
 
-  it("projette chaque bâtiment de l'exemple dans l'image", () => {
+  it("projects every building of the sample into the image", () => {
     const city = layoutCity(HERO_SAMPLE);
     for (const lot of city.lots) {
       const [x, y] = projectOn(HERO_FIGURE, lot.x + lot.w / 2, lot.y + lot.h, lot.z + lot.d / 2);

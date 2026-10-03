@@ -15,7 +15,7 @@ import sub from "../../subpage.module.css";
 import { loadSite, readDomain } from "./load";
 import styles from "./site.module.css";
 
-/** Pages montrées d'un coup (un site comme fr.wikipedia.org peut en avoir des milliers). */
+/** Pages shown at once (a site like fr.wikipedia.org can have thousands). */
 const PER_PAGE = 60;
 
 const count = (n: number, word: string) => `${formatCount(n)} ${word}${n > 1 ? "s" : ""}`;
@@ -34,8 +34,8 @@ export async function generateMetadata(props: PageProps<"/site/[domain]">): Prom
 }
 
 /**
- * La page d'un site : ses pages relevées, chacune sa ville, et l'entrée de sa mégalopole.
- * Elle existe dès qu'une page du site est partagée, même si sa page d'accueil ne l'est pas.
+ * A site's page: its captured pages, each its own city, and the entrance to its megalopolis.
+ * It exists as soon as one page of the site is shared, even if its home page is not.
  */
 export default async function SitePage(props: PageProps<"/site/[domain]">) {
   const domain = readDomain((await props.params).domain);
@@ -49,8 +49,8 @@ export default async function SitePage(props: PageProps<"/site/[domain]">) {
   const pages = await sitePageList(domain, PER_PAGE, (chunk - 1) * PER_PAGE);
   if (pages.length === 0) notFound();
 
-  // Les adresses sont rangées dans l'ordre : l'accueil, s'il est relevé, ouvre la liste.
-  // Wikipédia n'a pas d'accueil à cette adresse : on ne le réclame pas.
+  // Addresses are sorted in order: the home page, if captured, opens the list.
+  // Wikipedia has no home page at this address: we do not ask for it.
   const homeMissing = chunk === 1 && pages[0].path !== "/" && !domain.endsWith(".wikipedia.org");
   const several = site.pagesCount > 1;
   const chunkHref = (n: number) => (n === 1 ? sitePath(domain) : `${sitePath(domain)}?page=${n}`);

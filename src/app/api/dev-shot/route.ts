@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-/** Développement seulement : enregistre une image de la vue 3D dans .data/shots (essais de rendu). */
+/** Development only: saves an image of the 3D view in .data/shots (rendering experiments). */
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") return new Response(null, { status: 404 });
   const name = (new URL(request.url).searchParams.get("name") ?? "vue").replace(/[^a-z0-9-]/gi, "");

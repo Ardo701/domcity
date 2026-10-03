@@ -14,7 +14,7 @@ const IMAGE_STATUS: Record<ImageStatus, string> = {
   refused: "Masquée : son site est refusé par DOMCity.",
 };
 
-/** Fiche détaillée de l'élément sélectionné. */
+/** Detailed card of the selected element. */
 export function Inspector({
   info,
   number = info.id,
@@ -27,9 +27,9 @@ export function Inspector({
   onViewImage,
 }: {
   info: LotInfo;
-  /** Numéro de l'élément dans sa page (dans la mégalopole, les lots de toutes les pages se suivent). */
+  /** Number of the element in its page (in the megalopolis, the lots of all pages follow each other). */
   number?: number;
-  /** Dans la mégalopole : la page de l'élément, et sa ville à elle. */
+  /** In the megalopolis: the element's page, and its own city. */
   page?: { path: string; href: string };
   imageStatus?: ImageStatus;
   canFocus: boolean;
@@ -39,7 +39,7 @@ export function Inspector({
   onViewImage: () => void;
 }) {
   const added = info.ownText || info.gallery;
-  // Une image d'un site refusé n'est ni montrée ni décrite (son texte alternatif peut être aussi cru qu'elle).
+  // An image from a refused site is neither shown nor described (its alt text can be as crude as the image).
   const refused = info.img?.refused === true;
   const parent = info.path.length > 1 ? info.path[info.path.length - (added ? 1 : 2)] : null;
   const rows: Array<[string, ReactNode]> = [

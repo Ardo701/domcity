@@ -1,18 +1,18 @@
 /**
- * L'urbanisme : où va chaque élément, et à quelle hauteur.
+ * Urban planning: where each element goes, and how tall it is.
  *
- * - La ville est plate, posée sur le socle d'une maquette et entourée d'un périphérique.
- * - Chaque conteneur range ses enfants en rangées, dans l'ordre de la page :
- *   de gauche à droite, puis du nord (haut de page) au sud (bas de page).
- * - Des rues séparent les conteneurs voisins et découpent les longues rangées en pâtés
- *   de maisons. Dans un pâté, les éléments se touchent sur un trottoir commun, comme
- *   les immeubles d'une rue. Les rues sont larges entre les grandes parties de la page,
- *   plus étroites en profondeur.
- * - Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur propre sol.
- * - Une ligne <hr> coupe son quartier par un canal bordé de quais.
+ * - The city is flat, laid on the base of a model and surrounded by a ring road.
+ * - Each container arranges its children in rows, in page order:
+ *   left to right, then from north (top of the page) to south (bottom of the page).
+ * - Streets separate neighboring containers and cut long rows into city
+ *   blocks. In a block, elements touch each other on a shared sidewalk, like
+ *   the buildings of a street. Streets are wide between the large parts of the page,
+ *   narrower deeper down.
+ * - Parks, lists, forms, tables, menus, header and footer have their own ground.
+ * - An <hr> line cuts its district with a canal lined with quays.
  *
- * Résultat : des « lots » numérotés en ordre de document (le sous-arbre d'un lot occupe
- * les numéros id+1 … subtreeEnd-1), plus les rues, les trottoirs et quelques décors.
+ * Result: "lots" numbered in document order (a lot's subtree takes
+ * the numbers id+1 ... subtreeEnd-1), plus streets, sidewalks and some decor.
  */
 
 import { kindOf, type Kind } from "@/format/taxonomy";
@@ -21,93 +21,93 @@ import { ambianceOf, type Ambiance, type Weather } from "./ambiance";
 import { rand } from "./palette";
 
 export interface Panel {
-  /** Largeur et hauteur de l'affiche. */
+  /** Width and height of the poster. */
   width: number;
   height: number;
-  /** Hauteur du bas de l'affiche au-dessus de la base du lot (sur un toit : ses poteaux, ou le mât d'un drapeau). */
+  /** Height of the bottom of the poster above the lot's base (on a roof: its posts, or a flag's pole). */
   lift: number;
-  /** Petite image : une enseigne, ou un drapeau sur son mât, plutôt qu'une grande affiche. */
+  /** Small image: a sign, or a flag on its pole, rather than a large poster. */
   emblem?: Emblem;
-  /** Où elle est accrochée sur son bâtiment porteur : une façade, ou le toit. */
+  /** Where it hangs on its carrier building: a facade, or the roof. */
   mount: Mount;
 }
 
-/** Une façade (celle qui regarde vers le sud, le nord, l'est, l'ouest) ou le toit. */
+/** A facade (the one facing south, north, east, west) or the roof. */
 export type Mount = "south" | "north" | "east" | "west" | "roof";
 
 export type Emblem = "sign" | "flag";
 
-/** Sous cette taille (en pixels), une image est une icône : pas de grand panneau pour elle. */
+/** Below this size (in pixels), an image is an icon: no large billboard for it. */
 export const ICON_SIZE = 48;
 const FLAG_NAME = /flag|drapeau|bandera|flagge|bandiera|bandeira/i;
 
 /**
- * Petite image : drapeau (son fichier ou son texte de remplacement le dit, et il est plus large
- * que haut) ou simple icône. Rien pour une vraie image, même perdue : elle garde son panneau.
+ * Small image: a flag (its file or its alt text says so, and it is wider
+ * than tall) or a simple icon. Nothing for a real image, even a lost one: it keeps its billboard.
  */
 export function emblemOf(node: CityNode): Emblem | undefined {
   const img = node.img;
   const size = Math.max(img?.w ?? 0, img?.h ?? 0);
   const small = size > 0 && size < ICON_SIZE;
-  // Une image d'un site refusé a perdu son adresse, pas sa place : elle reste une affiche.
+  // An image from a refused site has lost its address, not its place: it stays a poster.
   if (!small && (img?.src || img?.refused || size > 0)) return undefined;
   const file = (img?.src ?? "").split(/[?#]/)[0].split("/").pop() ?? "";
   const wide = (img?.w ?? 0) > (img?.h ?? 0) * 1.15;
   return wide && (FLAG_NAME.test(file) || FLAG_NAME.test(img?.alt ?? "")) ? "flag" : "sign";
 }
 
-/** Enseigne : la plus grande dimension de la plaque, et la hauteur de son bas sur la façade. */
+/** Sign: the largest dimension of the plate, and the height of its bottom on the facade. */
 const SIGN_SIZE = 1;
 const SIGN_LIFT = 1.05;
-/** Drapeau : sa largeur, et la hauteur de son mât au-dessus du toit. */
+/** Flag: its width, and the height of its pole above the roof. */
 const FLAG_WIDTH = 1.6;
 const FLAG_MAST = 2.2;
-/** Le bas des affiches, au-dessus des vitrines, des enseignes et des graffitis. */
+/** The bottom of posters, above shop windows, signs and graffiti. */
 const POSTER_LIFT = 2.2;
 const POSTER_GAP = 0.35;
-/** Les poteaux d'un panneau sur un toit. */
+/** The posts of a billboard on a roof. */
 const ROOF_LIFT = 0.8;
-/** Épaisseur d'une affiche sur sa façade. */
+/** Thickness of a poster on its facade. */
 const POSTER_DEPTH = 0.12;
 
-/** Ce qui s'accroche à un bâtiment plutôt que de prendre une case au sol : les images, les écrans. */
+/** What hangs on a building rather than taking a cell on the ground: images, screens. */
 const MOUNTED = new Set<Kind>(["billboard", "screen"]);
-/** Ce qui peut porter des affiches. */
+/** What can carry posters. */
 const HOSTS = new Set<Kind>(["tower", "residence", "house", "gallery"]);
 
 export interface Lot {
   id: number;
   parent: number;
-  /** Premier numéro après le sous-arbre de ce lot. */
+  /** First number after this lot's subtree. */
   subtreeEnd: number;
   node: CityNode;
   kind: Kind;
   depth: number;
   container: boolean;
-  /** Bâtiment ajouté pour porter le texte écrit directement dans un conteneur. */
+  /** Building added to carry the text written directly in a container. */
   ownText: boolean;
-  /** Emprise au sol : coin nord-ouest (x, z), largeur (w, le long de x), profondeur (d, le long de z). */
+  /** Footprint: northwest corner (x, z), width (w, along x), depth (d, along z). */
   x: number;
   z: number;
   w: number;
   d: number;
-  /** Altitude de la base. */
+  /** Altitude of the base. */
   y: number;
-  /** Hauteur du bâtiment, ou épaisseur du sol pour un conteneur qui en a un (0 sinon). */
+  /** Height of the building, or thickness of the ground for a container that has one (0 otherwise). */
   h: number;
-  /** Texte propre + texte de tous les descendants. */
+  /** Own text + text of all descendants. */
   textTotal: number;
   panel?: Panel;
   /**
-   * Posé ailleurs que sur une case au sol : une image accrochée à un bâtiment voisin, ou un
-   * conteneur qui n'a que des images (il n'a pas de sol, son emprise est celle de ses images).
+   * Placed somewhere other than on a ground cell: an image hung on a neighboring building, or a
+   * container that only has images (it has no ground, its footprint is that of its images).
    */
   hung?: boolean;
-  /** Galerie : le nombre d'images qu'elle a été bâtie pour porter. */
+  /** Gallery: the number of images it was built to carry. */
   gallery?: number;
 }
 
-/** `highway` : les autoroutes de la mégalopole, entre les villes. */
+/** `highway`: the megalopolis highways, between cities. */
 export type RoadStyle = "ring" | "avenue" | "street" | "lane" | "path" | "highway";
 export type GroundStyle = "base" | "sidewalk" | "plaza" | "grass" | "lawn" | "crops" | "dirt" | "wharf" | "quay";
 
@@ -119,17 +119,17 @@ export interface Rect {
 }
 
 export interface Road extends Rect {
-  /** Sens de la chaussée. */
+  /** Direction of the roadway. */
   axis: "x" | "z";
   style: RoadStyle;
-  /** Le conteneur dont c'est une rue : survoler la rue, c'est désigner le conteneur. */
+  /** The container this street belongs to: hovering the street points at the container. */
   owner: number;
   y: number;
-  /** Tracée sur une pelouse (lotissement, parc) : retirée, elle laisse l'herbe, pas un trou. */
+  /** Drawn on a lawn (housing estate, park): when removed, it leaves grass, not a hole. */
   lawn?: boolean;
 }
 
-/** Les côtés d'une case de raccord par lesquels la chaussée en sort. */
+/** The sides of a joint cell through which the roadway leaves it. */
 export interface Openings {
   north: boolean;
   east: boolean;
@@ -138,15 +138,15 @@ export interface Openings {
 }
 
 /**
- * Case de raccord entre tronçons de chaussée. Deux côtés voisins ouverts font un virage
- * arrondi (les coins du périphérique) ; deux côtés opposés, une ligne droite ; trois ou
- * quatre, un carrefour. Pour brancher une autre route (les autoroutes de la mégalopole),
- * il suffit d'ouvrir un côté de plus : le moteur dessine alors le carrefour.
+ * Joint cell between roadway sections. Two adjacent open sides make a rounded
+ * curve (the corners of the ring road); two opposite sides, a straight line; three or
+ * four, an intersection. To connect another road (the megalopolis highways),
+ * opening one more side is enough: the engine then draws the intersection.
  */
 export interface Joint extends Rect {
   open: Openings;
   style: RoadStyle;
-  /** Le sol qui borde la chaussée hors du virage. */
+  /** The ground that lines the roadway outside the curve. */
   verge: GroundStyle;
   owner: number;
   y: number;
@@ -161,33 +161,33 @@ export interface Plate extends Rect {
 
 export interface Decor extends Rect {
   /**
-   * Le port (bassin et grues) du pied de page, la porte monumentale de l'en-tête, une place publique,
-   * un bosquet de la campagne autour de la mégalopole.
+   * The footer's harbor (basin and cranes), the header's monumental gate, a public square,
+   * a grove in the countryside around the megalopolis.
    */
   type: "harbor" | "gate" | "square" | "woods";
   owner: number;
   y: number;
 }
 
-/** L'arc de la porte de l'en-tête, au milieu de sa place : largeur de l'ouverture et hauteur des piliers. */
+/** The arch of the header's gate, in the middle of its square: width of the opening and height of the pillars. */
 export function gateArch(decor: Decor): { span: number; height: number; top: number } {
   const span = Math.min(11, Math.max(4, decor.w * 0.3));
   const height = Math.min(9, Math.max(5, span * 0.85));
-  // Piliers, linteau (1,3) et attique (0,7).
+  // Pillars, lintel (1.3) and attic (0.7).
   return { span, height, top: decor.y + height + 2 };
 }
 
-/** Chenal d'un port : son eau, du bassin jusqu'au bord de la maquette. */
+/** A harbor's channel: its water, from the basin to the edge of the model. */
 export interface Channel extends Rect {
-  /** Sens du chenal : le long de x (bassin prolongé vers l'ouest ou l'est), de z (vers le sud). */
+  /** Direction of the channel: along x (basin extended west or east), along z (toward the south). */
   axis: "x" | "z";
-  /** Le port, pour le survol. */
+  /** The harbor, for hovering. */
   owner: number;
-  /** Base de l'eau : celle du bassin. */
+  /** Base of the water: that of the basin. */
   y: number;
 }
 
-/** Le pont d'une rue au-dessus d'un chenal : la partie de la chaussée qui franchit l'eau. */
+/** A street's bridge over a channel: the part of the roadway that crosses the water. */
 export interface Bridge extends Rect {
   axis: "x" | "z";
   style: RoadStyle;
@@ -196,32 +196,32 @@ export interface Bridge extends Rect {
 }
 
 /**
- * L'aéroport : les liens de la page vers d'autres sites. Il n'est pas un élément de la page :
- * il est hors les murs, à l'est de la ville, sur une extension du socle, relié au périphérique.
- * Dans la mégalopole, chaque ville garde un petit aérodrome (une piste, un hangar) et le site a
- * son grand aéroport commun.
+ * The airport: the page's links to other sites. It is not an element of the page:
+ * it is outside the walls, east of the city, on an extension of the base, linked to the ring road.
+ * In the megalopolis, each city keeps a small airfield (a runway, a hangar) and the site has
+ * its large shared airport.
  */
 export interface Airport extends Rect {
   kind: "airport" | "aerodrome";
-  /** Numéro de survol : juste après le dernier lot (ce n'est pas un lot). */
+  /** Hover number: right after the last lot (it is not a lot). */
   id: number;
-  /** Niveau des pistes et du tarmac. */
+  /** Level of the runways and the tarmac. */
   y: number;
-  /** Liens vers d'autres sites, dans toute la page. */
+  /** Links to other sites, across the whole page. */
   external: number;
   runways: Rect[];
-  /** Voies de circulation des avions : la grande, parallèle aux pistes, et ses bretelles. */
+  /** Aircraft taxiways: the main one, parallel to the runways, and its links. */
   taxiways: Array<Rect & { axis: "x" | "z" }>;
   apron: Rect;
-  /** Le terminal (le hangar d'un aérodrome). */
+  /** The terminal (an airfield's hangar). */
   terminal: Rect;
-  /** La tour de contrôle (la manche à air d'un aérodrome). */
+  /** The control tower (an airfield's windsock). */
   tower: Rect;
-  /** Avions aux portes du terminal (devant le hangar). */
+  /** Aircraft at the terminal gates (in front of the hangar). */
   planes: number;
-  /** Sites visés par les liens, du plus visé au moins visé (relevés récents seulement). */
+  /** Sites targeted by the links, from most to least targeted (recent captures only). */
   destinations: Array<[domain: string, links: number]>;
-  /** Un avion en vol vers chacun des premiers sites : il vient de décoller, cap sur sa destination. */
+  /** A plane in flight toward each of the top sites: it has just taken off, heading for its destination. */
   flights: Flight[];
 }
 
@@ -230,36 +230,36 @@ export interface Flight {
   x: number;
   y: number;
   z: number;
-  /** Cap (rotation autour de la verticale, 0 = vers l'est) et cabré. */
+  /** Heading (rotation around the vertical, 0 = east) and pitch. */
   heading: number;
   pitch: number;
 }
 
-/** Une usine dans la ceinture verte : un hall et ses cheminées qui fument. */
+/** A factory in the green belt: a hall and its smoking chimneys. */
 export interface Factory extends Rect {
-  /** Sens du hall : le long de la ceinture. */
+  /** Direction of the hall: along the belt. */
   axis: "x" | "z";
   chimneys: number;
   y: number;
 }
 
-/** Les usines de la ville : les scripts de la page. Un seul numéro de survol pour toutes. */
+/** The city's factories: the page's scripts. A single hover number for all of them. */
 export interface Industry {
   id: number;
   scripts: number;
   factories: Factory[];
 }
 
-/** Une caméra de surveillance sur son mât, au bord d'une rue. */
+/** A surveillance camera on its pole, at the edge of a street. */
 export interface Camera {
   x: number;
   y: number;
   z: number;
-  /** Où regarde l'objectif (0 = vers l'est, comme un avion). */
+  /** Where the lens looks (0 = east, like a plane). */
   heading: number;
 }
 
-/** Les caméras de la ville : les traqueurs publicitaires de la page. */
+/** The city's cameras: the page's ad trackers. */
 export interface Surveillance {
   id: number;
   trackers: string[];
@@ -270,11 +270,11 @@ export interface Cloud {
   x: number;
   y: number;
   z: number;
-  /** Rayon du gros du nuage. */
+  /** Radius of the main body of the cloud. */
   size: number;
 }
 
-/** Ce qui ne s'affiche pas dans la page mais se voit dans la ville : météo, usines, caméras. */
+/** What does not show in the page but shows in the city: weather, factories, cameras. */
 export interface CityAmbiance {
   info: Ambiance;
   weather: Weather;
@@ -298,25 +298,25 @@ export interface CityStats {
 export interface CityLayout {
   lots: Lot[];
   roads: Road[];
-  /** Raccords entre tronçons (coins du périphérique). */
+  /** Joints between sections (corners of the ring road). */
   joints: Joint[];
   plates: Plate[];
   decor: Decor[];
-  /** Chenaux des ports vers l'extérieur, et ponts des rues qui les franchissent. */
+  /** Harbor channels to the outside, and bridges of the streets that cross them. */
   channels: Channel[];
   bridges: Bridge[];
   airport?: Airport;
-  /** Absent pour la campagne de la mégalopole. */
+  /** Absent for the megalopolis countryside. */
   ambiance?: CityAmbiance;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number };
   stats: CityStats;
 }
 
 // ---------------------------------------------------------------------------
-// Réglages de l'urbanisme (1 unité ≈ 3 m)
+// Urban planning settings (1 unit ≈ 3 m)
 // ---------------------------------------------------------------------------
 
-/** Épaisseur du socle de la maquette, hauteur d'un trottoir, d'un étage. */
+/** Thickness of the model's base, height of a sidewalk, of a floor. */
 export const BASE = 0.4;
 export const CURB = 0.14;
 export const FLOOR = 1.15;
@@ -324,25 +324,25 @@ export const FLOOR = 1.15;
 export const RING = 6;
 export const BELT = 7;
 const SIDEWALK = 0.75;
-/** Une rue où passent les voitures laisse toujours une file dans chaque sens (2,4 unités : 7 m). */
+/** A street that cars use always leaves one lane in each direction (2.4 units: 7 m). */
 export const DRIVABLE_MIN = 2.4;
-/** Le plus petit côté d'un bâtiment : une maison fait au moins 6,6 m, un immeuble 7,8 m. */
+/** The smallest side of a building: a house is at least 6.6 m, an apartment building 7.8 m. */
 const MIN_SIDE: Partial<Record<Kind, number>> = { house: 2.2, residence: 2.6, tower: 2.6, gallery: 6, vacant: 2, counter: 1.4 };
 const ALLEY = 0.16;
 const RIVER_WIDTH = 3.4;
 const QUAY = 1.3;
 const GATE_BAND = 7;
 const HARBOR_BAND = 10;
-/** Part de la bande du port prise par le quai, au nord du bassin. */
+/** Share of the harbor strip taken by the quay, north of the basin. */
 const QUAY_SHARE = 0.38;
-/** Épaisseur de l'eau : sa surface reste sous le niveau des quais. */
+/** Thickness of the water: its surface stays below quay level. */
 export const WATER_DEPTH = 0.05;
-/** Largeur d'une autoroute : deux fois deux voies et un terre-plein central. */
+/** Width of a highway: two lanes each way and a central median. */
 export const HIGHWAY = 7;
 
 type StreetMode = RoadStyle | "none";
 
-/** Largeur d'une rue de ce genre, à cette profondeur dans la page. */
+/** Width of a street of this kind, at this depth in the page. */
 export function roadWidth(style: RoadStyle, depth: number): number {
   switch (style) {
     case "ring": return RING;
@@ -354,12 +354,12 @@ export function roadWidth(style: RoadStyle, depth: number): number {
   }
 }
 
-/** Espace entre deux éléments voisins sans rue entre eux, quand ils ne se touchent pas. */
+/** Space between two neighboring elements with no street between them, when they do not touch. */
 function softGap(mode: StreetMode): number {
   return mode === "path" ? 1.6 : mode === "lane" ? 1.1 : 1;
 }
 
-/** Longueur et profondeur d'un pâté de maisons avant qu'une rue ne le coupe. */
+/** Length and depth of a city block before a street cuts it. */
 function blockLength(mode: StreetMode): number {
   return mode === "avenue" ? 28 : mode === "path" ? 18 : mode === "lane" ? 26 : 24;
 }
@@ -367,7 +367,7 @@ function blockDepth(mode: StreetMode): number {
   return mode === "lane" ? 9 : mode === "path" ? 12 : 16;
 }
 
-/** Les conteneurs qui ont leur propre sol, et la façon dont on y circule. */
+/** Containers that have their own ground, and how people move around in them. */
 function groundOf(kind: Kind): GroundStyle | undefined {
   switch (kind) {
     case "park": return "grass";
@@ -387,7 +387,7 @@ function streetsOf(kind: Kind): StreetMode | undefined {
   }
 }
 
-/** Les grands édifices ont toujours une rue de chaque côté, et leur parvis. */
+/** Large buildings always have a street on each side, and their forecourt. */
 const LANDMARKS = new Set<Kind>(["monument", "embassy"]);
 export const isLandmark = (kind: Kind) => LANDMARKS.has(kind);
 
@@ -414,7 +414,7 @@ function leafArea(kind: Kind, node: CityNode): number {
   }
 }
 
-/** Hauteurs logarithmiques : 10 000 caractères ne font pas une tour de 10 km. */
+/** Logarithmic heights: 10,000 characters do not make a 10 km tower. */
 function leafHeight(kind: Kind, node: CityNode): number {
   const text = node.text ?? 0;
   switch (kind) {
@@ -435,7 +435,7 @@ function leafHeight(kind: Kind, node: CityNode): number {
 }
 
 // ---------------------------------------------------------------------------
-// Arbre de travail
+// Working tree
 // ---------------------------------------------------------------------------
 
 interface Plot {
@@ -445,31 +445,31 @@ interface Plot {
   ownText: boolean;
   depth: number;
   children: Plot[];
-  /** Surface demandée, rues comprises. */
+  /** Requested area, streets included. */
   area: number;
   textTotal: number;
-  /** Pâté de maisons ajouté par l'urbanisme : il n'existe pas dans la page, il n'a pas de lot. */
+  /** City block added by urban planning: it does not exist in the page, it has no lot. */
   virtual?: boolean;
-  /** Rang parmi les enfants de son conteneur, dans l'ordre de la page (-1 : une galerie ajoutée). */
+  /** Rank among its container's children, in page order (-1: an added gallery). */
   order: number;
-  /** Faux pour une image (accrochée ailleurs) ou un conteneur qui n'a que des images. */
+  /** False for an image (hung elsewhere) or a container that only has images. */
   placed: boolean;
-  /** Enfants qui ne prennent pas de case : leurs lots se créent à leur rang, posés ensuite. */
+  /** Children that take no cell: their lots are created at their rank, placed afterwards. */
   unplaced: Plot[];
-  /** Le sous-arbre a un bâtiment pour porter des images. */
+  /** The subtree has a building to carry images. */
   hosts: boolean;
-  /** Images du sous-arbre encore sans porteur, et de combien de niveaux elles sont remontées. */
+  /** Images of the subtree still without a carrier, and how many levels they have moved up. */
   orphans: number;
   climb: number;
   gallery?: number;
-  /** Le plus petit côté possible : celui de son bâtiment, ou du plus grand bâtiment qu'il contient. */
+  /** The smallest possible side: that of its building, or of the largest building it contains. */
   least: number;
 }
 
 /**
- * Regroupe les éléments simples qui se suivent entre deux conteneurs en un pâté de maisons :
- * il se range comme un conteneur, bordé de rues, au lieu d'aligner de petits bâtiments
- * à côté de quartiers entiers.
+ * Groups the simple elements that follow each other between two containers into a city block:
+ * it is arranged like a container, lined with streets, instead of lining up small buildings
+ * next to whole districts.
  */
 function blocksOf(items: Plot[], mode: StreetMode, depth: number): Plot[] {
   const mixed = items.some((item) => item.container) && items.some((item) => !item.container);
@@ -512,13 +512,13 @@ function blocksOf(items: Plot[], mode: StreetMode, depth: number): Plot[] {
   return out;
 }
 
-/** Les genres qui sont des bâtiments. */
+/** The kinds that are buildings. */
 const BUILDINGS = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "kiosk", "bollard", "counter"]);
 
 /**
- * Le texte écrit directement dans un conteneur devient un bâtiment de plus, jamais un champ,
- * un lotissement ou un parc posé sur le sien. Dans un tableau (le texte de ses cases), une liste
- * ou un parc : une maison, la ferme au milieu des champs ; ailleurs, un immeuble.
+ * Text written directly in a container becomes one more building, never a field,
+ * a housing estate or a park laid on its own. In a table (the text of its cells), a list
+ * or a park: a house, the farm in the middle of the fields; elsewhere, an apartment building.
  */
 function ownTextKind(tag: string, text: number, container: Kind): Kind {
   const kind = kindOf(tag, false, text);
@@ -526,7 +526,7 @@ function ownTextKind(tag: string, text: number, container: Kind): Kind {
   return container === "fields" || container === "estate" || container === "park" ? "house" : "tower";
 }
 
-/** Une galerie : un immeuble couvert d'écrans, bâti pour porter les images d'un bloc qui n'a qu'elles. */
+/** A gallery: a building covered with screens, built to carry the images of a block that has nothing else. */
 function galleryPlot(node: CityNode, depth: number, images: number): Plot {
   const side = clamp(5 + 1.15 * Math.sqrt(images), 6, 16);
   return {
@@ -535,14 +535,14 @@ function galleryPlot(node: CityNode, depth: number, images: number): Plot {
   };
 }
 
-/** `textOf` : bâtiment du texte écrit directement dans ce conteneur, de ce genre. */
+/** `textOf`: building for the text written directly in this container, of this kind. */
 function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: Kind): Plot {
   const ownText = textOf !== undefined;
   const kept = ownText ? [] : node.children ?? [];
   const container = kept.length > 0;
   const text = node.text ?? 0;
   let kind = ownText ? ownTextKind(node.tag, text, textOf) : kindOf(node.tag, container, text);
-  // Une image cassée dans la page : son panneau est en ruine.
+  // A broken image in the page: its billboard is in ruins.
   if (kind === "billboard" && node.img?.broken) kind = "ruin";
   const plot: Plot = {
     node, kind, container, ownText, depth, children: [], area: 0, textTotal: text,
@@ -557,14 +557,14 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
   }
 
   const mode = depth === 0 ? "street" : streetsOf(kind) ?? streets;
-  // Texte écrit directement dans le conteneur : un bâtiment de plus, en premier.
+  // Text written directly in the container: one more building, first.
   const built: Plot[] = [];
   if (text > 0) built.push(buildPlot(node, depth + 1, mode, kind));
   for (const child of kept) built.push(buildPlot(child, depth + 1, mode));
 
-  // Les images ne prennent pas de case : elles s'accrochent au bâtiment le plus proche dans la page.
-  // Celles qui n'en ont pas dans leur bloc remontent ; au bout de deux niveaux (si elles sont au
-  // moins trois), ou au bord d'un quartier, une galerie couverte d'écrans est bâtie pour elles.
+  // Images take no cell: they hang on the nearest building in the page.
+  // Those that have none in their block move up; after two levels (if there are at
+  // least three), or at the edge of a district, a gallery covered with screens is built for them.
   let orphans = 0;
   let climb = 0;
   built.forEach((child, i) => {
@@ -581,7 +581,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
     if (child.placed) plot.children.push(child);
     else plot.unplaced.push(child);
   });
-  // Une ou deux images seules continuent de chercher un vrai bâtiment ; trois font une galerie.
+  // One or two lone images keep looking for a real building; three make a gallery.
   if (orphans > 0 && !plot.hosts && ((climb >= 2 && orphans >= 3) || depth <= 1 || kind === "district")) {
     plot.children.unshift(galleryPlot(node, depth + 1, orphans));
     plot.hosts = true;
@@ -603,7 +603,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
       rivers += 1;
       continue;
     }
-    // Un enfant unique remplit son parent : pas de rue à prévoir autour (les enveloppes <div> en chaîne).
+    // An only child fills its parent: no street to plan around it (chains of <div> wrappers).
     const alone = plot.children.length === 1;
     const big = child.container || LANDMARKS.has(child.kind);
     const side = Math.sqrt(child.area) + (alone ? 0 : big && road > 0 ? road + 2 * SIDEWALK : Math.max(gap, accessMargin(mode)));
@@ -618,11 +618,11 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
   return plot;
 }
 
-/** Espace moyen réservé autour d'un élément : une demi-rue en ville (les voisins se touchent souvent). */
+/** Average space reserved around an element: half a street in town (neighbors often touch). */
 /**
- * Ce qu'un bâtiment réserve autour de lui, là où passent des voitures, pour qu'une rue le longe :
- * la moitié d'une rue à double sens, son trottoir (son accotement sur une pelouse), la moitié de
- * l'écart avec son voisin de derrière.
+ * What a building reserves around itself, where cars pass, so that a street can run along it:
+ * half a two-way street, its sidewalk (its verge on a lawn), half of the
+ * gap with its neighbor behind.
  */
 function accessMargin(mode: StreetMode): number {
   if (mode !== "street" && mode !== "avenue" && mode !== "lane") return 0;
@@ -632,13 +632,13 @@ function accessMargin(mode: StreetMode): number {
 function unitGap(mode: StreetMode, depth: number): number {
   if (mode === "street" || mode === "avenue") return roadWidth(mode, depth) * 0.55;
   if (mode === "none") return softGap(mode);
-  // Un lotissement garde de quoi tracer entre deux rangées une ruelle à double sens (ses jardins).
+  // A housing estate keeps enough room to draw a two-way lane between two rows (its gardens).
   if (mode === "lane") return roadWidth(mode, depth) * 0.8;
   return Math.max(roadWidth(mode, depth) * 0.6, softGap(mode));
 }
 
 // ---------------------------------------------------------------------------
-// Rangement en rangées, dans l'ordre
+// Arrangement in rows, in order
 // ---------------------------------------------------------------------------
 
 interface Row {
@@ -659,30 +659,30 @@ function worstRatio(areas: number[], width: number): number {
 }
 
 /**
- * Profondeur d'une rangée. Une rangée presque vide (un petit élément seul, la fin d'une liste)
- * s'étalerait en une bande très fine : elle garde des cases presque carrées, centrées,
- * et laisse de la place libre de part et d'autre.
+ * Depth of a row. An almost empty row (a small lone element, the end of a list)
+ * would spread into a very thin strip: it keeps almost square cells, centered,
+ * and leaves free space on either side.
  */
 function rowShape(scaled: number[], width: number, rigid: boolean, least = 0) {
   const total = scaled.reduce((sum, a) => sum + a, 0);
   const natural = total / width;
   const side = Math.sqrt(Math.max(...scaled));
-  // Jamais moins profonde que son plus petit bâtiment possible : pas d'immeuble en lamelle.
+  // Never shallower than its smallest possible building: no sliver-thin buildings.
   const depth = Math.max(rigid && natural < side * 0.4 ? side * 0.8 : natural, least);
   return { depth, used: Math.min(width, total / depth) };
 }
 
-/** Un conteneur s'adapte à n'importe quelle case ; un bâtiment a besoin d'une case à peu près carrée. */
+/** A container adapts to any cell; a building needs a roughly square cell. */
 export type Fit = "flexible" | "leaf" | "landmark";
 
-/** Range des surfaces dans un rectangle, par rangées, sans changer leur ordre. */
+/** Arranges areas in a rectangle, in rows, without changing their order. */
 export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: number[] = [], cores: number[] = mins): Row[] {
   const total = areas.reduce((sum, a) => sum + a, 0);
   if (areas.length === 0 || total <= 0) return [];
   const scale = (rect.w * rect.d) / total;
   const scaled = areas.map((a) => Math.max(a * scale, 1e-6));
   const rigid = (group: number[]) => group.some((j) => (fits[j] ?? "flexible") !== "flexible");
-  /** Chaque case garde au moins la largeur de son bâtiment le plus petit possible. */
+  /** Each cell keeps at least the width of its smallest possible building. */
   const least = (group: number[]) => Math.max(0, ...group.map((j) => mins[j] ?? 0));
   const shapeOf = (group: number[]) => rowShape(group.map((j) => scaled[j]), rect.w, rigid(group), least(group));
   const wideEnough = (group: number[]) => {
@@ -697,8 +697,8 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
       current.push(i);
       continue;
     }
-    // Un petit bâtiment ne partage pas la rangée d'un géant : il serait écrasé en lamelle.
-    // Un grand édifice encore moins : il lui faut une case presque carrée pour se dresser.
+    // A small building does not share a row with a giant: it would be squashed into a sliver.
+    // A large landmark even less: it needs an almost square cell to rise.
     const fit = (j: number) => fits[j] ?? "flexible";
     let mismatch = false;
     for (const j of current) {
@@ -716,11 +716,11 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
   }
   groups.push(current);
 
-  // Les rangées trop peu remplies prennent plus de profondeur : on resserre l'ensemble pour tenir dans le rectangle.
+  // Underfilled rows take more depth: we tighten the whole to fit in the rectangle.
   const shapes = groups.map(shapeOf);
   const depthTotal = shapes.reduce((sum, shape) => sum + shape.depth, 0);
-  // Trop de rangées pour le rectangle : on les tasse, d'abord sur ce qu'elles ont en plus de leur
-  // minimum ; seulement s'il n'y suffit pas, toutes ensemble.
+  // Too many rows for the rectangle: we compress them, first on what they have beyond their
+  // minimum; only if that is not enough, all together.
   const floors = groups.map(least);
   const spare = shapes.reduce((sum, shape, k) => sum + Math.max(0, shape.depth - floors[k]), 0);
   const excess = depthTotal - rect.d;
@@ -730,12 +730,12 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
     if (excess <= spare) return depth - (Math.max(0, depth - floors[k]) * excess) / spare;
     return depth * (rect.d / depthTotal);
   };
-  // Même tassées au minimum, les rangées ne tiennent pas : on range les cases comme un texte, ligne
-  // à ligne, chacune au moins à sa taille minimale, sans laisser de place libre au bout des lignes.
+  // Even compressed to the minimum, the rows do not fit: cells are laid out like text, line
+  // by line, each at least at its minimum size, without leaving free space at the end of lines.
   if (excess > spare && floors.some((floor) => floor > 0)) {
     const dense = denseRows(scaled, rect, mins);
-    // Toujours trop serré : on renonce aux marges (et aux rues qu'elles laissaient passer), jamais à
-    // la taille des bâtiments.
+    // Still too tight: we give up the margins (and the streets they let through), never
+    // the size of the buildings.
     return dense.squeezed && cores !== mins ? denseRows(scaled, rect, cores).rows : dense.rows;
   }
 
@@ -743,7 +743,7 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
   let z = rect.z;
   groups.forEach((group, k) => {
     const { depth, used } = shapes[k];
-    // Une rangée incomplète est centrée : la place libre se partage entre ses deux bouts.
+    // An incomplete row is centered: the free space is split between its two ends.
     let x = rect.x + Math.max(0, rect.w - used) / 2;
     const items = group.map((index) => {
       const w = Math.min(scaled[index] / depth, rect.w);
@@ -759,12 +759,12 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: n
 }
 
 /**
- * Rangement serré, ligne à ligne : les lignes se coupent sur les largeurs minimales des cases, puis
- * la place qui reste se partage selon leurs surfaces. Chaque case garde ainsi sa largeur et sa
- * profondeur minimales tant que le rectangle peut les contenir.
+ * Tight arrangement, line by line: lines break on the minimum widths of the cells, then
+ * the remaining space is shared according to their areas. Each cell thus keeps its minimum width and
+ * depth as long as the rectangle can hold them.
  */
 function denseRows(scaled: number[], rect: Rect, mins: number[]): { rows: Row[]; squeezed: boolean } {
-  // Une case sans minimum (un conteneur vide de bâtiments, une statue) compte pour une petite largeur.
+  // A cell without a minimum (a container without buildings, a statue) counts as a small width.
   const narrow = (j: number) => Math.max(mins[j] ?? 0, Math.sqrt(scaled[j]) * 0.6);
   const groups: number[][] = [];
   let current: number[] = [];
@@ -784,8 +784,8 @@ function denseRows(scaled: number[], rect: Rect, mins: number[]): { rows: Row[];
   const areas = groups.map((group) => group.reduce((sum, j) => sum + scaled[j], 0));
   const floorTotal = floors.reduce((sum, f) => sum + f, 0);
   const areaTotal = areas.reduce((sum, a) => sum + a, 0) || 1;
-  // La profondeur qui reste après les minimums se partage selon les surfaces ; en dernier recours
-  // (le rectangle est vraiment trop petit), tout se tasse ensemble.
+  // The depth left after the minimums is shared according to the areas; as a last resort
+  // (the rectangle really is too small), everything is compressed together.
   const extra = rect.d - floorTotal;
   const depths = floors.map((floor, k) => (extra >= 0 ? floor + (extra * areas[k]) / areaTotal : (floor * rect.d) / floorTotal));
 
@@ -809,37 +809,37 @@ function denseRows(scaled: number[], rect: Rect, mins: number[]): { rows: Row[];
   return { rows, squeezed: extra < 0 };
 }
 
-/** Un joint de rangée ne va chercher sa ligne de grille qu'à cette fraction de l'espacement. */
+/** A row joint only reaches for its grid line within this fraction of the spacing. */
 const SNAP = 0.3;
-/** Pas de ligne de grille si près du bord d'un tronçon : le bout de pâté serait trop court. */
+/** No grid line this close to the edge of a section: the end of the block would be too short. */
 const GRID_MARGIN = 0.4;
 
 /**
- * Lignes de la grille des rues transversales qui traversent un tronçon. La grille est calée sur
- * la ville entière : deux listes l'une au-dessus de l'autre partagent les mêmes lignes.
+ * Lines of the cross-street grid that cross a section. The grid is aligned on
+ * the whole city: two lists one above the other share the same lines.
  */
 export function gridLines(x0: number, width: number, spacing: number): number[] {
   const lines: number[] = [];
   const from = x0 + spacing * GRID_MARGIN;
   const to = x0 + width - spacing * GRID_MARGIN;
-  // « || 0 » : l'arrondi d'un nombre négatif proche de zéro donne -0.
+  // "|| 0": rounding a negative number close to zero gives -0.
   for (let k = Math.ceil(from / spacing) || 0; k * spacing < to; k += 1) lines.push(k * spacing);
   return lines;
 }
-/** Étirement permis aux cases entre deux joints déplacés. */
+/** Stretch allowed for the cells between two moved joints. */
 const STRETCH: [number, number] = [0.7, 1.4];
 
 /**
- * Choisit dans une rangée les joints où passent les rues transversales : ceux qui tombent près
- * d'une grille commune à toutes les rangées. Chaque joint retenu est amené sur sa ligne, en étirant
- * un peu les cases d'entre deux. D'une rangée à l'autre, les rues se prolongent au lieu de se décaler.
- * Renvoie le numéro de la case qui suit chaque joint retenu.
+ * Picks the joints of a row where cross streets pass: those that fall near
+ * a grid shared by all rows. Each kept joint is moved onto its line, stretching
+ * the cells in between a little. From one row to the next, streets continue instead of shifting.
+ * Returns the index of the cell that follows each kept joint.
  */
 function alignJoints(row: Row, lines: number[], spacing: number): Set<number> {
   const items = row.items;
   const start = items[0].x;
   const end = items[items.length - 1].x + items[items.length - 1].w;
-  // Repères : un joint, sa position d'origine et sa place sur la grille. Les deux bouts ne bougent pas.
+  // Markers: a joint, its original position and its place on the grid. The two ends do not move.
   const pins = [{ j: 0, from: start, to: start }];
   const fits = (a: { from: number; to: number }, b: { from: number; to: number }) => {
     const scale = (b.to - a.to) / (b.from - a.from);
@@ -847,7 +847,7 @@ function alignJoints(row: Row, lines: number[], spacing: number): Set<number> {
   };
   for (const line of lines) {
     const previous = pins[pins.length - 1];
-    // Le joint le plus proche de la ligne ; s'il étire trop les cases d'avant, le suivant.
+    // The joint closest to the line; if it stretches the cells before it too much, the next one.
     const candidates: number[] = [];
     for (let j = previous.j + 1; j < items.length; j += 1) {
       if (Math.abs(items[j].x - line) < spacing * SNAP) candidates.push(j);
@@ -874,7 +874,7 @@ function alignJoints(row: Row, lines: number[], spacing: number): Set<number> {
   return new Set(pins.slice(1, -1).map((pin) => pin.j));
 }
 
-/** Les mêmes rangées, à plat : une case par surface. */
+/** The same rows, flattened: one cell per area. */
 export function stripLayout(areas: number[], rect: Rect): Rect[] {
   const cells: Rect[] = areas.map(() => ({ ...rect, w: 0, d: 0 }));
   for (const row of stripRows(areas, rect)) {
@@ -889,7 +889,7 @@ export function stripLayout(areas: number[], rect: Rect): Rect[] {
 
 interface Ctx {
   lots: Lot[];
-  /** Enfants sans case de chaque conteneur en cours de pose, dans l'ordre de la page. */
+  /** Children without a cell of each container being laid out, in page order. */
   waiting: Map<number, Plot[]>;
   roads: Road[];
   joints: Joint[];
@@ -901,10 +901,10 @@ interface Ctx {
 }
 
 interface Env {
-  /** Sol fourni par un conteneur ancêtre (parc, pelouse, place…) : pas de trottoirs à poser. */
+  /** Ground provided by an ancestor container (park, lawn, square...): no sidewalks to lay. */
   ground?: GroundStyle;
   streets: StreetMode;
-  /** Les bords de la case qui donnent sur une rue (tous, si absent : le périphérique entoure la ville). */
+  /** The edges of the cell that face a street (all of them if absent: the ring road surrounds the city). */
   access?: Access;
 }
 
@@ -915,10 +915,10 @@ interface Access {
   east: boolean;
 }
 
-/** Ce qu'il y a d'un côté d'une case : une rue, un simple écart, un voisin collé, ou le bord du conteneur. */
+/** What lies on one side of a cell: a street, a simple gap, an adjoining neighbor, or the container's edge. */
 type Side = "road" | "soft" | "attached" | "edge";
 
-/** Une limite entre deux cases, et la largeur de ce qui la sépare. */
+/** A boundary between two cells, and the width of what separates them. */
 interface Edge {
   side: Side;
   width: number;
@@ -928,13 +928,13 @@ const EDGE: Edge = { side: "edge", width: 0 };
 
 export interface LayoutOptions {
   /**
-   * « aerodrome » dans la mégalopole : le grand aéroport est commun au site, chaque ville garde
-   * une petite piste (si elle a assez de liens vers d'autres sites). « none » : rien hors les murs.
+   * "aerodrome" in the megalopolis: the large airport is shared by the site, each city keeps
+   * a small runway (if it has enough links to other sites). "none": nothing outside the walls.
    */
   airport?: "airport" | "aerodrome" | "none";
 }
 
-/** Côté du socle d'une page, sans la construire : la mégalopole range ses villes avant de les bâtir. */
+/** Side of a page's base, without building it: the megalopolis arranges its cities before building them. */
 export function citySide(doc: CityDoc): number {
   return Math.sqrt(buildPlot(doc.root, 0, "street").area);
 }
@@ -959,7 +959,7 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
   connectRoads(ctx);
   const { lots } = ctx;
 
-  // Le monument (h1) domine toujours la ville.
+  // The monument (h1) always dominates the city.
   let tallest = 0;
   for (const lot of lots) if (lot.kind === "tower" || lot.kind === "residence") tallest = Math.max(tallest, lot.h);
   for (const lot of lots) if (lot.kind === "monument") lot.h = Math.max(lot.h, tallest * 1.15 + 6);
@@ -990,10 +990,10 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
       default: stats.buildings += 1;
     }
   }
-  // L'ambiance : usines dans la ceinture verte, caméras au bord des rues, nuages au-dessus.
+  // The ambiance: factories in the green belt, cameras at the edge of streets, clouds above.
   const info = ambianceOf(doc);
   const seed = hashOf(doc.url);
-  // Numéros de survol après le dernier lot : l'aéroport, puis les usines, puis les caméras.
+  // Hover numbers after the last lot: the airport, then the factories, then the cameras.
   let special = lots.length + (ctx.airport ? 1 : 0);
   const factories = planFactories(ctx, edge, info.factories, seed);
   const cameras = planCameras(ctx, edge, info.cameras, seed);
@@ -1012,10 +1012,10 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
 }
 
 // ---------------------------------------------------------------------------
-// L'ambiance
+// The ambiance
 // ---------------------------------------------------------------------------
 
-/** Tirage stable dans [0, 1[ à partir d'une graine et d'un rang. */
+/** Stable draw in [0, 1[ from a seed and a rank. */
 function draw(seed: number, k: number): number {
   const x = Math.sin((seed % 100_003) * 0.0173 + k * 12.9898) * 43758.5453;
   return x - Math.floor(x);
@@ -1025,9 +1025,9 @@ const FACTORY_LENGTH = 9;
 const FACTORY_GAP = 4;
 
 /**
- * Les usines, dans la ceinture verte : d'abord à l'ouest (l'est est à l'aéroport), puis au sud,
- * puis au nord, groupées au milieu de chaque côté comme une zone industrielle. Jamais près des
- * coins (la mégalopole y branche ses bretelles), ni sur un chenal ou une rue qui traverse.
+ * Factories, in the green belt: first to the west (the east belongs to the airport), then south,
+ * then north, grouped in the middle of each side like an industrial zone. Never near the
+ * corners (the megalopolis connects its ramps there), nor on a channel or a crossing street.
  */
 function planFactories(ctx: Ctx, edge: Rect, count: number, seed: number): Factory[] {
   if (count === 0) return [];
@@ -1067,8 +1067,8 @@ function planFactories(ctx: Ctx, edge: Rect, count: number, seed: number): Facto
 }
 
 /**
- * Les caméras, au bord des rues de la ville : une par rue tirée au sort (les plus longues
- * d'abord parmi un lot pris au hasard), au milieu du trottoir, l'objectif tourné vers la chaussée.
+ * Cameras, at the edge of the city's streets: one per randomly drawn street (the longest
+ * first among a random batch), in the middle of the sidewalk, the lens turned toward the roadway.
  */
 function planCameras(ctx: Ctx, edge: Rect, count: number, seed: number): Camera[] {
   if (count === 0) return [];
@@ -1086,7 +1086,7 @@ function planCameras(ctx: Ctx, edge: Rect, count: number, seed: number): Camera[
     const t = length * (0.35 + draw(seed, 200 + i) * 0.3);
     const near = draw(seed, 300 + i) < 0.5;
     const tilt = (draw(seed, 400 + i) - 0.5) * 1.2;
-    // Le mât au bord du trottoir ; l'objectif vers la chaussée, un peu de biais.
+    // The pole at the edge of the sidewalk; the lens toward the roadway, slightly at an angle.
     if (alongX) {
       const z = near ? road.z - 0.4 : road.z + road.d + 0.4;
       return { x: road.x + t, y: road.y + CURB, z, heading: (near ? -Math.PI / 2 : Math.PI / 2) + tilt };
@@ -1096,7 +1096,7 @@ function planCameras(ctx: Ctx, edge: Rect, count: number, seed: number): Camera[
   });
 }
 
-/** Nuages : d'autant plus nombreux que la page est lourde, toujours au-dessus des toits. */
+/** Clouds: more of them the heavier the page, always above the roofs. */
 const CLOUDS: Record<Weather, { density: number; min: number }> = {
   clear: { density: 0, min: 0 },
   fair: { density: 0.25, min: 1 },
@@ -1122,45 +1122,45 @@ function planClouds(weather: Weather, edge: Rect, maxY: number, seed: number): C
   return clouds;
 }
 
-/** Liens vers d'autres sites, dans toute la page. */
+/** Links to other sites, across the whole page. */
 export function externalLinks(node: CityNode): number {
   let total = node.links?.external ?? 0;
   for (const child of node.children ?? []) total += externalLinks(child);
   return total;
 }
 
-/** En dessous, la page est presque fermée sur elle-même : pas d'aéroport. */
+/** Below this, the page is almost closed on itself: no airport. */
 export const AIRPORT_MIN = 5;
-/** Longueur (et envergure) d'un avion. */
+/** Length (and wingspan) of a plane. */
 export const PLANE = 8;
 const RUNWAY_WIDTH = 6;
 const TAXIWAY_WIDTH = 2.4;
 
-/** Pistes : une pour un aérodrome, trois pour une page très ouverte sur le web. */
+/** Runways: one for an airfield, three for a page very open to the web. */
 export function runwaysFor(external: number): number {
   return external >= 300 ? 3 : external >= 50 ? 2 : 1;
 }
 
-/** Où poser l'aéroport : à l'est de x0, sur toute la profondeur [z, z + d], centré sur `center`. */
+/** Where to put the airport: east of x0, over the full depth [z, z + d], centered on `center`. */
 export interface AirportSite {
   x0: number;
   z: number;
   d: number;
   center: number;
-  /** Où commence l'avenue d'accès (le périphérique de la ville, l'autoroute de la mégalopole). */
+  /** Where the access avenue starts (the city's ring road, the megalopolis highway). */
   access: number;
-  /** Propriétaire de l'avenue d'accès (le socle de la ville ; -1 dans la mégalopole). */
+  /** Owner of the access avenue (the city's base; -1 in the megalopolis). */
   owner: number;
   y: number;
 }
 
-/** Combien de sites ont leur avion en vol. */
+/** How many sites have their plane in flight. */
 const FLIGHTS = 6;
 
 /**
- * L'aéroport, à l'est de la ceinture verte : terminal et tour de contrôle côté ville, avions
- * aux portes sur le tarmac, puis la voie de circulation et les pistes. Une avenue le relie au
- * périphérique à travers la ceinture.
+ * The airport, east of the green belt: terminal and control tower on the city side, planes
+ * at the gates on the tarmac, then the taxiway and the runways. An avenue links it to the
+ * ring road across the belt.
  */
 export function planAirport(
   ctx: Pick<Ctx, "lots" | "roads" | "plates">,
@@ -1172,7 +1172,7 @@ export function planAirport(
   const runways = runwaysFor(external);
   const { x0 } = site;
   const length = Math.max(30, Math.min(site.d - 8, 55 + 25 * runways));
-  // Les pistes restent sur le socle, même quand l'accès n'arrive pas en son milieu.
+  // The runways stay on the base, even when the access does not arrive in its middle.
   const top = clamp(site.center - length / 2, site.z + 4, site.z + site.d - 4 - length);
 
   let x = x0 + 2;
@@ -1192,7 +1192,7 @@ export function planAirport(
   }
   x += 4;
 
-  // Une porte par avion, autant que le tarmac en contient.
+  // One gate per plane, as many as the tarmac holds.
   const gate = PLANE * 1.15;
   const planes = Math.min(clamp(Math.round(Math.sqrt(external) / 2), 1, 12), Math.floor((length - 6) / gate));
   const apronD = Math.min(length, planes * gate + 6);
@@ -1200,7 +1200,7 @@ export function planAirport(
   const apron = { x: apronX, z: center - apronD / 2, w: apronW, d: apronD };
   const terminal = { x: terminalX, z: apron.z, w: 5, d: apronD };
 
-  // Bretelles : du tarmac à la grande voie, et de la grande voie à chaque piste.
+  // Links: from the tarmac to the main taxiway, and from the main taxiway to each runway.
   const taxiways: Airport["taxiways"] = [taxiway];
   for (const z of [apron.z + 1.5, apron.z + apron.d - 1.5 - TAXIWAY_WIDTH]) {
     taxiways.push({ x: apron.x + apron.w, z, w: taxiway.x - apron.x - apron.w, d: TAXIWAY_WIDTH, axis: "x" });
@@ -1213,7 +1213,7 @@ export function planAirport(
     from = strip.x + RUNWAY_WIDTH;
   }
 
-  // L'avenue d'accès, du périphérique au terminal : elle coupe la ceinture verte.
+  // The access avenue, from the ring road to the terminal: it cuts through the green belt.
   const avenue = roadWidth("avenue", 0);
   const access: Road = {
     x: site.access, z: site.center - avenue / 2, w: terminalX - site.access, d: avenue,
@@ -1222,8 +1222,8 @@ export function planAirport(
   ctx.plates = ctx.plates.flatMap((plate) => cutRect(plate, access).map((piece) => ({ ...plate, ...piece })));
   ctx.roads.push(access);
 
-  // Les premiers sites visés ont chacun leur avion : parti du bout nord de la piste, il a déjà viré
-  // vers l'est, cap sur sa destination (un cap tiré du nom du site, toujours le même).
+  // The top targeted sites each have their plane: it left from the north end of the runway and has already turned
+  // east, heading for its destination (a heading drawn from the site's name, always the same).
   const [main] = strips;
   const flights: Flight[] = sites.slice(0, FLIGHTS).map(([domain], i) => {
     const heading = (hashOf(domain) / 0xffffffff - 0.5) * 2.4;
@@ -1255,21 +1255,21 @@ export function planAirport(
   };
 }
 
-/** Dans la mégalopole, une ville a son aérodrome dès ce nombre de liens vers d'autres sites. */
+/** In the megalopolis, a city has its airfield from this number of links to other sites. */
 export const AERODROME_MIN = 20;
-/** Largeur de l'aérodrome, à l'est du socle : la mégalopole lui réserve cette place. */
+/** Width of the airfield, east of the base: the megalopolis reserves this space for it. */
 export const AERODROME = 18;
 const STRIP_WIDTH = 3.4;
 
-/** Une ville de la mégalopole a-t-elle son aérodrome ? (avant de la construire, pour la placer) */
+/** Does a megalopolis city have its airfield? (before building it, to place it) */
 export function hasAerodrome(doc: CityDoc): boolean {
   return externalLinks(doc.root) >= AERODROME_MIN;
 }
 
 /**
- * L'aérodrome d'une ville de la mégalopole : un hangar au bout d'une rue qui traverse la
- * ceinture verte, un ou trois petits avions devant, une piste courte et sa manche à air. Pas de
- * vols : ils partent du grand aéroport du site. Il tient dans la bande de AERODROME de large.
+ * The airfield of a megalopolis city: a hangar at the end of a street that crosses the
+ * green belt, one to three small planes in front, a short runway and its windsock. No
+ * flights: they leave from the site's large airport. It fits in the AERODROME-wide strip.
  */
 export function planAerodrome(
   ctx: Pick<Ctx, "lots" | "roads" | "plates">,
@@ -1292,7 +1292,7 @@ export function planAerodrome(
     x: apron.x + apron.w, z: site.center - 0.8, w: strip.x - apron.x - apron.w, d: 1.6, axis: "x" as const,
   };
 
-  // La rue d'accès, du périphérique au hangar : elle coupe la ceinture verte.
+  // The access street, from the ring road to the hangar: it cuts through the green belt.
   const street = roadWidth("street", 2);
   const access: Road = {
     x: site.access, z: site.center - street / 2, w: terminal.x - site.access, d: street,
@@ -1311,7 +1311,7 @@ export function planAerodrome(
     taxiways: [taxiway],
     apron,
     terminal,
-    // La manche à air, au bout nord de la piste, côté hangar.
+    // The windsock, at the north end of the runway, on the hangar side.
     tower: { x: strip.x - 1.6, z: top + 1, w: 0.4, d: 0.4 },
     planes,
     destinations: sites,
@@ -1319,7 +1319,7 @@ export function planAerodrome(
   };
 }
 
-/** Les limites de la ville comprennent l'aéroport et les avions en vol. */
+/** The city's bounds include the airport and the planes in flight. */
 export function includeAirport(bounds: CityLayout["bounds"], airport: Airport) {
   bounds.minZ = Math.min(bounds.minZ, airport.z);
   bounds.maxZ = Math.max(bounds.maxZ, airport.z + airport.d);
@@ -1333,7 +1333,7 @@ export function includeAirport(bounds: CityLayout["bounds"], airport: Airport) {
   }
 }
 
-/** Tirage stable à partir d'un nom (FNV-1a). */
+/** Stable draw from a name (FNV-1a). */
 function hashOf(text: string): number {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
@@ -1343,7 +1343,7 @@ function hashOf(text: string): number {
   return hash >>> 0;
 }
 
-/** Le bassin d'un port : le sud de sa bande, au pied du quai. */
+/** A harbor's basin: the south of its strip, at the foot of the quay. */
 export function harborWater(harbor: Rect): Rect {
   const quay = harbor.d * QUAY_SHARE;
   return { x: harbor.x, z: harbor.z + quay, w: harbor.w, d: harbor.d - quay };
@@ -1352,7 +1352,7 @@ export function harborWater(harbor: Rect): Rect {
 const overlap = (a: Rect, b: Rect, pad = 0) =>
   a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.z < b.z + b.d + pad && b.z < a.z + a.d + pad;
 
-/** Ce qui reste d'un rectangle quand on en retire un autre : jusqu'à quatre morceaux. */
+/** What remains of a rectangle when another is removed from it: up to four pieces. */
 export function cutRect(a: Rect, b: Rect): Rect[] {
   if (!overlap(a, b)) return [a];
   const z0 = Math.max(a.z, b.z);
@@ -1367,10 +1367,10 @@ export function cutRect(a: Rect, b: Rect): Rect[] {
 }
 
 /**
- * Un port s'ouvre sur le large : un chenal mène son bassin jusqu'au bord de la maquette, par le
- * plus court chemin libre (le bassin prolongé vers l'ouest ou l'est, ou un chenal vers le sud).
- * Il ne passe sous aucun bâtiment ni le long d'une rue ; les trottoirs et la ceinture verte
- * s'écartent, et les rues qu'il coupe le franchissent sur un pont.
+ * A harbor opens onto the open sea: a channel leads its basin to the edge of the model, by the
+ * shortest free path (the basin extended west or east, or a channel toward the south).
+ * It passes under no building and does not run along a street; sidewalks and the green belt
+ * move aside, and the streets it cuts cross it on a bridge.
  */
 function openHarbors(ctx: Ctx, edge: Rect) {
   for (const harbor of ctx.decor) {
@@ -1381,7 +1381,7 @@ function openHarbors(ctx: Ctx, edge: Rect) {
       { x: edge.x, z: water.z, w: water.x - edge.x, d: water.d, axis: "x" },
       { x: water.x + water.w, z: water.z, w: edge.x + edge.w - water.x - water.w, d: water.d, axis: "x" },
     ];
-    // Vers le sud : depuis le milieu du bassin, puis de plus en plus près de ses bouts.
+    // Toward the south: from the middle of the basin, then closer and closer to its ends.
     const width = clamp(water.d, 2, 4);
     const south = water.z + water.d;
     const reach = Math.max(0, Math.floor((water.w - width) / 2));
@@ -1394,7 +1394,7 @@ function openHarbors(ctx: Ctx, edge: Rect) {
     const length = (c: Rect & { axis: "x" | "z" }) => (c.axis === "x" ? c.w : c.d);
     const free = (c: Rect & { axis: "x" | "z" }) =>
       length(c) > 0.01 &&
-      // Ni bâtiment, ni conteneur qui a son propre sol (parc, place, champs…), hors le socle et le port.
+      // Neither a building nor a container with its own ground (park, square, fields...), apart from the base and the harbor.
       !ctx.lots.some(
         (lot) =>
           lot.id !== 0 &&
@@ -1450,9 +1450,9 @@ function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lo
 }
 
 /**
- * Une rue où roulent des voitures mène toujours quelque part : de proche en proche, elle rejoint
- * le périphérique. Celle que rien ne relie au réseau (entre deux rangées sans rue à leurs bouts)
- * s'efface : de l'herbe sur une pelouse, un passage pavé en ville.
+ * A street with cars always leads somewhere: step by step, it reaches
+ * the ring road. One that nothing connects to the network (between two rows with no street at their ends)
+ * disappears: grass on a lawn, a paved passage in town.
  */
 function connectRoads(ctx: Ctx) {
   type Way = Rect & { style: RoadStyle };
@@ -1492,7 +1492,7 @@ function connectRoads(ctx: Ctx) {
       }
     }
   }
-  // Une rue que rien ne relie s'efface (son pont avec elle).
+  // A street that nothing connects disappears (its bridge with it).
   ways.forEach((way, i) => {
     if (reached.has(i)) return;
     if (ctx.roads.includes(way as Road)) eraseRoad(way as Road, ctx);
@@ -1501,14 +1501,14 @@ function connectRoads(ctx: Ctx) {
   });
 }
 
-/** Crée, dans l'ordre de la page, les lots des enfants sans case qui précèdent ce rang. */
+/** Creates, in page order, the lots of the cell-less children that precede this rank. */
 function hangBefore(parent: number, order: number, y: number, ctx: Ctx) {
   const queue = ctx.waiting.get(parent);
   while (queue && queue.length > 0 && queue[0].order < order) hang(queue.shift()!, parent, y, ctx);
 }
 
 // ---------------------------------------------------------------------------
-// Les images accrochées aux bâtiments
+// Images hung on buildings
 // ---------------------------------------------------------------------------
 
 interface Placed {
@@ -1538,20 +1538,20 @@ interface Wall {
 interface Host {
   lot: Lot;
   walls: Wall[];
-  /** Bande des affiches sur les façades. */
+  /** Band of posters on the facades. */
   bottom: number;
   top: number;
-  /** Le haut des murs, sous le toit : la base des panneaux de toit. */
+  /** The top of the walls, under the roof: the base of roof billboards. */
   eave: number;
-  /** Où plantent les mâts des drapeaux : un toit plat au bord de la façade (null : un toit pentu). */
+  /** Where flag poles are planted: a flat roof at the edge of the facade (null: a sloped roof). */
   mast: number | null;
-  /** Prochaine façade à essayer : les affiches font le tour du bâtiment. */
+  /** Next facade to try: posters go around the building. */
   next: number;
   roof: boolean;
   flags: number;
 }
 
-/** Grille des bâtiments, pour savoir si une façade donne sur la rue ou contre un voisin. */
+/** Grid of buildings, to know whether a facade faces the street or a neighbor. */
 class Solids {
   private readonly cells = new Map<string, Lot[]>();
   constructor(lots: Lot[], private readonly size = 8) {
@@ -1577,9 +1577,9 @@ class Solids {
 }
 
 /**
- * Le toit plat où planter un mât, au bord de la façade : comme la scène le dessine (mêmes tirages).
- * Un gratte-ciel n'a de toit plat jusqu'au bord que sur son socle ; une maison et un petit immeuble
- * à toit pentu n'en ont pas.
+ * The flat roof where a pole is planted, at the edge of the facade: as the scene draws it (same draws).
+ * A skyscraper only has a flat roof reaching the edge on its base; a house and a small building
+ * with a sloped roof have none.
  */
 function mastOf(lot: Lot): number | null {
   const short = Math.min(lot.w, lot.d);
@@ -1589,12 +1589,12 @@ function mastOf(lot: Lot): number | null {
   return lot.y + lot.h;
 }
 
-/** Taille naturelle d'une affiche : selon l'image (ses pixels, ses proportions), un écran en 16/9. */
+/** Natural size of a poster: according to the image (its pixels, its proportions), a 16:9 screen. */
 function posterSize(lot: Lot): [number, number] {
   if (lot.kind === "screen") return [4, 4 / (16 / 9)];
   const img = lot.node.img;
   const ratio = clamp((img?.w || 4) / (img?.h || 3), 0.45, 3);
-  // Une vignette de 250 px : 3 m de large environ ; une grande photo : 13 m au plus.
+  // A 250 px thumbnail: about 3 m wide; a large photo: 13 m at most.
   let width = img?.w && img?.h ? clamp(Math.sqrt(img.w * img.h) / 80, 1.6, 4.4) : 3;
   let height = width / ratio;
   if (height > 3.4) {
@@ -1605,11 +1605,11 @@ function posterSize(lot: Lot): [number, number] {
 }
 
 /**
- * Accroche les images (et les écrans) au bâtiment le plus proche dans la page : dans leur bloc,
- * sinon un niveau au-dessus, et ainsi de suite. Les affiches font le tour des façades libres
- * (pas celles collées à un voisin), empilées par rangées comme à Times Square ; les enseignes se
- * posent au rez-de-chaussée, les drapeaux sur un mât au toit. Quand toutes les façades sont pleines,
- * un panneau monte sur le toit, puis on passe au bâtiment suivant.
+ * Hangs images (and screens) on the nearest building in the page: in their block,
+ * otherwise one level up, and so on. Posters go around the free facades
+ * (not those adjoining a neighbor), stacked in rows like in Times Square; signs go
+ * on the ground floor, flags on a pole on the roof. When all facades are full,
+ * a billboard goes up on the roof, then we move on to the next building.
  */
 function hangImages(lots: Lot[]) {
   const images = lots.filter((lot) => lot.hung && MOUNTED.has(lot.kind));
@@ -1624,7 +1624,7 @@ function hangImages(lots: Lot[]) {
     const lot = lots[id];
     const short = Math.min(lot.w, lot.d);
     const sky = lot.kind === "tower" && lot.h >= 20 && short >= 3.6;
-    // Le haut des murs utilisables : sous le toit pentu, sous le premier retrait d'un gratte-ciel.
+    // The top of the usable walls: under the sloped roof, under a skyscraper's first setback.
     const wallTop =
       lot.kind === "gallery" ? 0.97 : sky ? 0.45 : lot.kind === "house" ? 0.58 : lot.kind === "residence" && lot.h <= 9.5 ? 0.74 : 0.9;
     const e = 0.25;
@@ -1680,7 +1680,7 @@ function hangImages(lots: Lot[]) {
       host.next = (host.next + k + 1) % 4;
       return true;
     }
-    // Les façades sont pleines : un panneau sur le toit (pas sur le toit pentu d'une maison).
+    // The facades are full: a billboard on the roof (not on a house's sloped roof).
     if (host.roof || host.lot.kind === "house") return false;
     const ratio = w0 / h0;
     let width = Math.min(w0, host.lot.w * 0.85);
@@ -1737,7 +1737,7 @@ function hangImages(lots: Lot[]) {
     return poster(host, lot);
   };
 
-  /** Les porteurs dans [lo, hi[ les plus proches de l'image dans l'ordre de la page. */
+  /** The carriers in [lo, hi[ closest to the image in page order. */
   const nearest = (target: number, lo: number, hi: number, count: number): number[] => {
     let right = 0;
     let span = hostIds.length;
@@ -1776,11 +1776,11 @@ function hangImages(lots: Lot[]) {
         }
       }
     }
-    // Plus aucune place nulle part : l'image s'efface (elle reste dans l'inspecteur).
+    // No room left anywhere: the image disappears (it stays in the inspector).
     if (!done) lot.h = 0;
   }
 
-  // Chaque rangée d'affiches, et la rangée d'enseignes, se centre sur sa façade.
+  // Each row of posters, and the row of signs, is centered on its facade.
   for (const host of hosts.values()) {
     const L = host.lot;
     for (const wall of host.walls) {
@@ -1812,7 +1812,7 @@ function hangImages(lots: Lot[]) {
     }
   }
 
-  // Un conteneur qui n'a que des images prend l'emprise de ses images (pour l'inspecteur).
+  // A container that only has images takes the footprint of its images (for the inspector).
   for (let i = lots.length - 1; i >= 0; i -= 1) {
     const box = lots[i];
     if (!box.container || !box.hung) continue;
@@ -1835,7 +1835,7 @@ function hangImages(lots: Lot[]) {
   }
 }
 
-/** Un lot sans case : son emprise sera celle de l'affiche (ou de ses images, pour un conteneur). */
+/** A lot without a cell: its footprint will be that of the poster (or of its images, for a container). */
 function hang(plot: Plot, parent: number, y: number, ctx: Ctx) {
   const lot = newLot(plot, { x: 0, z: 0, w: 0, d: 0 }, y, parent, ctx);
   lot.hung = true;
@@ -1869,7 +1869,7 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
     ringAround(inner, top, lot.id, ctx);
   }
 
-  // Bandes réservées : la porte au nord de l'en-tête, le bassin au sud du pied de page.
+  // Reserved strips: the gate north of the header, the basin south of the footer.
   let z0 = inner.z;
   let z1 = inner.z + inner.d;
   if (plot.kind === "gate") {
@@ -1883,7 +1883,7 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
     z1 -= band;
   }
 
-  // Découpe en tronçons séparés par les canaux.
+  // Split into sections separated by the canals.
   const segments: Plot[][] = [[]];
   const rivers: Plot[] = [];
   for (const child of plot.children) {
@@ -1911,7 +1911,7 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
     z += depth;
     const river = rivers[s];
     if (river) {
-      // Le canal traverse le conteneur de bord à bord, entre deux quais.
+      // The canal crosses the container from edge to edge, between two quays.
       const water = Math.min(RIVER_WIDTH, band * 0.6);
       const quay = (band - water) / 2;
       const quayTop = childEnv.ground ? top : top + CURB;
@@ -1930,7 +1930,7 @@ function place(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx, env:
   lot.subtreeEnd = ctx.lots.length;
 }
 
-/** Le périphérique autour de la ville, et la ceinture verte au-delà. */
+/** The ring road around the city, and the green belt beyond. */
 function ringAround(inner: Rect, top: number, owner: number, ctx: Ctx) {
   const r = RING;
   const left = inner.x - r;
@@ -1944,7 +1944,7 @@ function ringAround(inner: Rect, top: number, owner: number, ctx: Ctx) {
     { x: left, z: inner.z, w: r, d: inner.d, axis: "z", style: "ring", owner, y: top },
     { x: right, z: inner.z, w: r, d: inner.d, axis: "z", style: "ring", owner, y: top },
   );
-  // Les quatre coins tournent en arrondi ; la mégalopole pourra y ouvrir un côté vers l'extérieur.
+  // The four corners turn in an arc; the megalopolis can open a side toward the outside there.
   const corner = (x: number, z: number, open: Openings): Joint => ({
     x, z, w: r, d: r, open, style: "ring", verge: "grass", owner, y: top,
   });
@@ -1965,8 +1965,8 @@ function ringAround(inner: Rect, top: number, owner: number, ctx: Ctx) {
 }
 
 /**
- * Range les enfants d'un tronçon en rangées, choisit où passent les rues,
- * pose les trottoirs des pâtés, puis chaque enfant à sa place.
+ * Arranges the children of a section in rows, chooses where streets pass,
+ * lays the sidewalks of the blocks, then each child in its place.
  */
 function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx: Ctx, env: Env, depth: number) {
   const mode = env.streets;
@@ -1977,32 +1977,32 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   const urban = mode === "street" || mode === "avenue";
   const gap = unitGap(mode, depth);
   const big = (p: Plot) => p.container || LANDMARKS.has(p.kind);
-  // Conteneurs et grands édifices ont une vraie rue de chaque côté : on leur réserve sa largeur.
+  // Containers and large landmarks have a real street on each side: its width is reserved for them.
   const alone = items.length === 1;
   const rows = stripRows(
     items.map((item) => (Math.sqrt(item.area) + (alone ? 0 : big(item) && streets ? road + 2 * SIDEWALK : Math.max(gap, accessMargin(mode)))) ** 2),
     rect,
-    // Un pâté de maisons ajouté se range comme un conteneur ; s'il porte un grand édifice, comme lui.
+    // An added city block is arranged like a container; if it carries a large landmark, like that landmark.
     items.map((item): Fit =>
       item.virtual
         ? item.children.some((child) => LANDMARKS.has(child.kind)) ? "landmark" : "flexible"
         : item.container ? "flexible" : LANDMARKS.has(item.kind) ? "landmark" : "leaf",
     ),
-    // Taille minimale de chaque case : son plus grand bâtiment et l'écart qui l'entoure. Un bâtiment
-    // seul dans sa case, là où passent des voitures, garde de quoi être longé par une rue.
+    // Minimum size of each cell: its largest building and the gap around it. A building
+    // alone in its cell, where cars pass, keeps enough room for a street to run along it.
     items.map((item) => {
       if (item.least <= 0) return 0;
       if (alone) return item.least;
       return item.least + Math.max(gap, item.container ? 0 : accessMargin(mode));
     }),
-    // Au plus serré : le bâtiment et un simple écart.
+    // At the tightest: the building and a simple gap.
     items.map((item) => (item.least > 0 ? item.least + (alone ? 0 : soft) : 0)),
   );
   if (rows.length === 0) return;
 
-  // Un conteneur au bout d'une rangée incomplète prend la place libre : il touche ainsi le bord du
-  // tronçon, et la rue qui le longe (ses propres rues y trouvent une issue). La dernière rangée va
-  // jusqu'au bord sud.
+  // A container at the end of an incomplete row takes the free space: it thus touches the edge of the
+  // section, and the street that runs along it (its own streets find an outlet there). The last row goes
+  // to the south edge.
   for (const row of rows) {
     const first = row.items[0];
     const last = row.items[row.items.length - 1];
@@ -2017,8 +2017,8 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
 
   const quiet: Edge = urban ? { side: "attached", width: ALLEY } : { side: "soft", width: soft };
   const half = (edge: Edge) => edge.width / 2;
-  // Retrait d'un bâtiment : trottoir côté rue et côté bord, presque rien côté voisin.
-  // Sur une pelouse (lotissement, parc), pas de trottoir : un simple accotement.
+  // Setback of a building: sidewalk on the street side and the edge side, almost nothing on the neighbor side.
+  // On a lawn (housing estate, park), no sidewalk: a simple verge.
   const verge = env.ground ? 0.35 : SIDEWALK;
   const tight = env.ground ? 0.15 : 0.4;
   const inset = (edge: Edge) =>
@@ -2027,21 +2027,21 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       : edge.side === "edge"
         ? env.ground ? soft / 2 : SIDEWALK
         : edge.width / 2;
-  /** Ce que prendra au moins le bord encore inconnu d'une case (un simple écart, ou le bord du tronçon). */
+  /** What the still unknown edge of a cell will take at least (a simple gap, or the section's edge). */
   const leastInset = (last: boolean) => (last ? inset(EDGE) : Math.min(inset(quiet), soft / 2));
-  // Une rue trop serrée pour une voiture dans chaque sens n'est pas tracée : les cases restent collées.
+  // A street too tight for one car in each direction is not drawn: the cells stay adjoining.
   const narrowest = mode === "path" ? 1.2 : DRIVABLE_MIN;
   /**
-   * Une rue entre deux cases : jamais plus large que ce qu'elles peuvent céder, ni au point de
-   * laisser à leurs bâtiments moins que leur taille minimale (`other` : le retrait de l'autre bord).
+   * A street between two cells: never wider than what they can give up, nor so wide as to
+   * leave their buildings less than their minimum size (`other`: the setback of the other edge).
    */
   type Cell = { size: number; other: number; need: number };
   const street = (a: Cell, b: Cell, required = false): Edge | null => {
-    // En ville, une rue ne prend pas plus de 42 % de la plus petite case (sauf celle qui dessert
-    // une rangée sans autre accès) ; sur une pelouse, seule compte la taille minimale des maisons.
+    // In town, a street takes no more than 42% of the smallest cell (except one that serves
+    // a row with no other access); on a lawn, only the minimum size of the houses counts.
     let width = env.ground || required ? road : Math.min(road, 0.42 * Math.min(a.size, b.size));
-    // Pour desservir une rangée qui n'a pas d'autre accès, le trottoir (l'accotement) se resserre :
-    // les bâtiments mordront dessus plutôt que de rétrécir.
+    // To serve a row with no other access, the sidewalk (the verge) narrows:
+    // buildings will overlap it rather than shrink.
     const margin = required ? tight : verge;
     for (const cell of [a, b]) {
       if (cell.need > 0) width = Math.min(width, 2 * (cell.size - cell.other - margin - cell.need));
@@ -2051,16 +2051,16 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   const rowNeed = rows.map((row) => Math.max(0, ...row.items.map((it) => items[it.index].least)));
   const access: Access = env.access ?? { north: true, south: true, west: true, east: true };
 
-  // Entre les rangées : une rue dès qu'un conteneur est en jeu, ou quand le pâté devient trop profond.
+  // Between rows: a street as soon as a container is involved, or when the block gets too deep.
   const between: Edge[] = [];
   let depthSinceRoad = rows[0].d;
   for (let k = 0; k < rows.length - 1; k += 1) {
     const here = rows[k].items.some((it) => big(items[it.index]));
     const next = rows[k + 1].items.some((it) => big(items[it.index]));
     const north = k === 0 ? EDGE : between[k - 1];
-    // Chaque bâtiment donne sur une rue : une rangée qui n'en a pas au nord en reçoit une au sud,
-    // et la dernière, si son bord sud ne donne sur rien, en reçoit une au nord (les rangées vont
-    // par deux, dos à dos, de part et d'autre des rues).
+    // Every building faces a street: a row without one to the north gets one to the south,
+    // and the last one, if its south edge faces nothing, gets one to the north (rows go
+    // in pairs, back to back, on either side of the streets).
     const homes = (r: number) => rows[r].items.some((it) => !items[it.index].container);
     const reachedNorth = k === 0 ? access.north : north.side === "road";
     const last = k + 1 === rows.length - 1;
@@ -2074,8 +2074,8 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     ];
     let edge = wanted ? street(...sides(), required) : null;
     if (!edge && required) {
-      // La rue obligatoire ne tient pas : la limite entre les deux rangées glisse vers celle qui a
-      // de la place, si à elles deux elles peuvent la border.
+      // The required street does not fit: the boundary between the two rows slides toward the one that has
+      // room, if together they can line it.
       const [a, b] = sides();
       const room = (cell: Cell) => cell.other + tight + cell.need + narrowest / 2;
       if (a.size + b.size >= room(a) + room(b) - 1e-6) {
@@ -2096,16 +2096,16 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     }
   }
 
-  // Grille des rues transversales, à la longueur d'un pâté.
+  // Cross-street grid, at the length of a block.
   const spacing = blockLength(mode);
   const lines = gridLines(rect.x, rect.w, spacing);
-  // Un tronçon dont ni l'ouest ni l'est ne donnent sur une rue : ses rues entre rangées n'auraient
-  // pas d'issue. Une rue transversale commune à toutes les rangées les relie au nord ou au sud.
+  // A section where neither the west nor the east faces a street: its streets between rows would have
+  // no outlet. A cross street shared by all rows links them to the north or the south.
   const enclosed = streets && mode !== "path" && !access.west && !access.east && (access.north || access.south);
   if (enclosed && rows.length > 1 && lines.length === 0) lines.push(rect.x + rect.w / 2);
 
   const groundTop = env.ground ? top : top + CURB;
-  /** Les rues transversales de chaque rangée : à la fin, celles qui butent sur une maison s'effacent. */
+  /** The cross streets of each row: at the end, those that run into a house disappear. */
   const crossing: Road[][] = rows.map(() => []);
 
   rows.forEach((row, k) => {
@@ -2114,7 +2114,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     const z0 = row.z + half(north);
     const z1 = row.z + row.d - half(south);
 
-    // La place libre au bout d'une rangée incomplète devient une place publique.
+    // The free space at the end of an incomplete row becomes a public square.
     const first = row.items[0];
     const last = row.items[row.items.length - 1];
     for (const [x0, x1] of [[rect.x, first.x], [last.x + last.w, rect.x + rect.w]]) {
@@ -2131,8 +2131,8 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       });
     }
 
-    // Dans la rangée : une rue autour des conteneurs et des grands édifices, et sur la grille commune.
-    // Si aucun joint ne s'y prête, une rue coupe quand même un pâté devenu bien trop long.
+    // In the row: a street around containers and large landmarks, and on the shared grid.
+    // If no joint lends itself to it, a street still cuts a block that has become far too long.
     const aligned = streets ? alignJoints(row, lines, spacing) : new Set<number>();
     const cross: Edge[] = [];
     let run = row.items[0].w;
@@ -2158,7 +2158,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       }
     }
 
-    // Le trottoir d'un pâté : les éléments simples collés entre deux rues.
+    // A block's sidewalk: the simple elements adjoining between two streets.
     let segmentStart = -1;
     const closeSegment = (end: number) => {
       if (segmentStart < 0) return;
@@ -2185,14 +2185,14 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
           axis: "z", style: mode as RoadStyle, owner, y: top, ...(env.ground ? { lawn: true } : {}),
         };
         ctx.roads.push(road);
-        // Seules les petites rues d'un pâté s'effacent si elles butent sur une maison : celle qui borde
-        // un conteneur le dessert (ses propres rues s'y raccordent), quitte à finir en impasse.
+        // Only a block's small streets disappear if they run into a house: the one that lines
+        // a container serves it (its own streets connect to it), even if it ends up a dead end.
         if (!big(plot) && !big(items[row.items[j - 1].index])) crossing[k].push(road);
       }
 
       if (plot.container) {
         const cell = { x: item.x + half(west), z: z0, w: item.w - half(west) - half(east), d: z1 - z0 };
-        // Ce que la case touche : une rue de ce tronçon, ou le bord du tronçon s'il donne lui-même sur une rue.
+        // What the cell touches: a street of this section, or the section's edge if it faces a street itself.
         const reach: Access = {
           north: north.side === "road" || (row.z <= rect.z + 0.01 && access.north),
           south: south.side === "road" || (row.z + row.d >= rect.z + rect.d - 0.01 && access.south),
@@ -2211,8 +2211,8 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
         w: item.w - inset(west) - inset(east),
         d: row.d - inset(north) - inset(south),
       };
-      // Un bâtiment ne descend pas sous sa taille minimale pour garder ses trottoirs : il mord dessus,
-      // tant que la case (hors chaussée) le permet.
+      // A building does not go below its minimum size to keep its sidewalks: it overlaps them,
+      // as long as the cell (minus the roadway) allows it.
       const need = plot.least;
       if (footprint.w < need) {
         const x0 = item.x + half(west);
@@ -2226,7 +2226,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
         footprint.z = clamp(footprint.z - (d - footprint.d) / 2, z0, z1 - d);
         footprint.d = d;
       }
-      // Case trop étroite pour ses trottoirs : le bâtiment se recentre sur la partie hors chaussée.
+      // Cell too narrow for its sidewalks: the building recenters on the part outside the roadway.
       if (footprint.w < 0.3) {
         const x0 = item.x + half(west);
         const x1 = item.x + item.w - half(east);
@@ -2242,9 +2242,9 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     });
   });
 
-  // Une rue transversale qui débouche, à travers un simple écart, sur une maison de la rangée voisine
-  // (au lieu de rejoindre la rue de cette rangée) ferait croire que la maison coupe la route : elle
-  // s'efface. En ville, sa place devient un passage pavé ; sur une pelouse, de l'herbe.
+  // A cross street that opens, through a simple gap, onto a house of the neighboring row
+  // (instead of joining that row's street) would make it look as if the house cuts the road: it
+  // disappears. In town, its place becomes a paved passage; on a lawn, grass.
   const meets = (a: Road, b: Road) => a.x < b.x + b.w - 0.05 && b.x < a.x + a.w - 0.05;
   let changed = true;
   while (changed) {
@@ -2269,7 +2269,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   }
 }
 
-/** Retire une rue : sur une pelouse, l'herbe reprend sa place ; en ville, un passage pavé. */
+/** Removes a street: on a lawn, grass takes its place back; in town, a paved passage. */
 function eraseRoad(road: Road, ctx: Pick<Ctx, "roads" | "plates">) {
   const at = ctx.roads.indexOf(road);
   if (at >= 0) ctx.roads.splice(at, 1);
@@ -2312,7 +2312,7 @@ function shapeLeaf(lot: Lot, node: CityNode): void {
     }
     case "embassy": capRatio(1.6); break;
     case "gallery": {
-      // Assez haute pour ses écrans, sur ses quatre façades (une affiche type : 4 × 3).
+      // Tall enough for its screens, on its four facades (a typical poster: 4 × 3).
       capRatio(1.6);
       const across = (length: number) => Math.max(1, Math.floor((length - 0.4 + POSTER_GAP) / (4 + POSTER_GAP)));
       const perRow = 2 * (across(lot.w) + across(lot.d));
@@ -2323,7 +2323,7 @@ function shapeLeaf(lot: Lot, node: CityNode): void {
     case "tower":
     case "residence": {
       capRatio(lot.kind === "tower" ? 2.2 : 3);
-      // Variation stable de ±20 % : deux textes de même longueur ne font pas deux immeubles jumeaux.
+      // Stable ±20% variation: two texts of the same length do not make twin buildings.
       const x = Math.sin(lot.id * 91.345 + 7.1) * 43758.5453;
       lot.h *= 0.82 + 0.4 * (x - Math.floor(x));
       break;

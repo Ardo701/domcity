@@ -3,7 +3,7 @@ import { sharingEnabled } from "@/server/config";
 import { clientActor, jsonError, sameOrigin, SLUG_PATTERN } from "@/server/security";
 import { hitRateLimit, reportCapture } from "@/server/store";
 
-/** Signaler une ville. Corps JSON : { reason, details? }. Trois signalements la masquent. */
+/** Reports a city. JSON body: { reason, details? }. Three reports hide it. */
 export async function POST(request: Request, ctx: RouteContext<"/api/captures/[slug]/report">) {
   if (!sharingEnabled()) return jsonError(503, "Le partage n'est pas encore configuré.");
   if (!sameOrigin(request)) return jsonError(403, "Requête refusée.");

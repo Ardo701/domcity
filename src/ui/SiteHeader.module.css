@@ -1,7 +1,7 @@
 /*
- * La barre du haut reste en haut de l'écran. Au repos, elle se fond dans la planche et son filet s'arrête aux
- * marges ; dès qu'on fait défiler, un fond de papier apparaît et le filet s'étire jusqu'aux bords de l'écran.
- * Fond et filet débordent de la barre de la largeur des marges de la page (--gutter).
+ * The top bar stays at the top of the screen. At rest, it blends into the sheet and its rule stops at the
+ * margins; as soon as the page scrolls, a paper background appears and the rule stretches to the edges of the screen.
+ * Background and rule overflow the bar by the width of the page margins (--gutter).
  */
 .topbar {
   position: sticky;
@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   gap: 32px;
-  /* Autant de marge au-dessus qu'en dessous des liens. */
+  /* As much margin above the links as below. */
   padding: 20px 0;
 }
 
@@ -48,7 +48,7 @@
   clip-path: inset(0 0);
 }
 
-/* Une ancre de la page ne passe pas sous la barre. */
+/* A page anchor does not slide under the bar. */
 :root:has(.topbar) {
   scroll-padding-top: 90px;
 }
@@ -74,12 +74,12 @@
   border-bottom-color: var(--signal);
 }
 
-/* Le bouton GitHub (sa forme est dans GithubLink.module.css) : il passe dans le menu sur téléphone. */
+/* The GitHub button (its shape is in GithubLink.module.css): it moves into the menu on a phone. */
 .github {
   flex-shrink: 0;
 }
 
-/* ---------- Menu du téléphone ---------- */
+/* ---------- Phone menu ---------- */
 
 .burger,
 .menu {
@@ -114,7 +114,7 @@
   background: var(--beacon);
 }
 
-/* Ouvert : les trois traits deviennent une croix. */
+/* Open: the three lines become a cross. */
 .burger[aria-expanded="true"] span:nth-child(1) {
   transform: translateY(6px) rotate(45deg);
 }
@@ -128,7 +128,7 @@
   transform: translateY(-6px) rotate(-45deg);
 }
 
-/* Le panneau descend sous la barre et couvre le reste de l'écran (100 % : la hauteur de la barre). */
+/* The panel drops below the bar and covers the rest of the screen (100%: the height of the bar). */
 .menu {
   position: absolute;
   top: 100%;
@@ -238,9 +238,9 @@
   font-size: 11px;
 }
 
-/* ---------- Tailles d'écran ---------- */
+/* ---------- Screen sizes ---------- */
 
-/* Écrans bas (portable de 13 pouces) : la barre se resserre pour laisser le héros tenir dans le premier écran. */
+/* Short screens (13-inch laptop): the bar tightens to let the hero fit in the first screen. */
 @media (min-width: 981px) and (max-height: 760px) {
   .topbar {
     padding: 16px 0;

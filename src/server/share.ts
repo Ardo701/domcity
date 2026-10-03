@@ -12,7 +12,7 @@ import { cityKey, fileStore, thumbKey } from "./files";
 import { hashToken, newDeleteToken } from "./security";
 import * as store from "./store";
 
-/** Taille maximale d'une ville compressée, et une fois décompressée (contre les bombes gzip). */
+/** Maximum size of a compressed city, and once decompressed (against gzip bombs). */
 const MAX_GZIP_BYTES = 2 * 1024 * 1024;
 const MAX_JSON_BYTES = 32 * 1024 * 1024;
 const MAX_THUMB_BYTES = 800 * 1024;
@@ -26,7 +26,7 @@ export class ShareError extends Error {
   }
 }
 
-/** Relève l'article sur Wikipédia depuis le serveur : on ne fait pas confiance à la ville envoyée. */
+/** Captures the article on Wikipedia from the server: the city sent is not trusted. */
 export async function captureWikipediaOnServer(lang: WikiLang, title: string): Promise<CityDoc> {
   const { doc } = await fetchWikipediaCity(lang, title, AbortSignal.timeout(20_000), {
     headers: {
@@ -38,7 +38,7 @@ export async function captureWikipediaOnServer(lang: WikiLang, title: string): P
   return doc;
 }
 
-/** Ville envoyée telle quelle (bookmarklet) : gzip borné, puis validation stricte. */
+/** City sent as is (bookmarklet): bounded gzip, then strict validation. */
 export function readUploadedCity(gzipped: Uint8Array): CityDoc {
   if (gzipped.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "Ville trop lourde.");
   let text: string;
@@ -58,7 +58,7 @@ export function readUploadedCity(gzipped: Uint8Array): CityDoc {
   return result.doc;
 }
 
-/** Largeur et hauteur d'un JPEG, lues dans son en-tête (marqueur SOF), ou null. */
+/** Width and height of a JPEG, read from its header (SOF marker), or null. */
 function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
   let i = 2;
   while (i + 8 < bytes.length) {
@@ -68,16 +68,16 @@ function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
       i += 1;
       continue;
     }
-    // Marqueurs sans longueur.
+    // Markers without length.
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
       i += 2;
       continue;
     }
-    // Début de l'image (SOF0 à SOF15, sauf C4, C8 et CC qui sont d'autres marqueurs).
+    // Start of frame (SOF0 to SOF15, except C4, C8 and CC, which are other markers).
     if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
       return { height: (bytes[i + 5] << 8) | bytes[i + 6], width: (bytes[i + 7] << 8) | bytes[i + 8] };
     }
-    // Les données commencent sans que la taille ait été donnée.
+    // The data starts without the size having been given.
     if (marker === 0xda) return null;
     i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
   }
@@ -85,8 +85,8 @@ function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
 }
 
 /**
- * Miniature : un JPEG au format de celle que fait le moteur, et rien d'autre. Le serveur ne peut
- * pas savoir ce qu'elle montre (il ne sait pas rendre la 3D) ; une image détournée se signale.
+ * Thumbnail: a JPEG in the format of the one the engine makes, and nothing else. The server cannot
+ * know what it shows (it cannot render the 3D); a misused image gets reported.
  */
 export function readThumbnail(bytes: Uint8Array): Uint8Array {
   if (bytes.byteLength > MAX_THUMB_BYTES) throw new ShareError(413, "Miniature trop lourde.");
@@ -107,13 +107,13 @@ export function statsOf(doc: CityDoc): CityStatsSummary {
 export interface ShareResult {
   slug: string;
   token: string;
-  /** L'adresse publiée, nettoyée (sans www., ni paramètres, ni ancre). */
+  /** The published address, cleaned (without www., parameters or anchor). */
   pageUrl: string;
 }
 
 /**
- * Publie une ville : ligne en attente → fichiers dans le stockage → ligne visible.
- * Si l'envoi des fichiers échoue, on efface la ligne : rien ne reste à moitié publié.
+ * Publishes a city: pending row → files in storage → visible row.
+ * If uploading the files fails, the row is deleted: nothing stays half published.
  */
 export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Promise<ShareResult> {
   const files = fileStore();
@@ -122,7 +122,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   const address = normalizePageUrl(doc.url);
   if (!address) throw new ShareError(400, "Adresse de page invalide.");
   if (!isPublicHost(address.domain)) throw new ShareError(400, "Les pages locales ou d'intranet ne se partagent pas.");
-  // Les sites refusés (dans la base) : pas de ville pour eux, et leurs images ne partent pas avec celle d'un autre.
+  // Refused sites (in the database): no city for them, and their images do not leave with another site's city.
   const blocked = await store.blocklist();
   const refusal = cityRefusal(doc, blocked);
   if (refusal) throw new ShareError(403, refusal);
@@ -146,7 +146,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
       deleteTokenHash: tokenHash,
     });
   } catch (error) {
-    // La base refuse aussi : un site entré dans la liste entre-temps.
+    // The database refuses too: a site added to the list in the meantime.
     if (error instanceof Error && error.message.includes("blocked_domain")) {
       throw new ShareError(403, "Ce site est sur la liste des sites refusés par DOMCity.");
     }
@@ -157,7 +157,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
     await files.put(cityKey(slug), body, "application/gzip");
     if (thumbnail) await files.put(thumbKey(slug), thumbnail, "image/jpeg");
     const published = await store.publishCapture(slug);
-    if (!published) throw new Error("publication refusée");
+    if (!published) throw new Error("publish refused");
   } catch (error) {
     await store.deleteCapture(slug, tokenHash).catch(() => undefined);
     await files.remove([cityKey(slug), thumbKey(slug)]).catch(() => undefined);
@@ -166,7 +166,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   return { slug, token, pageUrl: address.url };
 }
 
-/** Supprime la ville si le jeton correspond, puis ses fichiers. */
+/** Deletes the city if the token matches, then its files. */
 export async function deleteSharedCity(slug: string, token: string): Promise<boolean> {
   const deleted = await store.deleteCapture(slug, hashToken(token));
   if (!deleted) return false;

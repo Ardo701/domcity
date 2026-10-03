@@ -16,8 +16,8 @@ import {
 import { DURATION, KEYSTROKES, T, TYPED, along, clamp01, ease, fade, lerp, prog } from "./timeline";
 
 /**
- * La démonstration du favori, image par image : tout ce qu'on voit est calculé à partir de l'instant t.
- * Un navigateur dessiné à la manière de la planche (papier, encre, filets), pas la copie d'un vrai.
+ * The bookmarklet demo, frame by frame: everything visible is computed from the instant t.
+ * A browser drawn in the style of the sheet (paper, ink, rules), not a copy of a real one.
  */
 
 const INK = "#15151a";
@@ -29,7 +29,7 @@ const RULE = "#cbc3b2";
 const SIGNAL = "#ff4b12";
 const SIGNAL_DEEP = "#c73a08";
 const BEACON = "#ffd23f";
-/** La page d'exemple : un site ordinaire, sur fond blanc. */
+/** The sample page: an ordinary site, on a white background. */
 const SITE_BG = "#fdfcf9";
 const SITE_TEXT = "#d6d1c5";
 
@@ -42,7 +42,7 @@ const corners = (r: PageRect): P[] => [
   [r.x + r.w, r.y + r.h],
   [r.x, r.y + r.h],
 ];
-/** Le dessus d'une boîte de la ville à l'altitude y : coins nord-ouest, nord-est, sud-est, sud-ouest. */
+/** The top of a city box at altitude y: northwest, northeast, southeast, southwest corners. */
 const footprint = (cam: DemoCamera, x: number, y: number, z: number, w: number, d: number): P[] => [
   viewPoint(cam, x, y, z),
   viewPoint(cam, x + w, y, z),
@@ -50,9 +50,9 @@ const footprint = (cam: DemoCamera, x: number, y: number, z: number, w: number, 
   viewPoint(cam, x, y, z + d),
 ];
 
-// ---------- Les gestes ----------
+// ---------- The gestures ----------
 
-/** Les endroits où va la souris, dans la scène (barres comprises). */
+/** The places the mouse goes to, in the scene (bars included). */
 const AT = {
   rest: [520, 432] as P,
   button: [102, VIEW.top + 214] as P,
@@ -85,10 +85,10 @@ function cursorPath(city: DemoCity) {
 
 const CLICKS = [T.press, T.focus, T.click];
 
-/** Le moment où le balayage du relevé passe sur un élément de la page. */
+/** The moment the capture sweep passes over an element of the page. */
 const passOf = (page: PageRect) => lerp(T.scan[0], T.scan[1], page.y / VIEW.height);
 
-// ---------- Le navigateur ----------
+// ---------- The browser ----------
 
 function Tab({ x, active, title, icon }: { x: number; active: boolean; title: string; icon: ReactNode }) {
   const w = 172;
@@ -162,7 +162,7 @@ function AddressBar({ t }: { t: number }) {
   else if (t >= T.newTab && t < T.back[0]) text = "domcity.app/nouveau";
   const selected = t >= T.focus && t < T.typing;
   const caret = focused && (t >= T.typing || Math.floor((t - T.focus) * 5) % 2 === 0);
-  // Martian Mono : environ 0,74 corps par signe.
+  // Martian Mono: about 0.74 em per character.
   const charWidth = 9.5 * 0.74;
   return (
     <g>
@@ -232,9 +232,9 @@ function Bookmarks({ t }: { t: number }) {
   );
 }
 
-// ---------- Les pages ----------
+// ---------- The pages ----------
 
-/** Le bouton à glisser, tel qu'il est sur la page Créer une ville. */
+/** The button to drag, as it is on the Créer une ville page. */
 function Stamp({ x, y, scale = 1, pressed = 0 }: { x: number; y: number; scale?: number; pressed?: number }) {
   const shift = pressed * 2;
   return (
@@ -318,7 +318,7 @@ function DomcityPage({ t }: { t: number }) {
   );
 }
 
-/** Le contenu d'un élément de la page d'exemple : mots, titres, lignes de texte, liste… */
+/** The content of an element of the sample page: words, headings, lines of text, list... */
 function Content({ lot }: { lot: DemoLot }) {
   const { page: r, look } = lot;
   switch (look.type) {
@@ -398,14 +398,14 @@ function SitePage({ t, lots }: { t: number; lots: DemoLot[] }) {
   );
 }
 
-// ---------- La page devient une ville ----------
+// ---------- The page becomes a city ----------
 
 function City({ t, city }: { t: number; city: DemoCity }) {
   if (t < T.scan[0] || t >= T.reveal[1]) return null;
   const cam = lerpCamera(city.plan, city.final, prog(t, T.tilt[0], T.tilt[1], ease.inOut));
   const vanish = 1 - prog(t, T.reveal[0] + 0.15, T.reveal[1]);
   const tint = t < T.newTab ? 0.36 : lerp(0.36, 0.84, prog(t, T.newTab, T.newTab + 0.5));
-  /** Couchée en plan : de la page vers son emprise au sol (en haut de la page d'abord). */
+  /** Laid flat into a plan: from the page to its footprint on the ground (top of the page first). */
   const flat = (r: PageRect) => {
     const delay = (r.y / VIEW.height) * 0.16 + (r.x / VIEW.width) * 0.05;
     return prog(t, T.flatten[0] + delay, T.flatten[1] - 0.21 + delay, ease.inOut);
@@ -474,7 +474,7 @@ function City({ t, city }: { t: number; city: DemoCity }) {
   );
 }
 
-/** Les images de la page : d'abord dans la page, puis couchées au pied de leur façade, puis dressées en affiches. */
+/** The page's images: first in the page, then lying at the foot of their facade, then raised as posters. */
 function Panels({ t, city }: { t: number; city: DemoCity }) {
   if (t < T.swap || t >= T.reveal[1]) return null;
   const cam = lerpCamera(city.plan, city.final, prog(t, T.tilt[0], T.tilt[1], ease.inOut));
@@ -488,7 +488,7 @@ function Panels({ t, city }: { t: number; city: DemoCity }) {
         const a = prog(t, T.flatten[0] + delay, T.flatten[1] - 0.21 + delay, ease.inOut);
         const up = prog(t, T.rise[0] + 0.3, T.rise[0] + 0.85, ease.inOut);
         const angle = (up * Math.PI) / 2;
-        // La charnière : le bas de l'affiche, contre sa façade ; couchée, elle repose sur le sol.
+        // The hinge: the bottom of the poster, against its facade; lying down, it rests on the ground.
         const west = lot.panel!.mount === "west";
         const hingeY = lerp(0.56, lot.y, up);
         const left: [number, number, number] = west ? [lot.x, hingeY, lot.z] : [lot.x, hingeY, lot.z + lot.d];
@@ -527,7 +527,7 @@ function Panels({ t, city }: { t: number; city: DemoCity }) {
   );
 }
 
-/** Le relevé : un balayage jaune descend la page, chaque élément est cerné, quelques balises sont nommées. */
+/** The capture: a yellow sweep goes down the page, each element is outlined, a few tags are named. */
 function Scan({ t, city }: { t: number; city: DemoCity }) {
   const labels = [...city.containers, ...city.buildings, ...city.panels].filter((lot) => lot.label);
   const sweep = prog(t, T.scan[0], T.scan[1]);
@@ -564,7 +564,7 @@ function Scan({ t, city }: { t: number; city: DemoCity }) {
   );
 }
 
-/** La ville rendue par le moteur, puis ce qu'affiche DOMCity autour : le titre, Partager, la bulle au survol. */
+/** The city rendered by the engine, then what DOMCity displays around it: the title, Partager, the hover tooltip. */
 function Rendered({ t, city }: { t: number; city: DemoCity }) {
   const shown = prog(t, T.reveal[0], T.reveal[1]) * (1 - prog(t, T.reset[0], T.reset[1]));
   if (shown <= 0) return null;
@@ -635,7 +635,7 @@ function Loading({ t, elements }: { t: number; elements: number }) {
   );
 }
 
-// ---------- La souris ----------
+// ---------- The mouse ----------
 
 function Pointer({ t, city }: { t: number; city: DemoCity }) {
   const [x, y] = along(t, cursorPath(city));
@@ -670,7 +670,7 @@ function Pointer({ t, city }: { t: number; city: DemoCity }) {
   );
 }
 
-// ---------- La scène ----------
+// ---------- The scene ----------
 
 export function DemoScene({ t, city, label }: { t: number; city: DemoCity; label: string }) {
   const lots = [...city.containers, ...city.buildings, ...city.panels];

@@ -10,18 +10,18 @@ import { SUPABASE_DEFAULTS } from "./db";
 const dir = join(process.cwd(), "supabase", "migrations");
 const migrations = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
 const read = (file: string) => readFileSync(join(dir, file), "utf8");
-/** Les quatre premières ont été collées ensemble le 3 octobre 2026 (la première charge pg_trgm pour les autres). */
+/** The first four were pasted together on October 3, 2026 (the first one loads pg_trgm for the others). */
 const APPLIED_TOGETHER = 4;
 
 /**
- * Comme dans le SQL Editor de Supabase : chaque nouvelle migration est collée seule, dans une
- * session neuve (aucune extension encore chargée), par un rôle qui possède les objets mais n'est
- * pas superutilisateur. Les autres tests tournent en superutilisateur et ne verraient pas, par
- * exemple, un réglage de pg_trgm refusé (« permission denied to set parameter »).
+ * As in the Supabase SQL Editor: each new migration is pasted alone, in a
+ * fresh session (no extension loaded yet), by a role that owns the objects but is
+ * not a superuser. The other tests run as superuser and would not see, for
+ * example, a refused pg_trgm setting ("permission denied to set parameter").
  */
-describe("les migrations, appliquées une à une comme dans Supabase", () => {
+describe("migrations, applied one by one as in Supabase", () => {
   for (const file of migrations.slice(APPLIED_TOGETHER)) {
-    it(`${file} s'applique seule, sans être superutilisateur`, async () => {
+    it(`${file} applies on its own, without being a superuser`, async () => {
       const data = mkdtempSync(join(tmpdir(), "domcity-migration-"));
       const open = () => PGlite.create(data, { extensions: { pg_trgm, pgcrypto } });
       try {
@@ -33,7 +33,7 @@ describe("les migrations, appliquées une à une comme dans Supabase", () => {
           grant usage on schema extensions to migrateur;
           grant create on schema public to migrateur;`);
         for (const before of migrations.slice(0, migrations.indexOf(file))) await db.exec(read(before));
-        // Les objets appartiennent au rôle qui migre, comme « postgres » sur Supabase.
+        // The objects belong to the migrating role, like "postgres" on Supabase.
         await db.exec(`
           do $$
           declare r record;

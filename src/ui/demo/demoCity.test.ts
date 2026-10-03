@@ -5,11 +5,11 @@ import { demoCity } from "./demoCity";
 import { VIEW, viewPoint } from "./scene";
 import { DURATION, KEYSTROKES, STEPS, T, along } from "./timeline";
 
-describe("démonstration du favori", () => {
+describe("bookmarklet demo", () => {
   const city = demoCity();
   const lots = [...city.containers, ...city.buildings, ...city.panels];
 
-  it("dessine chaque élément de la page d'exemple dans la fenêtre", () => {
+  it("draws every element of the sample page inside the window", () => {
     expect(lots).toHaveLength(35);
     for (const { page } of lots) {
       expect(page.x).toBeGreaterThanOrEqual(0);
@@ -19,7 +19,7 @@ describe("démonstration du favori", () => {
     }
   });
 
-  it("pose les blocs exactement sur les bâtiments de l'image du moteur", () => {
+  it("lays the blocks exactly on the buildings of the engine's image", () => {
     const k = city.image.width / HERO_FIGURE.width;
     for (const lot of city.buildings) {
       for (const [x, y, z] of [
@@ -28,24 +28,24 @@ describe("démonstration du favori", () => {
       ]) {
         const [px, py] = projectOn(HERO_FIGURE, x, y, z);
         const [vx, vy] = viewPoint(city.final, x, y, z);
-        // Au dixième de pixel près : la maquette se fond dans l'image sans décalage visible.
+        // To a tenth of a pixel: the model blends into the image without a visible offset.
         expect(Math.abs(vx - (city.image.x + px * k))).toBeLessThan(0.1);
         expect(Math.abs(vy - (city.image.y + py * k))).toBeLessThan(0.1);
       }
     }
   });
 
-  it("fait sortir le monument de terre en dernier", () => {
+  it("makes the monument rise from the ground last", () => {
     const last = city.buildings.reduce((a, b) => (b.rank > a.rank ? b : a));
     expect(last.tag).toBe("h1");
     expect(new Set(city.buildings.map((lot) => lot.rank)).size).toBe(city.buildings.length);
   });
 
-  it("accroche les deux images de la page à leur façade", () => {
+  it("hangs the page's two images on their facade", () => {
     expect(city.panels.map((lot) => lot.panel?.src)).toEqual(["/figures/exemple-logo.svg", "/figures/exemple-affiche.svg"]);
   });
 
-  it("enchaîne les étapes sans trou et boucle sans saut", () => {
+  it("chains the steps without gaps and loops without a jump", () => {
     expect(STEPS[0].from).toBe(0);
     STEPS.slice(1).forEach((step, i) => expect(step.from).toBe(STEPS[i].to));
     expect(STEPS.at(-1)!.to).toBe(DURATION);

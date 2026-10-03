@@ -1,6 +1,6 @@
 import type { CityDoc } from "@/format/types";
 
-/** Télécharge une ville partagée (JSON compressé en gzip) et la décompresse dans le navigateur. */
+/** Downloads a shared city (gzip-compressed JSON) and decompresses it in the browser. */
 export async function loadSharedCity(fileUrl: string, signal?: AbortSignal): Promise<CityDoc> {
   const response = await fetch(fileUrl, { signal });
   if (!response.ok || !response.body) throw new Error(`fichier de ville ${response.status}`);
@@ -10,7 +10,7 @@ export async function loadSharedCity(fileUrl: string, signal?: AbortSignal): Pro
   return doc;
 }
 
-/** Compresse une ville pour l'envoi (bookmarklet). */
+/** Compresses a city for upload (bookmarklet). */
 export async function gzipCity(doc: CityDoc): Promise<Blob> {
   const stream = new Blob([JSON.stringify(doc)]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Response(stream).blob();

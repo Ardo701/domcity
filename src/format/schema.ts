@@ -83,9 +83,9 @@ export type ValidationResult =
   | { ok: false; error: string };
 
 /**
- * Vérifie d'abord la taille (nombre d'éléments, profondeur) sans récursion,
- * pour qu'un fichier piégé très profond ne fasse pas tomber la validation,
- * puis la forme exacte du fichier.
+ * First checks the size (number of elements, depth) without recursion,
+ * so that a very deep booby-trapped file does not bring the validation down,
+ * then the exact shape of the file.
  */
 export function validateCityDoc(data: unknown): ValidationResult {
   const root = (data as { root?: unknown } | null)?.root;

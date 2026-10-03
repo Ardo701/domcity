@@ -11,10 +11,10 @@ function isRendered(element: Element): boolean {
 }
 
 /**
- * jsdom ne fait aucune mise en page : on imite ce que le navigateur répond au relevé.
- * checkVisibility suit la règle du navigateur (masqué si un ancêtre est en display: none,
- * pas de boîte en display: contents) ; chaque élément reçoit la boîte donnée par `boxOf`.
- * Renvoie la fonction qui remet jsdom en l'état.
+ * jsdom does no layout: we imitate what the browser answers to the capture.
+ * checkVisibility follows the browser's rule (hidden if an ancestor is display: none,
+ * no box for display: contents); each element gets the box given by `boxOf`.
+ * Returns the function that puts jsdom back as it was.
  */
 export function mimicBrowserLayout(boxOf: (el: Element) => Box = () => ({ left: 10, top: 20, width: 300, height: 40 })) {
   const proto = Element.prototype as { checkVisibility?: (this: Element) => boolean };

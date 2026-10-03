@@ -1,9 +1,9 @@
 /**
- * Relevé d'une page : Document → ville (JSON).
+ * Capture of a page: Document → city (JSON).
  *
- * Fonctionne sur un document analysé (Wikipédia via DOMParser) comme sur la
- * page affichée (bookmarklet, avec `live`). Aucune dépendance : ce fichier est
- * compilé tel quel dans le bookmarklet (scripts/build-bookmarklet.mts).
+ * Works on a parsed document (Wikipedia via DOMParser) as well as on the
+ * displayed page (bookmarklet, with `live`). No dependencies: this file is
+ * compiled as is into the bookmarklet (scripts/build-bookmarklet.mts).
  */
 
 import { LIMITS } from "@/format/limits";
@@ -21,26 +21,26 @@ import { isPublicHost, isSameSite, normalizePageUrl, rootDomain, siteHost } from
 
 export interface CaptureOptions {
   source: CaptureSource;
-  /** Adresse de la page, pour résoudre les liens et les images relatifs. */
+  /** Address of the page, to resolve relative links and images. */
   url: string;
   title?: string;
   lang?: string;
   /**
-   * Page affichée dans le navigateur : on lit aussi ce que seul le rendu connaît
-   * (positions, éléments masqués, couleurs, composants web, ressources chargées).
+   * Page displayed in the browser: we also read what only rendering knows
+   * (positions, hidden elements, colors, web components, loaded resources).
    */
   live?: boolean;
   now?: Date;
 }
 
-/** Dans un tableau, seuls ces éléments deviennent des bâtiments ; le reste est du texte de champ. */
+/** In a table, only these elements become buildings; the rest is field text. */
 const KEPT_IN_TABLE = new Set(["img", "video", "canvas", "iframe", "svg"]);
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const SHOW_COMMENT = 0x80;
 
-/** Où mènent les liens : empreintes des pages du site, domaines des autres sites, avec leur nombre. */
+/** Where the links lead: fingerprints of the site's pages, domains of other sites, with their counts. */
 interface LinkTally {
   self: string;
   pages: Map<string, number>;
@@ -52,7 +52,7 @@ interface Frame {
   parent: CityNode;
   depth: number;
   inTable: boolean;
-  /** Fond visible sous ce nœud (celui du parent gardé le plus proche), en mode `live`. */
+  /** Visible background under this node (that of the nearest kept parent), in `live` mode. */
   bg?: string;
 }
 
@@ -73,7 +73,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
     if (label) root.label = label;
 
     if (view && colors) {
-      // Le fond de <body>, sinon celui de <html>, sinon le blanc du navigateur.
+      // The <body> background, otherwise the <html> one, otherwise the browser's white.
       pageBg =
         colors(view.getComputedStyle(body).backgroundColor) ??
         colors(view.getComputedStyle(doc.documentElement).backgroundColor) ??
@@ -81,7 +81,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
       root.bg = pageBg;
     }
 
-    // Parcours en profondeur avec une pile : pas de récursion, même sur un DOM très profond.
+    // Depth-first traversal with a stack: no recursion, even on a very deep DOM.
     const stack: Frame[] = [];
     pushChildren(stack, body, root, 0, false, pageBg);
 
@@ -103,7 +103,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
         const visibility = visibilityOf(el, view);
         if (visibility === "hidden") continue;
         if (visibility === "contents") {
-          // display: contents : l'élément n'a pas de boîte, ses enfants si.
+          // display: contents: the element has no box, its children do.
           pushChildren(stack, el, parent, depth, inTable, bg);
           continue;
         }
@@ -120,12 +120,12 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
 
       if (keep && view) {
         box = el.getBoundingClientRect();
-        // Sans surface (conteneur de flottants, enveloppe vide…), l'élément ne fait pas un bâtiment.
+        // Without area (float container, empty wrapper...), the element does not make a building.
         if (box.width === 0 && box.height === 0 && tag !== "hr") keep = false;
       }
 
       if (!keep) {
-        // Élément transparent : son texte et ses enfants remontent au parent gardé.
+        // Transparent element: its text and children move up to the kept parent.
         pushChildren(stack, el, parent, depth, inTable, bg);
         continue;
       }
@@ -170,7 +170,7 @@ export function captureDocument(doc: Document, options: CaptureOptions): CityDoc
   return result;
 }
 
-/** Les plus visés d'abord, puis par ordre alphabétique : le même relevé donne toujours le même fichier. */
+/** Most targeted first, then alphabetically: the same capture always gives the same file. */
 function ranked(counts: Map<string, number>, max: number): Array<[string, number]> {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, max);
 }
@@ -183,7 +183,7 @@ function linksOf(tally: LinkTally): CityLinksTo | undefined {
 }
 
 function pushChildren(stack: Frame[], el: Node, parent: CityNode, depth: number, inTable: boolean, bg?: string) {
-  // À l'envers, pour dépiler dans l'ordre du document.
+  // Reversed, to pop in document order.
   const children = childNodesOf(el);
   for (let i = children.length - 1; i >= 0; i -= 1) {
     stack.push({ node: children[i], parent, depth, inTable, bg });
@@ -191,8 +191,8 @@ function pushChildren(stack: Frame[], el: Node, parent: CityNode, depth: number,
 }
 
 /**
- * Les enfants tels qu'ils sont affichés. Un composant web montre son arbre fantôme
- * (shadow DOM ouvert), et chaque <slot> de cet arbre reçoit des éléments de la page.
+ * Children as they are displayed. A web component shows its shadow tree
+ * (open shadow DOM), and each <slot> of that tree receives elements from the page.
  */
 function childNodesOf(node: Node): ArrayLike<Node> {
   const el = node as Element;
@@ -210,7 +210,7 @@ function describeElement(el: Element, tag: string, options: CaptureOptions): Cit
   if (label) city.label = label;
 
   if (/^h[1-6]$/.test(tag) || tag === "button" || tag === "textarea" || tag === "select") {
-    // Sur la page affichée, le texte tel qu'on le lit : un <br> fait une espace, le texte masqué disparaît.
+    // On the displayed page, text as it reads: a <br> makes a space, hidden text disappears.
     const shown = options.live ? (el as HTMLElement).innerText : undefined;
     const text = collapse(shown ?? el.textContent);
     if (text.length > 0) city.text = text.length;
@@ -228,7 +228,7 @@ function describeElement(el: Element, tag: string, options: CaptureOptions): Cit
   return city;
 }
 
-/** Attributs où les sites rangent la vraie image tant qu'elle n'est pas chargée (chargement différé). */
+/** Attributes where sites keep the real image until it is loaded (lazy loading). */
 const LAZY_SRC = ["data-src", "data-lazy-src", "data-original"];
 
 function describeImage(img: HTMLImageElement, options: CaptureOptions): CityNode["img"] | null {
@@ -251,7 +251,7 @@ function describeImage(img: HTMLImageElement, options: CaptureOptions): CityNode
     h = numberAttr(img, "height") ?? numberAttr(img, "data-file-height");
   }
 
-  // Pixel espion de 1×1 : ce n'est pas une image, on l'ignore.
+  // 1×1 tracking pixel: not an image, ignored.
   if (w !== undefined && h !== undefined && w <= 2 && h <= 2) return null;
 
   const image: NonNullable<CityNode["img"]> = { src };
@@ -264,16 +264,16 @@ function describeImage(img: HTMLImageElement, options: CaptureOptions): CityNode
 }
 
 /**
- * Image cassée : le navigateur a fini de la charger et n'a rien pu afficher. Une image en
- * chargement différé pas encore demandée n'est pas « finie ». Les SVG sans taille propre
- * ont parfois une largeur nulle : on ne les compte pas.
+ * Broken image: the browser finished loading it and could not display anything. A lazy-loaded
+ * image not yet requested is not "finished". SVGs without an intrinsic size
+ * sometimes have a zero width: they are not counted.
  */
 function isBroken(img: HTMLImageElement, src: string): boolean {
   if (!src || /\.svg(\?|$)/i.test(src)) return false;
   return img.complete && img.naturalWidth === 0 && img.naturalHeight === 0;
 }
 
-/** Adresse absolue http(s) d'une image, ou "" (data:, blob:, trop longue, illisible). */
+/** Absolute http(s) address of an image, or "" (data:, blob:, too long, unreadable). */
 function imageUrl(raw: string, base: string): string {
   const value = raw.trim();
   if (!value || /^(data|blob):/i.test(value)) return "";
@@ -304,13 +304,13 @@ function countLink(parent: CityNode, href: string | null, pageUrl: string, pageH
     if (key !== tally.self) tally.pages.set(key, (tally.pages.get(key) ?? 0) + 1);
   } else {
     links.external += 1;
-    // Un intranet ou une machine locale ne se nomme pas dans une ville partagée.
+    // An intranet or a local machine is not named in a shared city.
     const host = siteHost(target.hostname);
     if (isPublicHost(host) && /^[a-z0-9.-]{1,253}$/.test(host)) tally.sites.set(host, (tally.sites.get(host) ?? 0) + 1);
   }
 }
 
-/** Masqué (display: none, visibility: hidden…), sans boîte à lui (display: contents), ou visible. */
+/** Hidden (display: none, visibility: hidden...), without its own box (display: contents), or visible. */
 function visibilityOf(el: Element, view: Window): "visible" | "hidden" | "contents" {
   const check = (el as HTMLElement).checkVisibility;
   if (typeof check !== "function") return "visible";
@@ -318,7 +318,7 @@ function visibilityOf(el: Element, view: Window): "visible" | "hidden" | "conten
   return view.getComputedStyle(el).display === "contents" ? "contents" : "hidden";
 }
 
-/** Ce que la page a chargé, ses scripts, ses commentaires et ses couleurs. */
+/** What the page loaded, its scripts, its comments and its colors. */
 function pageFacts(
   doc: Document,
   view: Window,
@@ -339,14 +339,14 @@ function pageFacts(
 
   const page: CityPage = { domSize: doc.getElementsByTagName("*").length, scripts, comments };
 
-  // Page réservée aux adultes, d'après sa propre étiquette : « adult » ou le label RTA, lus par
-  // les moteurs de recherche et les contrôles parentaux. DOMCity refuse d'en faire une ville.
+  // Page restricted to adults, according to its own label: "adult" or the RTA label, read by
+  // search engines and parental controls. DOMCity refuses to make a city of it.
   for (const meta of Array.from(doc.getElementsByTagName("meta"))) {
     if ((meta.getAttribute("name") ?? "").trim().toLowerCase() !== "rating") continue;
     if (/^(adult|RTA-5042-1996-1400-1577-RTA)$/i.test((meta.getAttribute("content") ?? "").trim())) page.adult = true;
   }
 
-  // Hôtes tiers : ressources mesurées par le navigateur, plus les scripts, cadres et styles de la page.
+  // Third-party hosts: resources measured by the browser, plus the page's scripts, frames and styles.
   const hosts = new Map<string, number>();
   const siteRoot = rootDomain(pageHost);
   const note = (raw: string | null) => {
@@ -358,7 +358,7 @@ function pageFacts(
       if (!/^[a-z0-9.-]{1,253}$/.test(host) || rootDomain(host) === siteRoot) return;
       hosts.set(host, (hosts.get(host) ?? 0) + 1);
     } catch {
-      // adresse illisible : ignorée
+      // unreadable address: ignored
     }
   };
 
@@ -398,8 +398,8 @@ function pageFacts(
 const RGB = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+)(%?))?\s*\)$/i;
 
 /**
- * Couleur calculée → #rrggbb, ou undefined si elle est (presque) transparente.
- * Les couleurs modernes (oklch, color()…) passent par un pixel de canevas. Résultats mis en cache.
+ * Computed color → #rrggbb, or undefined if it is (almost) transparent.
+ * Modern colors (oklch, color()...) go through a canvas pixel. Results are cached.
  */
 function colorReader(doc: Document): (value: string) => string | undefined {
   const cache = new Map<string, string | undefined>();
@@ -477,7 +477,7 @@ function safeHostname(url: string): string {
   }
 }
 
-/** id ou classe lisible. Les identifiants générés (mwAB, :r1:, css-1x2y3z…) ne disent rien : on les saute. */
+/** Readable id or class. Generated identifiers (mwAB, :r1:, css-1x2y3z...) say nothing: they are skipped. */
 export function labelOf(el: Element): string | undefined {
   const id = el.getAttribute("id")?.trim();
   if (id && !looksGenerated(id)) return `#${id.slice(0, 40)}`;

@@ -1,7 +1,7 @@
 /**
- * Les couleurs de la ville, partagées par la 3D et le dessin axonométrique de l'accueil.
- * Des tons de matériaux réels (béton, brique, enduit, verre, gazon, asphalte) ;
- * l'orange chantier reste réservé au monument et aux accents.
+ * The city's colors, shared by the 3D and the axonometric drawing of the home page.
+ * Tones of real materials (concrete, brick, render, glass, grass, asphalt);
+ * construction orange stays reserved for the monument and accents.
  */
 
 import type { GroundStyle, RoadStyle } from "./layout";
@@ -40,7 +40,7 @@ export const ROAD_COLORS: Record<RoadStyle, string> = {
   highway: "#3a3b40",
 };
 
-/** Tirage stable : le même lot tire toujours les mêmes nombres. */
+/** Stable draw: the same lot always draws the same numbers. */
 export function rand(id: number, salt: number): number {
   const x = Math.sin(id * 12.9898 + salt * 78.233) * 43758.5453;
   return x - Math.floor(x);

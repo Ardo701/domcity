@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import styles from "./explorer.module.css";
 
-/** Un lien en lecture seule et son bouton « Copier ». */
+/** A read-only link and its "Copier" button. */
 export function CopyField({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);

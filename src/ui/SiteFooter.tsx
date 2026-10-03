@@ -4,7 +4,7 @@ import { GithubMark, REPO_URL } from "./GithubLink";
 import { Wordmark } from "./Logo";
 import styles from "./SiteFooter.module.css";
 
-/** Le pied des pages du site : la marque, les pages, le projet, les pages légales. */
+/** The footer of the site's pages: the brand, the pages, the project, the legal pages. */
 export function SiteFooter() {
   const sharing = sharingEnabled();
   return (

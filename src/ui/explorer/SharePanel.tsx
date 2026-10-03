@@ -28,10 +28,10 @@ function headingsOf(root: CityNode): string[] {
   return out;
 }
 
-/** Wikipédia : le serveur relève l'article lui-même. Favori : la ville part telle quelle. */
+/** Wikipedia: the server captures the article itself. Bookmarklet: the city is sent as is. */
 export type ShareSource = { kind: "wikipedia"; lang: WikiLang } | { kind: "bookmarklet" };
 
-/** Aperçu de ce qui sera publié, puis les deux liens : public et secret. */
+/** Preview of what will be published, then the two links: public and secret. */
 export function SharePanel({
   doc,
   source,

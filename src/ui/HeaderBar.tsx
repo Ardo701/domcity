@@ -15,9 +15,9 @@ const subscribeScroll = (onChange: () => void) => {
 const isScrolled = () => window.scrollY > 4;
 
 /**
- * La barre du haut : la marque (retour à l'accueil), « Découvrir », « Créer une ville », le compte, GitHub.
- * Elle reste en haut quand on fait défiler la page ; son filet s'élargit alors jusqu'aux bords de l'écran.
- * Sur téléphone, les liens passent dans un menu plein écran, derrière un bouton à trois traits.
+ * The top bar: the brand (back to the home page), "Découvrir", "Créer une ville", the account, GitHub.
+ * It stays at the top when the page scrolls; its rule then widens to the edges of the screen.
+ * On a phone, the links move into a full-screen menu, behind a three-line button.
  */
 export function HeaderBar({ sharing, current }: { sharing: boolean; current?: SitePage }) {
   const scrolled = useSyncExternalStore(subscribeScroll, isScrolled, () => false);
@@ -30,7 +30,7 @@ export function HeaderBar({ sharing, current }: { sharing: boolean; current?: Si
   ];
   const here = (page: SitePage) => (current === page ? "page" : undefined);
 
-  // Menu ouvert : la page ne défile plus, Échap le ferme, et il se referme si l'écran s'élargit.
+  // Menu open: the page no longer scrolls, Escape closes it, and it closes again if the screen gets wider.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {

@@ -5,9 +5,9 @@ import { bookmarkletHref } from "@/bookmarklet/href";
 import { LogoMark } from "@/ui/Logo";
 
 /**
- * Le bouton à glisser dans la barre de favoris. Il pointe vers le site qui l'a servi
- * (domcity.app, un aperçu, ou localhost en développement).
- * React refuse les liens javascript: dans ses attributs : on pose l'adresse nous-mêmes.
+ * The button to drag into the bookmarks bar. It points to the site that served it
+ * (domcity.app, a preview, or localhost in development).
+ * React refuses javascript: links in its attributes: we set the address ourselves.
  */
 export function BookmarkletButton({ className }: { className?: string }) {
   const ref = useRef<HTMLAnchorElement>(null);
@@ -23,7 +23,7 @@ export function BookmarkletButton({ className }: { className?: string }) {
   );
 }
 
-/** Pour installer le favori à la main (téléphone, ou navigateur qui refuse le glisser). */
+/** To install the bookmarklet by hand (phone, or a browser that refuses dragging). */
 export function CopyBookmarklet({ className }: { className?: string }) {
   const [copied, setCopied] = useState<"oui" | "non" | null>(null);
 

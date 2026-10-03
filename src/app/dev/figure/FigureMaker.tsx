@@ -5,12 +5,12 @@ import { layoutCity } from "@/city/layout";
 import { figureKey } from "@/ui/figureMeta";
 import { HERO_SAMPLE } from "@/ui/samples";
 
-/** Largeur de l'image en pixels (affichée vers 700 px : nette sur un écran haute densité). */
+/** Image width in pixels (displayed around 700 px: sharp on a high-density screen). */
 const WIDTH = 1800;
 
 export function FigureMaker() {
   const stage = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState("Construction de la ville…");
+  const [status, setStatus] = useState("Building the city...");
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export function FigureMaker() {
       const { CityView } = await import("@/city/view");
       if (disposed || !stage.current) return;
       const layout = layoutCity(HERO_SAMPLE);
-      // Chaque image accrochée donne une nouvelle de son chargement : on attend la dernière.
+      // Each hung image reports when it has loaded: we wait for the last one.
       const expected = layout.lots.filter((lot) => lot.panel).length;
       const loaded = new Set<number>();
       let ready = () => {};
@@ -38,10 +38,10 @@ export function FigureMaker() {
       await new Promise((resolve) => setTimeout(resolve, 300));
       if (disposed) return;
 
-      setStatus("Rendu…");
+      setStatus("Rendering...");
       const figure = await view.figure(WIDTH, { from: "south-west" });
-      if (!figure || disposed) return setStatus("Échec du rendu");
-      // Pour régler l'exemple et ses repères depuis la console.
+      if (!figure || disposed) return setStatus("Rendering failed");
+      // To tune the sample and its markers from the console.
       (window as unknown as { __figure?: unknown }).__figure = { layout, figure, view };
       setPreview(URL.createObjectURL(figure.blob));
       const form = new FormData();
@@ -50,8 +50,8 @@ export function FigureMaker() {
       const response = await fetch("/api/dev-figure", { method: "POST", body: form });
       setStatus(
         response.ok
-          ? `Enregistrée : public/figures/accueil.webp (${figure.width} × ${figure.height}, ${Math.round(figure.blob.size / 1024)} Ko)`
-          : `Échec de l'enregistrement (${response.status})`,
+          ? `Saved: public/figures/accueil.webp (${figure.width} × ${figure.height}, ${Math.round(figure.blob.size / 1024)} KB)`
+          : `Saving failed (${response.status})`,
       );
     })();
     return () => {
@@ -68,7 +68,7 @@ export function FigureMaker() {
       <div ref={stage} style={{ width: 900, height: 640, position: "relative" }} />
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="Figure rendue" className="graph-paper" style={{ width: 900, height: "auto" }} />
+        <img src={preview} alt="Rendered figure" className="graph-paper" style={{ width: 900, height: "auto" }} />
       )}
     </main>
   );

@@ -1,12 +1,12 @@
 -- =============================================================================
--- DOMCity : lectures pour le partage (étape 2)
+-- DOMCity: reads for sharing (step 2)
 --
---   get_capture      une version partagée, avec son site et sa page
---   recent_captures  la galerie des dernières villes
---   get_site         le résumé d'un site
---   site_pages       les pages d'un site, avec leur dernière version
+--   get_capture      a shared version, with its site and page
+--   recent_captures  the gallery of the latest cities
+--   get_site         a site's summary
+--   site_pages       a site's pages, with their latest version
 --
--- Toutes publiques (lecture seule), comme site_city et page_versions.
+-- All public (read only), like site_city and page_versions.
 -- =============================================================================
 
 create function public.get_capture(p_slug text)

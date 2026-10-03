@@ -51,7 +51,7 @@
 
 .input {
   flex: 1;
-  /* Sans largeur propre, le champ ne force plus la colonne à s'élargir sur mobile. */
+  /* Without its own width, the field no longer forces the column to widen on mobile. */
   width: 0;
   min-width: 0;
   border: 0;

@@ -1,23 +1,23 @@
 import type { CityLayout } from "@/city/layout";
 
 /**
- * Les figures de la planche (l'accueil, la page Installer) sont de vraies images du moteur 3D,
- * rendues en développement (/dev/figure) et versionnées : la page reste légère, sans Three.js.
- * Elles sont accompagnées de la matrice de leur caméra, pour poser les repères au bon endroit,
- * et de l'empreinte de l'urbanisme qu'elles montrent : un test échoue si le moteur a changé
- * depuis (il faut alors régénérer l'image).
+ * The sheet's figures (the home page, the Installer page) are real images from the 3D engine,
+ * rendered in development (/dev/figure) and versioned: the page stays light, without Three.js.
+ * They come with their camera's matrix, to put the markers in the right place,
+ * and with the fingerprint of the urban plan they show: a test fails if the engine has changed
+ * since (the image must then be regenerated).
  */
 export interface FigureMeta {
   src: string;
   width: number;
   height: number;
-  /** Projection de la caméra (vue × projection, en colonnes, comme Three.js). */
+  /** Camera projection (view × projection, column-major, like Three.js). */
   matrix: readonly number[];
-  /** Empreinte de l'urbanisme rendu (`figureKey`). */
+  /** Fingerprint of the rendered urban plan (`figureKey`). */
   layout: string;
 }
 
-/** Empreinte (FNV-1a, 32 bits) de ce que l'urbanisme a placé : lots, rues, sols. */
+/** Fingerprint (FNV-1a, 32 bits) of what the urban plan placed: lots, streets, grounds. */
 export function figureKey(layout: CityLayout): string {
   const round = (n: number) => Math.round(n * 100) / 100;
   const parts = [
@@ -34,7 +34,7 @@ export function figureKey(layout: CityLayout): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-/** Un point de la ville sur l'image, en pixels. */
+/** A point of the city on the image, in pixels. */
 export function projectOn(figure: Pick<FigureMeta, "matrix" | "width" | "height">, x: number, y: number, z: number): [number, number] {
   const m = figure.matrix;
   const w = m[3] * x + m[7] * y + m[11] * z + m[15];

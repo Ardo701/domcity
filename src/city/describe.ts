@@ -1,4 +1,4 @@
-/** Fiche d'un lot, pour la bulle de survol et l'inspecteur. */
+/** A lot's card, for the hover tooltip and the inspector. */
 
 import { KINDS, type Kind } from "@/format/taxonomy";
 import type { CityImage, CityLinks } from "@/format/types";
@@ -11,8 +11,8 @@ export interface LotStep {
 }
 
 /**
- * Les rues ne sont pas dans la page : la ville les trace entre les éléments d'un conteneur.
- * Au survol, elles portent le nom de leur genre, et la fiche est celle de ce conteneur.
+ * Streets are not in the page: the city draws them between the elements of a container.
+ * On hover, they carry the name of their kind, and the card is that of the container.
  */
 export const ROAD_NAMES: Record<RoadStyle, string> = {
   ring: "Périphérique",
@@ -29,12 +29,12 @@ export interface LotInfo {
   name: string;
   blurb: string;
   color: string;
-  /** Sélecteur lisible : div.infobox, section#histoire… */
+  /** Readable selector: div.infobox, section#histoire... */
   selector: string;
   heading?: string;
-  /** Bâtiment ajouté pour le texte écrit directement dans un conteneur. */
+  /** Building added for the text written directly in a container. */
   ownText: boolean;
-  /** Galerie ajoutée pour porter les images d'un conteneur qui n'a qu'elles. */
+  /** Gallery added to carry the images of a container that has nothing else. */
   gallery: boolean;
   text: number;
   textTotal: number;
@@ -42,30 +42,30 @@ export interface LotInfo {
   descendants: number;
   links?: CityLinks;
   img?: CityImage;
-  /** Fond réel sous l'élément (le sien ou celui d'un parent), quand le favori l'a relevé. */
+  /** Real background under the element (its own or a parent's), when the bookmarklet captured it. */
   background?: string;
-  /** Position sur la page réelle [x, y, largeur, hauteur]. */
+  /** Position on the real page [x, y, width, height]. */
   rect?: [number, number, number, number];
   depth: number;
-  /** Étages d'un bâtiment (pas d'un conteneur ni d'un équipement). */
+  /** Floors of a building (not of a container or a facility). */
   floors?: number;
   path: LotStep[];
 }
 
 const STOREYED = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "embassy"]);
 
-/** Les petites images ne sont pas des affiches : elles ont leur propre nom. */
+/** Small images are not posters: they have their own name. */
 const EMBLEMS = {
   sign: { name: "Enseigne", blurb: "Une icône du site (moins de 48 px), en enseigne au rez-de-chaussée du bâtiment le plus proche dans la page." },
   flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur un mât, au toit du bâtiment le plus proche dans la page." },
 } as const;
 
-/** Bâtiment ajouté par la ville : pour le texte direct d'un conteneur, ou pour porter ses images. */
+/** Building added by the city: for a container's direct text, or to carry its images. */
 const added = (lot: Lot) => lot.ownText || lot.gallery !== undefined;
 
 /**
- * Nom et phrase d'un lot : ceux de son genre, sauf les petites images, et le texte écrit
- * directement dans un conteneur (dans un tableau, le texte de ses cases : une ferme).
+ * Name and sentence of a lot: those of its kind, except small images, and text written
+ * directly in a container (in a table, the text of its cells: a farm).
  */
 function nameOf(lot: Lot, layout?: CityLayout): { name: string; blurb: string } {
   if (lot.panel?.emblem) return EMBLEMS[lot.panel.emblem];
@@ -102,7 +102,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
     current = current.parent >= 0 ? layout.lots[current.parent] : undefined;
   }
 
-  // La couleur n'est notée que là où elle change : on remonte jusqu'au dernier fond connu.
+  // The color is only noted where it changes: we walk up to the last known background.
   let background: string | undefined;
   for (let c: Lot | undefined = lot; c && !background; c = c.parent >= 0 ? layout.lots[c.parent] : undefined) {
     background = c.node.bg;
@@ -143,7 +143,7 @@ export function formatCount(value: number): string {
   return numberFormat.format(Math.round(value));
 }
 
-/** Poids lisible : 840 Ko, 2,4 Mo. */
+/** Readable weight: 840 Ko, 2,4 Mo. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${formatCount(bytes)} o`;
   if (bytes < 1024 * 1024) return `${formatCount(bytes / 1024)} Ko`;

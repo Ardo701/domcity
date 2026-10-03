@@ -4,8 +4,8 @@ import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
 
 /**
- * L'image en grand, dans une fenêtre ordinaire. Afficher une image d'un autre
- * site est toujours permis : c'est seulement la 3D qui a besoin d'autorisation.
+ * The image enlarged, in an ordinary dialog. Displaying an image from another
+ * site is always allowed: only the 3D needs permission.
  */
 export function ImageViewer({ image, onClose }: { image: CityImage; onClose: () => void }) {
   useEffect(() => {

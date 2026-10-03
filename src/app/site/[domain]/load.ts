@@ -3,7 +3,7 @@ import { siteHost } from "@/format/url";
 import { sharingEnabled } from "@/server/config";
 import { getSite } from "@/server/store";
 
-/** Le domaine de l'adresse, tel que la base le range (sans « www. », en minuscules). */
+/** The domain of the address, as the database stores it (without "www.", lowercase). */
 export const readDomain = (raw: string) => {
   try {
     return siteHost(decodeURIComponent(raw));
@@ -12,7 +12,7 @@ export const readDomain = (raw: string) => {
   }
 };
 
-/** Le résumé d'un site, ou null s'il n'a aucune ville (ou si le partage est éteint). */
+/** A site's summary, or null if it has no city (or if sharing is off). */
 export const loadSite = cache(async (domain: string) => {
   if (!sharingEnabled() || !/^[a-z0-9.-]{3,253}$/.test(domain)) return null;
   return getSite(domain);

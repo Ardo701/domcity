@@ -1,7 +1,7 @@
 /*
- * DOMCity : identité « planche d'urbanisme ».
- * Papier calque, encre, filets fins. Les couleurs vives sont rares et ont un sens :
- * orange chantier pour l'action et les monuments, jaune balise pour ce qu'on désigne.
+ * DOMCity: "urban planning sheet" identity.
+ * Tracing paper, ink, fine rules. Vivid colors are rare and carry meaning:
+ * construction orange for actions and monuments, beacon yellow for what is pointed at.
  */
 
 :root {
@@ -87,7 +87,7 @@ p {
   margin: 0;
 }
 
-/* Petites capitales techniques : repères, cotes, étiquettes. */
+/* Small technical capitals: markers, dimensions, labels. */
 .mono-caps {
   font-family: var(--mono);
   font-size: 11px;
@@ -106,7 +106,7 @@ p {
   white-space: nowrap;
 }
 
-/* Papier millimétré */
+/* Graph paper */
 .graph-paper {
   background-color: var(--paper);
   background-image:

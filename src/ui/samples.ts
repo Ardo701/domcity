@@ -1,8 +1,8 @@
 import type { CityDoc } from "@/format/types";
 
 /**
- * Page de démonstration montrée sur l'accueil et la page Installer. Construite à la main, rendue par le vrai
- * moteur 3D (/dev/figure). Ses images sont dans public/figures.
+ * Sample page shown on the home page and the Installer page. Built by hand, rendered by the real
+ * 3D engine (/dev/figure). Its images are in public/figures.
  */
 export const HERO_SAMPLE: CityDoc = {
   format: 1,

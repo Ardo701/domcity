@@ -1,6 +1,6 @@
 import { isoBox } from "./iso";
 
-/** Le repère DOMCity : quatre blocs, dont un monument orange. Rangés du fond vers l'avant (ordre de dessin). */
+/** The DOMCity logo: four blocks, including an orange monument. Ordered from back to front (drawing order). */
 export const LOGO_BLOCKS = [
   { x: 0, z: 0, height: 2.6, color: "#ff4b12" },
   { x: 1.2, z: 0, height: 1.7, color: "#e8c891" },
@@ -8,7 +8,7 @@ export const LOGO_BLOCKS = [
   { x: 1.2, z: 1.2, height: 0.7, color: "#d3d1cb" },
 ] as const;
 
-/** Cadrage du repère, partagé avec son animation de chargement. */
+/** Framing of the logo, shared with its loading animation. */
 export const LOGO_VIEWBOX = "-2.1 -2.75 4.2 5.1";
 
 const MARK = LOGO_BLOCKS.flatMap((block) => isoBox(block.x, 0, block.z, 1, block.height, 1, block.color));

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Reçoit la ville envoyée par le favori. Rien n'est publié sans un clic sur « Publier ». */
+/** Receives the city sent by the bookmarklet. Nothing is published without a click on "Publier". */
 export default function NewCityPage() {
   return <NewCity canShare={sharingEnabled()} />;
 }

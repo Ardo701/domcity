@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BLOCK_CATEGORIES, blockedCategory, type BlockCategory } from "@/format/blocklist";
 import { SUPABASE_DEFAULTS } from "./db";
 
-// La vraie liste de départ, dans une base neuve (PGlite + toutes les migrations).
+// The real starting list, in a fresh database (PGlite + all migrations).
 let db: PGlite;
 let list: Map<string, BlockCategory>;
 
@@ -27,17 +27,17 @@ afterAll(() => db?.close());
 const blockedInBase = async (host: string) =>
   (await db.query<{ b: boolean }>("select public.is_blocked_domain($1) as b", [host])).rows[0].b;
 
-describe("la liste des sites refusés dans la base", () => {
-  it("est remplie dans les six catégories", () => {
+describe("the list of refused sites in the database", () => {
+  it("is filled in all six categories", () => {
     expect(list.size).toBeGreaterThan(1000);
     for (const category of BLOCK_CATEGORIES) {
       expect([...list.values()].filter((c) => c === category).length, category).toBeGreaterThan(10);
     }
   });
 
-  it("range chaque entrée sous une note en anglais, comme sa catégorie", async () => {
+  it("files each entry under a note in English, like its category", async () => {
     const notes = (await db.query<{ note: string }>("select distinct note from public.blocked_domains order by note")).rows.map((row) => row.note);
-    // Les notes françaises de la liste de départ et leur traduction, lues dans la migration qui les traduit.
+    // The French notes of the starting list and their translation, read from the migration that translates them.
     const translation = readFileSync(join(process.cwd(), "supabase", "migrations", "20261003210000_blocked_domains_notes_en.sql"), "utf8");
     const pairs = [...translation.matchAll(/\('((?:[^']|'')*)', '((?:[^']|'')*)'\)/g)].map((m) => [m[1].replaceAll("''", "'"), m[2]]);
     const english = new Set(pairs.map(([, en]) => en));
@@ -49,7 +49,7 @@ describe("la liste des sites refusés dans la base", () => {
     }
   });
 
-  it("refuse les sites attendus, avec leur catégorie", () => {
+  it("refuses the expected sites, with their category", () => {
     const expected: Array<[string, BlockCategory]> = [
       ["fr.pornhub.com", "adult"],
       ["www.onlyfans.com", "adult"],
@@ -70,7 +70,7 @@ describe("la liste des sites refusés dans la base", () => {
     for (const [host, category] of expected) expect(blockedCategory(host, list), host).toBe(category);
   });
 
-  it("ne refuse pas les sites qui ne font que ressembler, ni les sites voisins d'une entrée précise", () => {
+  it("does not refuse sites that merely look similar, nor sites next to a precise entry", () => {
     for (const host of [
       "google.com", "www.google.com", "docs.python.org", "microsoft.com", "apple.com", "essex.ac.uk", "pornic.fr",
       "xxxlutz.de", "fr.wikipedia.org", "github.com", "service-public.fr", "lemonde.fr", "banque.example.org",
@@ -79,7 +79,7 @@ describe("la liste des sites refusés dans la base", () => {
     }
   });
 
-  it("donne la même réponse dans le navigateur et dans la base", async () => {
+  it("gives the same answer in the browser and in the database", async () => {
     const hosts = [
       "fr.pornhub.com", "mail.google.com", "google.com", "a.b.xxx", "xxx.fr", "mabanque.bnpparibas",
       "WWW.Chase.com.", "pornic.fr", "drive.google.com", "photos.google.com.evil.example",
@@ -87,7 +87,7 @@ describe("la liste des sites refusés dans la base", () => {
     for (const host of hosts) expect(await blockedInBase(host), host).toBe(blockedCategory(host, list) !== undefined);
   });
 
-  it("reste illisible pour les visiteurs, sauf par la fonction qui la rend entière", async () => {
+  it("stays unreadable for visitors, except through the function that returns it whole", async () => {
     await db.exec("set role anon");
     try {
       await expect(db.query("select * from public.blocked_domains limit 1")).rejects.toThrow(/permission denied/);
@@ -98,7 +98,7 @@ describe("la liste des sites refusés dans la base", () => {
     }
   });
 
-  it("refuse une entrée mal écrite", async () => {
+  it("refuses a malformed entry", async () => {
     for (const domain of ["https://exemple.com", "Exemple.com", "exemple..com", "-exemple.com"]) {
       await expect(
         db.query("insert into public.blocked_domains (domain, category) values ($1, 'adult')", [domain]),

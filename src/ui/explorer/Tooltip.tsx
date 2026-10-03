@@ -4,11 +4,11 @@ import { KindSwatch, RoadSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
 
 /**
- * Bulle de survol : ce qu'était ce bâtiment dans la page. Sur une rue, `info` est la fiche
- * du conteneur qui l'a fait tracer : la bulle nomme la rue, puis ce conteneur. L'aéroport
- * n'est pas un élément : sa bulle compte les liens de toute la page (ou de tout le site, dans
- * la mégalopole) vers d'autres sites ; celle d'un aérodrome, ceux de sa page. Usines et caméras
- * non plus : elles disent les scripts et les traqueurs de la page.
+ * Hover tooltip: what this building was in the page. On a street, `info` is the card
+ * of the container that had it drawn: the tooltip names the street, then that container. The airport
+ * is not an element: its tooltip counts the links of the whole page (or the whole site, in
+ * the megalopolis) to other sites; an airfield's, those of its page. Factories and cameras
+ * are not either: they tell the page's scripts and trackers.
  */
 export function Tooltip({
   info,
@@ -21,9 +21,9 @@ export function Tooltip({
 }: {
   info: LotInfo | null;
   part: HoverPart;
-  /** Dans la mégalopole : la page dont fait partie l'élément (ou l'aérodrome) survolé. */
+  /** In the megalopolis: the page the hovered element (or airfield) belongs to. */
   page?: string;
-  /** Ce que dessert l'aéroport : la page, ou tout le site. */
+  /** What the airport serves: the page, or the whole site. */
   scope?: string;
   x: number;
   y: number;

@@ -1,6 +1,6 @@
 /*
- * Le bouton principal : au survol, l'orange tombe au centre comme une goutte et s'étale jusqu'aux bords :
- * deux taches irrégulières qui grandissent en se déformant, dont un bruit (filtre SVG) fait onduler le bord.
+ * The main button: on hover, the orange drops into the center like a drop and spreads to the edges:
+ * two irregular blots that grow while deforming, whose edge ripples with noise (SVG filter).
  */
 .ink {
   position: relative;
@@ -26,7 +26,7 @@
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Dans une fenêtre : la même encre, à la taille des autres boutons. */
+/* In a dialog: the same ink, at the size of the other buttons. */
 .small {
   gap: 10px;
   padding: 11px 16px;
@@ -47,7 +47,7 @@
   pointer-events: none;
 }
 
-/* Les taches débordent du bouton (ellipses de 130 % sur 340 %) : une fois étalées, elles le couvrent entier. */
+/* The blots overflow the button (ellipses of 130% by 340%): once spread, they cover it entirely. */
 .stain::before,
 .stain::after {
   content: "";
@@ -76,8 +76,8 @@
 }
 
 /*
- * Pendant le chargement : le repère animé à la place de la flèche. Sa case fait la taille de la flèche, le dessin
- * en déborde : le bouton ne change pas de taille. Un court délai : une navigation instantanée ne le montre pas.
+ * While loading: the animated logo instead of the arrow. Its box is the size of the arrow, the drawing
+ * overflows it: the button does not change size. A short delay: an instant navigation does not show it.
  */
 .loading {
   position: relative;
@@ -119,7 +119,7 @@
   transform: translate(0, 0) scale(1) rotate(0deg);
 }
 
-/* La seconde tache part un peu après la première : le bord reste inégal pendant qu'il s'étale. */
+/* The second blot starts a little after the first: the edge stays uneven while it spreads. */
 .ink:hover .stain::after,
 .ink:focus-visible .stain::after {
   border-radius: 52% 48% 46% 54% / 47% 53% 49% 51%;

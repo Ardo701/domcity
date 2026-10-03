@@ -40,7 +40,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Tableau des pages d'un site */
+/* Table of a site's pages */
 .figures {
   display: flex;
   flex-wrap: wrap;
@@ -148,7 +148,7 @@
   background: var(--paper-sunk);
 }
 
-/* Carte de confirmation (suppression) */
+/* Confirmation card (deletion) */
 .card {
   max-width: 560px;
   padding: 22px 24px;

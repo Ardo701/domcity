@@ -7,15 +7,15 @@ import styles from "./explorer.module.css";
 
 const ms = (value: number) => `${value.toFixed(1).replace(".", ",")} ms`;
 
-/** Fluide au-delà de 50 images par seconde, correct au-delà de 30, lent en dessous. */
+/** Smooth above 50 frames per second, fine above 30, slow below. */
 function grade(fps: number): "bon" | "moyen" | "lent" {
   return fps >= 50 ? "bon" : fps >= 30 ? "moyen" : "lent";
 }
 
-/** Compteur FPS : images par seconde, temps par image, poids de la scène. */
+/** FPS meter: frames per second, time per frame, weight of the scene. */
 export function PerfMeter({ viewRef, shifted }: { viewRef: RefObject<CityView | null>; shifted: boolean }) {
   const [stats, setStats] = useState<ViewStats | null>(null);
-  // Onglet caché : le navigateur suspend le dessin, le compteur tombe à zéro sans que la ville y soit pour rien.
+  // Hidden tab: the browser suspends drawing, the meter drops to zero through no fault of the city.
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {

@@ -1,9 +1,9 @@
 /**
- * Format d'une ville DOMCity (version 1).
+ * Format of a DOMCity city (version 1).
  *
- * C'est la « photo » d'une page : sa structure, jamais son texte complet.
- * Le même format sort de la capture Wikipédia, du bookmarklet, et sera
- * stocké tel quel (gzip) dans R2.
+ * It is the "photo" of a page: its structure, never its full text.
+ * The same format comes out of the Wikipedia capture and of the bookmarklet, and is
+ * stored as is (gzip) in R2.
  */
 
 export const FORMAT_VERSION = 1 as const;
@@ -11,89 +11,89 @@ export const FORMAT_VERSION = 1 as const;
 export type CaptureSource = "wikipedia" | "bookmarklet";
 
 export interface CityImage {
-  /** URL absolue de l'image (jamais l'image elle-même). */
+  /** Absolute URL of the image (never the image itself). */
   src: string;
   alt?: string;
-  /** Dimensions affichées ou déclarées, pour garder les proportions du panneau. */
+  /** Displayed or declared dimensions, to keep the billboard's proportions. */
   w?: number;
   h?: number;
-  /** Image cassée dans la page au moment du relevé (le navigateur n'a pas pu l'afficher). Favori. */
+  /** Image broken in the page at capture time (the browser could not display it). Bookmarklet. */
   broken?: true;
   /**
-   * Image d'un site refusé par DOMCity : son adresse et son texte ont été retirés (`src` vide),
-   * l'affiche dit « Image masquée ». Posé à la publication et à l'ouverture d'une ville.
+   * Image from a site refused by DOMCity: its address and text were removed (empty `src`),
+   * the poster says "Image masquée". Set at publishing and when a city is opened.
    */
   refused?: true;
 }
 
 export interface CityLinks {
-  /** Liens vers une page du même site. */
+  /** Links to a page of the same site. */
   internal: number;
-  /** Liens vers un autre site. */
+  /** Links to another site. */
   external: number;
 }
 
 export interface CityNode {
-  /** Nom de balise en minuscules : "div", "section", "img"… */
+  /** Lowercase tag name: "div", "section", "img"... */
   tag: string;
-  /** Nombre de caractères de texte propres à l'élément (hors enfants gardés). */
+  /** Number of text characters of the element itself (excluding kept children). */
   text?: number;
-  /** Texte des titres h1 à h3 uniquement, raccourci. */
+  /** Text of h1 to h3 headings only, shortened. */
   heading?: string;
-  /** id lisible ou première classe, pour reconnaître l'élément. */
+  /** Readable id or first class, to recognize the element. */
   label?: string;
   img?: CityImage;
   links?: CityLinks;
-  /** Position sur la page réelle [x, y, largeur, hauteur], quand on la connaît (bookmarklet). */
+  /** Position on the real page [x, y, width, height], when known (bookmarklet). */
   rect?: [number, number, number, number];
-  /** Couleur de fond réelle (#rrggbb), seulement quand elle change par rapport au parent (bookmarklet). */
+  /** Real background color (#rrggbb), only when it changes from the parent (bookmarklet). */
   bg?: string;
   children?: CityNode[];
 }
 
-/** Ce que l'on sait de la page entière quand elle est relevée dans le navigateur (bookmarklet). */
+/** What is known about the whole page when it is captured in the browser (bookmarklet). */
 export interface CityPage {
-  /** Nombre d'éléments HTML du document, avant tri : le vrai poids du DOM. */
+  /** Number of HTML elements in the document, before sorting: the real weight of the DOM. */
   domSize?: number;
-  /** Balises <script>. */
+  /** <script> tags. */
   scripts?: number;
-  /** Commentaires laissés dans le HTML. */
+  /** Comments left in the HTML. */
   comments?: number;
-  /** Ressources chargées (images, scripts, requêtes…), au moins : le navigateur n'en retient qu'une partie. */
+  /** Loaded resources (images, scripts, requests...), at least: the browser only keeps part of them. */
   resources?: number;
-  /** Octets transférés connus, au moins : les autres sites cachent souvent la taille de leurs fichiers. */
+  /** Known transferred bytes, at least: other sites often hide the size of their files. */
   bytes?: number;
-  /** Hôtes des ressources venues d'autres sites, du plus sollicité au moins sollicité. */
+  /** Hosts of the resources coming from other sites, from most to least called. */
   thirdParty?: string[];
-  /** Couleurs réelles de la page (#rrggbb). */
+  /** Real colors of the page (#rrggbb). */
   colors?: { background?: string; text?: string; link?: string };
-  /** La page se déclare réservée aux adultes (balise rating) : DOMCity n'en construit pas de ville. */
+  /** The page declares itself adults only (rating tag): DOMCity builds no city for it. */
   adult?: true;
 }
 
 /**
- * Où mènent les liens de la page entière : les autoroutes et les vols de la mégalopole.
- * Facultatif : les villes relevées avant ne le savent pas.
+ * Where the links of the whole page lead: the megalopolis highways and flights.
+ * Optional: cities captured earlier do not know it.
  */
 export interface CityLinksTo {
-  /** Empreintes des pages du même site visées (voir format/links.ts), jamais leurs adresses. */
+  /** Fingerprints of the targeted pages of the same site (see format/links.ts), never their addresses. */
   pages?: string[];
-  /** Sites visés et nombre de liens vers chacun, du plus visé au moins visé. */
+  /** Targeted sites and the number of links to each, from most to least targeted. */
   sites?: Array<[domain: string, links: number]>;
 }
 
 export interface CityDoc {
   format: typeof FORMAT_VERSION;
   source: CaptureSource;
-  /** URL normalisée de la page (sans ?query ni #ancre). */
+  /** Normalized URL of the page (without ?query or #anchor). */
   url: string;
   title: string;
-  /** Date ISO du relevé. */
+  /** ISO date of the capture. */
   capturedAt: string;
   lang?: string;
-  /** Faits sur la page entière (bookmarklet). */
+  /** Facts about the whole page (bookmarklet). */
   page?: CityPage;
-  /** Pages et sites visés par les liens de la page. */
+  /** Pages and sites targeted by the page's links. */
   linksTo?: CityLinksTo;
   root: CityNode;
 }

@@ -16,10 +16,10 @@ export const metadata: Metadata = {
   description: "Les pages web construites en villes 3D et partagées sur DOMCity, rangées par site : cherchez-en un, ou parcourez les derniers mis à jour.",
 };
 
-/** Le plus que la base rende d'un coup (`recent_sites`). */
+/** The most the database returns at once (`recent_sites`). */
 const LATEST = 60;
 
-// La galerie se met à jour toutes les minutes.
+// The gallery updates every minute.
 export const revalidate = 60;
 
 export default async function ExplorePage() {

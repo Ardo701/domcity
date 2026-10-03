@@ -1,12 +1,12 @@
 /**
- * Construction de la scène 3D à partir de l'urbanisme.
+ * Builds the 3D scene from the urban plan.
  *
- * Chaque bâtiment est composé de quelques pièces (socle, fût, retraits, toit,
- * flèche…) choisies selon son genre et tirées au sort de façon stable : la même
- * page donne toujours la même ville. Toutes les pièces répétées sont des
- * InstancedMesh, quelques dizaines d'appels de dessin pour des milliers de
- * bâtiments, d'arbres et de voitures. Seules les affiches des panneaux (une
- * texture chacune) sont des objets à part ; les icônes partagent un atlas.
+ * Each building is made of a few pieces (base, shaft, setbacks, roof,
+ * spire...) chosen according to its kind and drawn at random in a stable way: the same
+ * page always gives the same city. All repeated pieces are
+ * InstancedMesh, a few dozen draw calls for thousands of
+ * buildings, trees and cars. Only the billboards' posters (one
+ * texture each) are separate objects; the icons share an atlas.
  */
 
 import * as THREE from "three";
@@ -26,17 +26,17 @@ export interface InstanceRef {
 }
 
 export interface BillboardSlot {
-  /** Numéro du lot dans la vue (dans la mégalopole, celui de toute la mégalopole). */
+  /** Lot number in the view (in the megalopolis, the one for the whole megalopolis). */
   id: number;
   lot: Lot;
   panels: THREE.Mesh[];
   ratio: number;
 }
 
-/** Panonceaux et drapeaux : l'atlas à remplir, et les lots qui portent chacune de ses icônes. */
+/** Small signs and flags: the atlas to fill, and the lots that carry each of its icons. */
 export interface EmblemSet {
   atlas: IconAtlas;
-  /** owners[i] : lots de l'icône atlas.sources[i]. */
+  /** owners[i]: lots of the icon atlas.sources[i]. */
   owners: number[][];
 }
 
@@ -50,14 +50,14 @@ export interface LabelSlot {
 export interface CityScene {
   group: THREE.Group;
   pickables: THREE.Object3D[];
-  /** Instances de chaque lot, pour les surligner. */
+  /** Instances of each lot, to highlight them. */
   refs: InstanceRef[][];
-  /** Couleurs d'origine de chaque InstancedMesh. */
+  /** Original colors of each InstancedMesh. */
   baseColors: Map<THREE.InstancedMesh, Float32Array>;
   billboards: BillboardSlot[];
   emblems: EmblemSet;
   labels: LabelSlot[];
-  /** Le mobilier (arbres, voitures, lampadaires) : on le cache de loin dans la mégalopole. */
+  /** Street furniture (trees, cars, street lamps): hidden from afar in the megalopolis. */
   details: THREE.Object3D[];
   dispose(): void;
 }
@@ -92,7 +92,7 @@ class Batch {
     if (this.options.attribute) this.extras.push(...extra);
   }
 
-  /** `base` : numéro, dans la vue, du premier lot de cette ville (la mégalopole en assemble plusieurs). */
+  /** `base`: number, in the view, of this city's first lot (the megalopolis assembles several). */
   build(refs: InstanceRef[][], baseColors: Map<THREE.InstancedMesh, Float32Array>, base: number): THREE.InstancedMesh | null {
     const count = this.lots.length;
     if (count === 0) {
@@ -112,7 +112,7 @@ class Batch {
     mesh.computeBoundingBox();
     mesh.computeBoundingSphere();
     if (this.options.pickable) {
-      // -1 : la campagne et les autoroutes de la mégalopole, qui ne sont pas des éléments de la page.
+      // -1: the megalopolis countryside and highways, which are not elements of the page.
       mesh.userData.lots = Int32Array.from(this.lots, (lotId) => (lotId >= 0 ? lotId + base : -1));
       baseColors.set(mesh, colors);
       this.lots.forEach((lotId, index) => {
@@ -131,10 +131,10 @@ const tmpQuaternion = new THREE.Quaternion();
 const tmpEuler = new THREE.Euler(0, 0, 0, "YXZ");
 
 /**
- * Base au centre (cx, y, cz), taille (w, h, d), rotation autour de la verticale puis de x ;
- * `rotZ` cabre une forme tournée vers +x (un avion qui décolle).
+ * Base at the center (cx, y, cz), size (w, h, d), rotation around the vertical then around x;
+ * `rotZ` pitches up a shape facing +x (a plane taking off).
  */
-/** Les petits avions d'un aérodrome. */
+/** An airfield's small planes. */
 const SMALL_PLANE = PLANE * 0.48;
 
 function at(cx: number, y: number, cz: number, w: number, h: number, d: number, rotY = 0, rotX = 0, rotZ = 0): THREE.Matrix4 {
@@ -145,7 +145,7 @@ function at(cx: number, y: number, cz: number, w: number, h: number, d: number, 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const shade = (hex: string, factor: number) => "#" + new THREE.Color(hex).multiplyScalar(factor).getHexString();
 
-/** Grille de recherche : où sont les bâtiments, l'eau et les rues, pour poser arbres et voitures ailleurs. */
+/** Lookup grid: where buildings, water and streets are, to put trees and cars elsewhere. */
 class Obstacles {
   private readonly cells = new Map<string, Rect[]>();
   constructor(private readonly size = 6) {}
@@ -175,7 +175,7 @@ class Obstacles {
 }
 
 // ---------------------------------------------------------------------------
-// La ville
+// The city
 // ---------------------------------------------------------------------------
 
 export function buildCityScene(layout: CityLayout, materials: CityMaterials, base = 0): CityScene {
@@ -183,7 +183,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   group.name = "domcity";
   const pickable = { pickable: true };
 
-  // Icônes : une case d'atlas par adresse, dans l'ordre de la page.
+  // Icons: one atlas cell per address, in page order.
   const iconOwners = new Map<string, number[]>();
   for (const lot of layout.lots) {
     const src = lot.panel?.emblem ? lot.node.img?.src : undefined;
@@ -217,7 +217,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     plane: new Batch(shapes.planeGeometry(), materials.painted, pickable),
     sign: new Batch(shapes.faceGeometry(), emblemSurface, { attribute: "aIcon", cast: false, pickable: true }),
     flag: new Batch(shapes.flagGeometry(), emblemSurface, { attribute: "aIcon", pickable: true }),
-    // L'ambiance. Nuages, fumées, pluie et champs des caméras ne se survolent pas : on vise à travers.
+    // The ambiance. Clouds, smoke, rain and camera fields cannot be hovered: we aim through them.
     graffiti: new Batch(shapes.faceGeometry(), materials.graffiti, { attribute: "aIcon", cast: false, pickable: true }),
     cloud: new Batch(shapes.ballGeometry(), materials.cloud, { receive: false }),
     glow: new Batch(shapes.boxGeometry(), materials.glow, { cast: false, receive: false }),
@@ -232,7 +232,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   const panelMeshes: THREE.Mesh[] = [];
   const obstacles = new Obstacles();
 
-  // --- Raccourcis ----------------------------------------------------------
+  // --- Shortcuts -----------------------------------------------------------
 
   const box = (id: number, cx: number, y: number, cz: number, w: number, h: number, d: number, color: string, rotY = 0) =>
     kit.plain.add(id, at(cx, y, cz, w, h, d, rotY), color);
@@ -249,9 +249,9 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   };
   const roofOf = (w: number, d: number) => (w >= d ? { w, d, rot: 0 } : { w: d, d: w, rot: Math.PI / 2 });
 
-  // --- Bâtiments -----------------------------------------------------------
+  // --- Buildings ------------------------------------------------------------
 
-  /** Équipements de toit : caissons de clim, édicule, parfois un château d'eau. */
+  /** Rooftop equipment: AC units, stair housing, sometimes a water tower. */
   function rooftop(lot: Lot, top: number, cx: number, cz: number, w: number, d: number) {
     const id = lot.id;
     const short = Math.min(w, d);
@@ -280,7 +280,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const shop = rand(id, 1) < 0.7 ? 1 : 0;
 
     if (h >= 20 && short >= 3.6) {
-      // Gratte-ciel : socle commerçant, fût de verre, un retrait, couronne technique, parfois une antenne.
+      // Skyscraper: retail base, glass shaft, a setback, technical crown, sometimes an antenna.
       const glass = pick(GLASS, rand(id, 2));
       const podium = clamp(h * 0.14, 2.6, 5.5);
       facade(id, cx, y, cz, lot.w, podium, lot.d, pick(CONCRETE, rand(id, 3)), FACADE.office, 1);
@@ -320,7 +320,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const shop = rand(id, 1) < 0.45 ? 1 : 0;
 
     if (h <= 9.5 && short >= 2 && rand(id, 4) < 0.55) {
-      // Petit immeuble à toit pentu.
+      // Small building with a sloped roof.
       const roofH = Math.min(2.4, short * 0.42);
       const body = Math.max(2, h - roofH * 0.6);
       facade(id, cx, y, cz, lot.w, body, lot.d, color, style, shop);
@@ -329,7 +329,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       return;
     }
     if (h > 6 && short > 2.4 && rand(id, 7) < 0.4) {
-      // Dernier étage en retrait, couvert de zinc, à la parisienne.
+      // Top floor set back, covered in zinc, Paris style.
       facade(id, cx, y, cz, lot.w, h - FLOOR, lot.d, color, style, shop);
       box(id, cx, y + h - FLOOR, cz, lot.w - 0.8, FLOOR, lot.d - 0.8, "#6f747a");
       rooftop(lot, y + h, cx, cz, lot.w - 0.8, lot.d - 0.8);
@@ -359,7 +359,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  /** Le monument (h1) : une tour Art déco à gradins, couronne orange et flèche. */
+  /** The monument (h1): a stepped Art Deco tower, orange crown and spire. */
   function monument(lot: Lot) {
     const { id, y, h } = lot;
     const s = lot.w;
@@ -378,7 +378,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     labels.push({ id: lot.id + base, lot, level: 1, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
-  /** Le beffroi (h2) : tour de pierre, cadrans sur les quatre faces, toit pyramidal de cuivre. */
+  /** The belfry (h2): stone tower, clock faces on all four sides, copper pyramid roof. */
   function belfry(lot: Lot) {
     const { id, y, h } = lot;
     const s = lot.w;
@@ -401,7 +401,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     labels.push({ id: lot.id + base, lot, level: 2, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
-  /** Le kiosque (h3) : un pavillon à coupole. */
+  /** The kiosk (h3): a domed pavilion. */
   function kiosk(lot: Lot) {
     const { id, y, h } = lot;
     const s = lot.w;
@@ -416,7 +416,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     labels.push({ id: lot.id + base, lot, level: 3, anchor: new THREE.Vector3(cx, y + h, cz) });
   }
 
-  /** Les petits titres (h4 à h6) : une statue de bronze sur son socle. */
+  /** Small headings (h4 to h6): a bronze statue on its pedestal. */
   function statue(lot: Lot) {
     const { id, y, h } = lot;
     const cx = lot.x + lot.w / 2;
@@ -427,7 +427,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     kit.ball.add(id, at(cx, y + h * 0.84, cz, s * 0.26, h * 0.16, s * 0.26), "#6d5d45");
   }
 
-  /** L'ambassade (iframe) : un édifice à colonnes et fronton, son dôme, son drapeau. */
+  /** The embassy (iframe): a building with columns and pediment, its dome, its flag. */
   function embassy(lot: Lot) {
     const { id, y, h } = lot;
     const cx = lot.x + lot.w / 2;
@@ -460,7 +460,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     kit.knot.add(id, at(cx, y + 0.5, cz, lot.w * 0.85, h - 0.5, lot.d * 0.85, rand(id, 2) * Math.PI), pick(ACCENTS, rand(id, 3)));
   }
 
-  /** Les boutons et champs : un petit kiosque à auvent. */
+  /** Buttons and fields: a small kiosk with an awning. */
   function booth(lot: Lot) {
     const { id, y, h } = lot;
     const cx = lot.x + lot.w / 2;
@@ -469,7 +469,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     box(id, cx, y + h * 0.78, cz, lot.w, 0.14, lot.d, "#f6f3ec");
   }
 
-  /** Les éléments vides : un chantier clôturé, parfois avec sa grue. */
+  /** Empty elements: a fenced construction site, sometimes with its crane. */
   function site(lot: Lot) {
     const { id, y } = lot;
     const cx = lot.x + lot.w / 2;
@@ -481,7 +481,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     box(id, cx, y, lot.z + lot.d - t / 2, lot.w, 0.75, t, fence);
     box(id, lot.x + t / 2, y, cz, t, 0.75, lot.d, fence);
     box(id, lot.x + lot.w - t / 2, y, cz, t, 0.75, lot.d, fence);
-    // Une grue de temps en temps : les <div> vides vont souvent par dizaines.
+    // A crane now and then: empty <div>s often come by the dozen.
     if (rand(id, 2) < 0.16 && Math.min(lot.w, lot.d) >= 2.6) {
       const mast = 14 + rand(id, 3) * 12;
       const angle = rand(id, 4) * Math.PI * 2;
@@ -500,7 +500,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  /** Petite image : un panonceau sur son poteau, ou un drapeau en haut de son mât. */
+  /** Small image: a small sign on its post, or a flag at the top of its pole. */
   function emblem(lot: Lot, panel: Panel) {
     const cell = atlas.cell(atlas.index(lot.node.img?.src));
     const cz = lot.z + lot.d / 2;
@@ -512,13 +512,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       kit.flag.add(lot.id, at(pole + 0.04 + panel.width / 2, lot.y + panel.lift, cz, panel.width, panel.height, panel.width), "#ffffff", cell);
       return;
     }
-    // Enseigne : une plaque d'aluminium à plat sur la façade, l'icône tournée vers la rue.
+    // Sign: an aluminum plate flat on the facade, the icon facing the street.
     const { x, z, rot, alongX } = onWall(lot, panel);
     box(lot.id, x, lot.y - 0.04, z, alongX ? panel.width + 0.08 : 0.05, panel.height + 0.08, alongX ? 0.05 : panel.width + 0.08, "#b4b7bd");
     kit.sign.add(lot.id, at(x + outward(panel).x * 0.04, lot.y, z + outward(panel).z * 0.04, panel.width, panel.height, 1, rot), "#ffffff", cell);
   }
 
-  /** Vers où regarde une façade. */
+  /** Which way a facade faces. */
   function outward(panel: Panel): { x: number; z: number } {
     switch (panel.mount) {
       case "south": return { x: 0, z: 1 };
@@ -529,18 +529,18 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  /** Centre d'une affiche contre son mur (au ras de la façade), et sa rotation. */
+  /** Center of a poster against its wall (flush with the facade), and its rotation. */
   function onWall(lot: Lot, panel: Panel) {
     const n = outward(panel);
     const alongX = n.z !== 0;
-    // Le lot est la bande devant la façade : le mur est son bord intérieur.
+    // The lot is the strip in front of the facade: the wall is its inner edge.
     const x = alongX ? lot.x + lot.w / 2 : n.x > 0 ? lot.x : lot.x + lot.w;
     const z = alongX ? (n.z > 0 ? lot.z : lot.z + lot.d) : lot.z + lot.d / 2;
     const rot = panel.mount === "north" ? Math.PI : panel.mount === "east" ? Math.PI / 2 : panel.mount === "west" ? -Math.PI / 2 : 0;
     return { x, z, rot, alongX, n };
   }
 
-  /** Une galerie : un immeuble sombre, sobre, que ses écrans et ses affiches habillent. */
+  /** A gallery: a dark, plain building, dressed by its screens and posters. */
   function gallery(lot: Lot) {
     const cx = lot.x + lot.w / 2;
     const cz = lot.z + lot.d / 2;
@@ -548,14 +548,14 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     rooftop(lot, lot.y + lot.h, cx, cz, lot.w, lot.d);
   }
 
-  /** Une image cassée : le panneau s'est effondré, entre un pan de mur et des gravats. */
+  /** A broken image: the billboard has collapsed, between a piece of wall and rubble. */
   function ruin(lot: Lot) {
     const { id, y } = lot;
     const cx = lot.x + lot.w / 2;
     const cz = lot.z + lot.d / 2;
     ground(id, lot, y, 0.05, "dirt");
     const brick = pick(BRICK, rand(id, 9));
-    // Deux pans de mur debout, déchiquetés, en équerre.
+    // Two standing pieces of wall, jagged, at a right angle.
     const wall = Math.min(lot.w * 0.75, 6);
     const pieces = Math.max(3, Math.round(wall / 1.2));
     for (let k = 0; k < pieces; k += 1) {
@@ -568,11 +568,11 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       const h = 0.5 + rand(id, 15 + k) * 1.6;
       box(id, lot.x + lot.w * 0.08 + 0.17, y, lot.z + 0.35 + (side / 3) * (k + 0.5), 0.35, h, (side / 3) * 0.97, brick);
     }
-    // Le panneau tombé, un poteau encore debout et penché.
+    // The fallen billboard, one post still standing and leaning.
     kit.plain.add(id, at(cx, y + 0.35, cz + lot.d * 0.1, Math.min(lot.w * 0.7, 5), 0.08, Math.min(lot.d * 0.5, 2.6), 0.2, 0.35), "#2b2b31");
     kit.plain.add(id, at(cx - lot.w * 0.25, y, cz, 0.16, 2.2, 0.16, 0, 0.25), "#5b5e64");
     kit.plain.add(id, at(cx + lot.w * 0.22, y, cz + 0.4, 0.16, 1.4, 0.16, 0, -0.5), "#5b5e64");
-    // Les gravats, d'autant plus nombreux que le terrain est grand.
+    // Rubble, more of it the larger the plot.
     const rubble = clamp(Math.round((lot.w * lot.d) / 3), 8, 28);
     for (let k = 0; k < rubble; k += 1) {
       const s = 0.25 + rand(id, 20 + k) * 0.55;
@@ -585,7 +585,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
 
   function board(lot: Lot) {
     const panel = lot.panel;
-    // Une image qui n'a trouvé de place nulle part : elle n'est que dans l'inspecteur.
+    // An image that found no place anywhere: it is only in the inspector.
     if (!panel || lot.h <= 0) return;
     if (panel.emblem) {
       emblem(lot, panel);
@@ -598,8 +598,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       emissiveIntensity: screen ? 0.6 : 0,
       roughness: 0.75,
       metalness: 0,
-      // L'affiche est collée au cadre : vue de loin, la profondeur ne sait plus lequel est
-      // devant et le cadre perce l'image par rayures qui scintillent. L'affiche gagne toujours.
+      // The poster is pressed against the frame: seen from afar, depth no longer knows which one is
+      // in front and the frame pierces the image with flickering stripes. The poster always wins.
       polygonOffset: true,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -4,
@@ -620,7 +620,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const frameColor = screen ? "#15161c" : "#2b2b31";
 
     if (panel.mount === "roof") {
-      // Le panneau d'un toit : sur ses poteaux, lisible des deux côtés.
+      // A roof billboard: on its posts, readable from both sides.
       const cx = lot.x + lot.w / 2;
       const cz = lot.z + lot.d / 2;
       const frameY = lot.y + panel.lift;
@@ -630,7 +630,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       addPanel(cx, frameY, cz + 0.18, 0);
       addPanel(cx, frameY, cz - 0.18, Math.PI);
     } else {
-      // Sur la façade : un caisson sombre contre le mur, l'affiche devant.
+      // On the facade: a dark box against the wall, the poster in front.
       const { x, z, rot, alongX, n } = onWall(lot, panel);
       const depth = 0.1;
       box(
@@ -642,7 +642,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     if (lot.kind === "billboard") billboards.push({ id: lot.id + base, lot, panels, ratio: panel.width / panel.height });
   }
 
-  /** Canal : l'eau, et des ponts pour la franchir. */
+  /** Canal: the water, and bridges to cross it. */
   function river(lot: Lot) {
     kit.water.add(lot.id, at(lot.x + lot.w / 2, lot.y, lot.z + lot.d / 2, lot.w, lot.h, lot.d), "#4f88a6");
     const count = Math.max(1, Math.floor(lot.w / 45));
@@ -655,13 +655,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  // --- Conteneurs et décors ---------------------------------------------------
+  // --- Containers and decor -----------------------------------------------------
 
   const CONTAINER_GROUND: Partial<Record<Lot["kind"], keyof typeof GROUND>> = {
     terrain: "base", park: "grass", estate: "lawn", townhall: "plaza", gate: "plaza", boulevard: "plaza", fields: "crops", port: "wharf",
   };
 
-  // Le bassin d'un port est plus bas que son quai : le sol du port s'arrête à son bord.
+  // A harbor's basin is lower than its quay: the harbor's ground stops at its edge.
   const basins = new Map(layout.decor.filter((d) => d.type === "harbor").map((d) => [d.owner, harborWater(d)]));
 
   for (const lot of layout.lots) {
@@ -704,7 +704,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       0,
     ]);
     obstacles.add(road);
-    // Le terre-plein central d'une autoroute : un muret de béton.
+    // A highway's central median: a low concrete wall.
     if (road.style === "highway") {
       const cx = road.x + road.w / 2;
       const cz = road.z + road.d / 2;
@@ -716,7 +716,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     junction(joint);
     obstacles.add(joint);
   }
-  // Chenaux des ports : l'eau jusqu'au bord de la maquette, et un pont pour chaque rue qui les coupe.
+  // Harbor channels: the water up to the edge of the model, and a bridge for each street that cuts them.
   for (const channel of layout.channels) {
     kit.water.add(channel.owner, at(channel.x + channel.w / 2, channel.y, channel.z + channel.d / 2, channel.w, WATER_DEPTH, channel.d), PALETTE.WATER);
     obstacles.add(channel, 0.6);
@@ -726,8 +726,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   else if (layout.airport) airfield(layout.airport);
 
   /**
-   * L'aérodrome d'une ville de la mégalopole : un hangar au bout de sa rue, de petits avions
-   * devant, une piste courte et sa manche à air. Les vols partent du grand aéroport du site.
+   * The airfield of a megalopolis city: a hangar at the end of its street, small planes
+   * in front, a short runway and its windsock. Flights leave from the site's large airport.
    */
   function aerodrome(a: Airport) {
     const { id } = a;
@@ -742,7 +742,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       kit.road.add(id, at(way.x + way.w / 2, a.y, way.z + way.d / 2, way.w, 0.03, way.d), "#4a4b50", [ROAD.taxiway, way.axis === "x" ? 0 : 1, 0, 0]);
     }
 
-    // Le hangar : murs de tôle, toit à deux pans, grande porte ouverte vers les avions.
+    // The hangar: sheet metal walls, gable roof, a large door open toward the planes.
     const h = a.terminal;
     const hcx = h.x + h.w / 2;
     const hcz = h.z + h.d / 2;
@@ -751,13 +751,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     box(id, h.x + h.w + 0.02, a.y, hcz, 0.06, 1.8, h.d * 0.7, "#2f3236");
     obstacles.add(h, 0.6);
 
-    // Les avions devant le hangar, nez vers lui.
+    // The planes in front of the hangar, nose toward it.
     const gate = a.apron.d / a.planes;
     for (let i = 0; i < a.planes; i += 1) {
       planeAt(id, a.apron.x + a.apron.w / 2 + 0.3, a.y, a.apron.z + gate * (i + 0.5), Math.PI, i, 0, SMALL_PLANE);
     }
 
-    // La manche à air, rayée, gonflée par le vent d'ouest.
+    // The windsock, striped, inflated by the west wind.
     const pole = a.tower;
     const px = pole.x + pole.w / 2;
     const pz = pole.z + pole.d / 2;
@@ -766,13 +766,13 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   }
 
   /**
-   * L'aéroport, hors les murs : le socle s'agrandit pour lui. Terminal vitré et tour de contrôle
-   * côté ville, avions aux portes sur le tarmac, voies de circulation, pistes.
+   * The airport, outside the walls: the base grows for it. Glass terminal and control tower
+   * on the city side, planes at the gates on the tarmac, taxiways, runways.
    */
   function airfield(a: Airport) {
     const { id } = a;
     ground(id, a, 0, BASE, "base");
-    // La pelouse s'écarte pour l'avenue qui vient du périphérique.
+    // The lawn moves aside for the avenue coming from the ring road.
     let lawn: Rect[] = [a];
     for (const road of layout.roads) lawn = lawn.flatMap((piece) => cutRect(piece, road));
     for (const piece of lawn) ground(id, piece, BASE, CURB, "grass");
@@ -785,7 +785,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       kit.road.add(id, at(way.x + way.w / 2, a.y, way.z + way.d / 2, way.w, 0.03, way.d), "#4a4b50", [ROAD.taxiway, way.axis === "x" ? 0 : 1, 0, 0]);
     }
 
-    // Le terminal : un long hall vitré, son toit débordant, l'auvent de la dépose côté ville.
+    // The terminal: a long glass hall, its overhanging roof, the drop-off canopy on the city side.
     const t = a.terminal;
     const tcx = t.x + t.w / 2;
     const tcz = t.z + t.d / 2;
@@ -794,7 +794,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     box(id, t.x - 0.9, a.y + 2.1, tcz, 1.8, 0.12, Math.min(t.d * 0.6, 14), "#e8e4da");
     obstacles.add(t, 0.8);
 
-    // La tour de contrôle.
+    // The control tower.
     const cx = a.tower.x + a.tower.w / 2;
     const cz = a.tower.z + a.tower.d / 2;
     kit.cylinder.add(id, at(cx, a.y, cz, 1.3, 10, 1.3), "#e2dccf");
@@ -804,7 +804,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     kit.ball.add(id, at(cx + 0.7, a.y + 11.7, cz, 0.7, 0.7, 0.7), "#f4f2ee");
     obstacles.add(a.tower, 0.5);
 
-    // Les avions aux portes, nez vers le terminal, chacun relié par sa passerelle.
+    // The planes at the gates, nose toward the terminal, each linked by its jet bridge.
     const gate = (a.apron.d - 6) / a.planes;
     const px = a.apron.x + a.apron.w / 2 + 0.4;
     for (let i = 0; i < a.planes; i += 1) {
@@ -815,15 +815,15 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       box(id, (from + to) / 2, a.y + 0.62, pz - PLANE * 0.1, to - from, 0.5, 0.55, "#c9c5bb");
       box(id, to - 0.3, a.y, pz - PLANE * 0.1, 0.16, 0.62, 0.16, "#8e9197");
     }
-    // Un avion attend en bout de piste ; une page très ouverte en a un autre qui décolle.
+    // A plane waits at the end of the runway; a very open page has another one taking off.
     const [main] = a.runways;
     if (a.runways.length >= 2) planeAt(id, main.x + main.w / 2, a.y, main.z + main.d - PLANE * 0.9, Math.PI / 2, 20);
     if (a.runways.length >= 3) planeAt(id, main.x + main.w / 2, a.y + 6, main.z - PLANE * 0.4, Math.PI / 2, 21, 0.22);
-    // Les vols vers les sites liés, déjà en l'air.
+    // The flights to the linked sites, already in the air.
     a.flights.forEach((flight, i) => planeAt(id, flight.x, flight.y, flight.z, flight.heading, 30 + i, flight.pitch));
   }
 
-  /** Un avion (nez vers +x avant rotation) et sa dérive aux couleurs d'une compagnie. */
+  /** A plane (nose toward +x before rotation) and its tail fin in an airline's colors. */
   function planeAt(id: number, x: number, y: number, z: number, heading: number, salt: number, pitch = 0, size = PLANE) {
     kit.plane.add(id, at(x, y, z, size, size, size, heading, 0, pitch), "#ffffff");
     const fin = new THREE.Vector3(-0.43 * size, 0.15 * size, 0).applyEuler(new THREE.Euler(0, heading, pitch, "YXZ"));
@@ -831,7 +831,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     kit.plain.add(id, at(x + fin.x, y + fin.y, z + fin.z, 0.12 * size, 0.16 * size, 0.014 * size, heading, 0, pitch), livery);
   }
 
-  /** Le pont d'une rue sur un chenal : un tablier juste au-dessus de l'eau, et ses parapets. */
+  /** A street's bridge over a channel: a deck just above the water, and its parapets. */
   function bridge(span: Bridge) {
     const cx = span.x + span.w / 2;
     const cz = span.z + span.d / 2;
@@ -850,7 +850,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     else if (decor.type === "gate") gate(decor);
   }
 
-  /** Case de raccord : virage arrondi si deux côtés voisins sont ouverts, sinon chaussée droite ou carrefour. */
+  /** Joint cell: a rounded curve if two adjacent sides are open, otherwise a straight roadway or an intersection. */
   function junction(joint: Joint) {
     const { open, owner, y } = joint;
     const cx = joint.x + joint.w / 2;
@@ -858,17 +858,17 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const sides = [open.north, open.east, open.south, open.west].filter(Boolean).length;
     const turning = sides === 2 && open.north !== open.south;
     if (!turning) {
-      // Ligne droite (marquage dans le sens de la traversée) ou carrefour (sans marquage).
+      // Straight line (markings in the crossing direction) or intersection (no markings).
       const axis = sides === 2 ? (open.east ? ROAD_AXIS.x : ROAD_AXIS.z) : ROAD_AXIS.cross;
       kit.road.add(owner, at(cx, y, cz, joint.w, 0.03, joint.d), ROAD_COLORS[joint.style], [ROAD[joint.style], axis, 0, 0]);
       return;
     }
-    // Le centre du virage est le coin de la case entre les deux côtés ouverts.
+    // The center of the curve is the corner of the cell between the two open sides.
     const rot = open.east ? (open.south ? Math.PI : -Math.PI / 2) : open.south ? Math.PI / 2 : 0;
     kit.bend.add(owner, at(cx, y, cz, joint.w, 0.03, joint.d, rot), ROAD_COLORS[joint.style], [ROAD[joint.style], ROAD_AXIS.bend, 0, 0]);
     kit.verge.add(owner, at(cx, y, cz, joint.w, CURB, joint.d, rot), GROUND_COLORS[joint.verge], [GROUND[joint.verge], 0, 0, 0]);
 
-    // Arbres d'alignement le long de l'arrondi, comme sur le reste du périphérique.
+    // Street trees along the arc, as on the rest of the ring road.
     if (joint.style !== "ring" && joint.style !== "avenue") return;
     const centerX = open.east ? joint.x + joint.w : joint.x;
     const centerZ = open.south ? joint.z + joint.d : joint.z;
@@ -899,12 +899,12 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     obstacles.add({ x: cx - span / 2 - pillar, z: cz - 1, w: span + 2 * pillar, d: 2 }, 0.3);
   }
 
-  /** Le port : bassin, grues portiques, conteneurs empilés, un cargo à quai. */
+  /** The harbor: basin, gantry cranes, stacked containers, a cargo ship at the quay. */
   function harbor(decor: Decor) {
     const id = decor.owner;
     const water = harborWater(decor);
     const quay = water.z - decor.z;
-    // L'eau au pied du quai, au niveau de celle du chenal qui mène au large.
+    // The water at the foot of the quay, at the level of the channel that leads to the sea.
     const base = layout.lots[id].y;
     kit.water.add(id, at(water.x + water.w / 2, base, water.z + water.d / 2, water.w, WATER_DEPTH, water.d), PALETTE.WATER);
     obstacles.add(water, 0.6);
@@ -937,9 +937,9 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  // --- Parcs, pelouses, places ---------------------------------------------------
+  // --- Parks, lawns, squares -----------------------------------------------------
 
-  /** Plante des arbres sur une surface, là où il n'y a ni bâtiment, ni rue, ni eau. */
+  /** Plants trees on an area, where there is no building, street or water. */
   function plant(owner: number, area: Rect, y: number, step: number, chance: number) {
     for (let x = area.x + step / 2; x < area.x + area.w; x += step) {
       for (let z = area.z + step / 2; z < area.z + area.d; z += step) {
@@ -957,10 +957,10 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  // Bosquets de la campagne, autour des villes de la mégalopole.
+  // Countryside groves, around the megalopolis cities.
   for (const decor of layout.decor) if (decor.type === "woods") plant(decor.owner, decor, decor.y, 2.2, 0.8);
 
-  // Places publiques : une fontaine au milieu si elle tient, des arbres autour.
+  // Public squares: a fountain in the middle if it fits, trees around.
   for (const decor of layout.decor) {
     if (decor.type !== "square") continue;
     if (decor.w > 7 && decor.d > 7) fountainAt(decor.owner, decor.x + decor.w / 2, decor.z + decor.d / 2, decor.y);
@@ -989,7 +989,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     obstacles.add({ x: cx - 1.7, z: cz - 1.7, w: 3.4, d: 3.4 });
   }
 
-  // --- L'ambiance : usines, caméras, graffitis, nuages ------------------------------
+  // --- The ambiance: factories, cameras, graffiti, clouds ----------------------------------
 
   const ambiance = layout.ambiance;
   if (ambiance?.industry) for (const factory of ambiance.industry.factories) factoryAt(ambiance.industry.id, factory);
@@ -1001,7 +1001,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     if (ambiance.weather === "storm") storm(ambiance.clouds);
   }
 
-  /** Une usine : hall de brique à sheds, cheminées rayées, fumée poussée par le vent d'ouest. */
+  /** A factory: a brick sawtooth hall, striped chimneys, smoke pushed by the west wind. */
   function factoryAt(id: number, f: Factory) {
     const alongZ = f.axis === "z";
     const cx = f.x + f.w / 2;
@@ -1013,7 +1013,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const hx = alongZ ? cx : f.x + hallW / 2;
     const hz = alongZ ? f.z + hallD / 2 : cz;
     facade(id, hx, f.y, hz, hallW, body, hallD, pick(BRICK, rand(id, Math.round(f.x + f.z))), FACADE.brick, 0, 1.7);
-    // Toit à sheds : une rangée de pignons sur la longueur.
+    // Sawtooth roof: a row of gables along the length.
     const teeth = 3;
     for (let k = 0; k < teeth; k += 1) {
       const step = (alongZ ? hallD : hallW) / teeth;
@@ -1022,7 +1022,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       kit.gable.add(id, at(tx, f.y + body, tz, alongZ ? hallW : step, 1.1, alongZ ? step : hallD, alongZ ? 0 : Math.PI / 2), "#7d8186");
     }
     obstacles.add({ x: f.x - 0.4, z: f.z - 0.4, w: f.w + 0.8, d: f.d + 0.8 });
-    // Les cheminées, au bout libre du terrain.
+    // The chimneys, at the free end of the plot.
     for (let c = 0; c < f.chimneys; c += 1) {
       const sx = alongZ ? f.x + f.w * (f.chimneys === 1 ? 0.5 : 0.3 + c * 0.4) : f.x + f.w * 0.9;
       const sz = alongZ ? f.z + f.d * 0.9 : f.z + f.d * (f.chimneys === 1 ? 0.5 : 0.3 + c * 0.4);
@@ -1038,7 +1038,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  /** Une caméra sur son mât, l'objectif vers la chaussée, son champ dessiné au sol. */
+  /** A camera on its pole, the lens toward the roadway, its field drawn on the ground. */
   function cameraAt(id: number, cam: Camera) {
     const dx = Math.cos(cam.heading);
     const dz = -Math.sin(cam.heading);
@@ -1051,8 +1051,8 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   }
 
   /**
-   * Les graffitis, sur la façade sud (celle qu'on voit d'emblée) d'immeubles et de palissades de
-   * chantier tirés au sort, au rez-de-chaussée.
+   * Graffiti, on the south facade (the one seen right away) of randomly drawn buildings and
+   * construction hoardings, on the ground floor.
    */
   function graffiti(count: number) {
     if (count === 0) return;
@@ -1061,7 +1061,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       .sort((a, b) => rand(a.id, 900) - rand(b.id, 900) || a.id - b.id)
       .slice(0, count);
     walls.forEach((lot, i) => {
-      // Au pied du mur, sous les enseignes.
+      // At the foot of the wall, under the signs.
       const w = Math.min(lot.w * 0.72, 1.9);
       const h = w / 2;
       const x = lot.x + lot.w / 2 + (rand(lot.id, 901) - 0.5) * (lot.w - w) * 0.8;
@@ -1071,7 +1071,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     });
   }
 
-  /** Un nuage : quelques boules aplaties autour d'une plus grosse. */
+  /** A cloud: a few flattened balls around a bigger one. */
   function cloudAt(cloud: Cloud, i: number, tone: number) {
     const t = Math.min(1, tone + rand(i, 950) * 0.06);
     const color = new THREE.Color(t, t, t * (tone < 0.6 ? 1.05 : 0.99));
@@ -1086,7 +1086,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
-  /** L'orage : un rideau de pluie sous chaque nuage, et un éclair sous le plus gros. */
+  /** The storm: a curtain of rain under each cloud, and a lightning bolt under the biggest. */
   function storm(clouds: Cloud[]) {
     const ground0 = BASE + CURB;
     for (const cloud of clouds) {
@@ -1105,14 +1105,14 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       const ny = y - drop;
       const length = Math.hypot(nx - x, drop);
       const angle = Math.atan2(nx - x, drop);
-      // Posé sur son bout bas, penché jusqu'à toucher le bout haut.
+      // Standing on its low end, leaning until it touches the high end.
       kit.glow.add(-1, at(nx, ny, z, 0.32, length, 0.32, 0, 0, angle), "#fff7d6");
       x = nx;
       y = ny;
     }
   }
 
-  // --- Mobilier urbain : arbres d'alignement, lampadaires, voitures -------------
+  // --- Street furniture: street trees, street lamps, cars -----------------------
 
   for (const road of layout.roads) streetLife(road);
 
@@ -1147,15 +1147,15 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
         const side = flip % 2 === 0 ? -0.22 : width + 0.22;
         const [x, z] = point(t, side);
         if (obstacles.hit(x, z, 0.15)) continue;
-        // La crosse du lampadaire penche au-dessus de la chaussée.
+        // The street lamp's arm leans over the roadway.
         const rot = alongX ? (side < 0 ? -Math.PI / 2 : Math.PI / 2) : side < 0 ? 0 : Math.PI;
         kit.lamp.add(-1, at(x, sidewalkY, z, 2.6, 2.6, 2.6, rot), "#ffffff");
       }
     }
     if (!drivable) return;
 
-    // Voitures : une file dans chaque sens (deux sur l'autoroute), loin des carrefours. Toute rue
-    // carrossable est assez large pour deux voitures (DRIVABLE_MIN dans layout.ts).
+    // Cars: one lane in each direction (two on the highway), away from intersections. Every
+    // drivable street is wide enough for two cars (DRIVABLE_MIN in layout.ts).
     const lanes =
       road.style === "highway" ? [0.14, 0.34, 0.66, 0.86].map((f) => width * f) : [width * 0.28, width * 0.72];
     lanes.forEach((across, lane) => {
@@ -1177,7 +1177,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     });
   }
 
-  // --- Assemblage ----------------------------------------------------------------
+  // --- Assembly ------------------------------------------------------------------
 
   const refs: InstanceRef[][] = [];
   const baseColors = new Map<THREE.InstancedMesh, Float32Array>();
@@ -1190,7 +1190,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     group.add(mesh);
     mesh.userData.batch = name;
     if (furniture.has(batch)) details.push(mesh);
-    // Une rue désigne le conteneur qui l'a fait tracer : le survol doit savoir que c'en est une.
+    // A street points at the container that had it drawn: hovering must know it is a street.
     if (batch === kit.road || batch === kit.bend) mesh.userData.part = "road";
     if (batch.options.pickable) pickables.push(mesh);
   }

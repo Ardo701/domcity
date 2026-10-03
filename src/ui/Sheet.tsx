@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Wordmark } from "./Logo";
 import styles from "./Sheet.module.css";
 
-/** Mise en page « planche » des pages secondaires : cadre, en-tête, contenu. */
+/** "Drawing sheet" layout for secondary pages: frame, header, content. */
 export function Sheet({ kicker, title, children }: { kicker: string; title: string; children: React.ReactNode }) {
   return (
     <div className={`${styles.sheet} graph-paper`}>

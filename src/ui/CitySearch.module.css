@@ -82,7 +82,7 @@
   padding-top: 4px;
 }
 
-/* Les pages qui répondent, sous leur site. */
+/* The pages that match, under their site. */
 .pages {
   list-style: none;
   margin: 0 0 4px 22px;
@@ -119,7 +119,7 @@
   color: var(--ink);
 }
 
-/* Sur téléphone, le titre de la page suffit : son adresse prendrait toute la ligne. */
+/* On a phone, the page title is enough: its address would take the whole line. */
 @media (max-width: 520px) {
   .pages .where {
     display: none;

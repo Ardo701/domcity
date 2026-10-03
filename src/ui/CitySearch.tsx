@@ -7,8 +7,8 @@ import { sharedCityPath, sitePath, type SearchHit } from "@/format/shared";
 import styles from "./CitySearch.module.css";
 
 /**
- * Recherche dans les villes déjà partagées : un nom de site ou un titre de page.
- * Un résultat par site ; les pages dont le titre répond sont rangées dessous et mènent droit à leur ville.
+ * Search among the cities already shared: a site name or a page title.
+ * One result per site; the pages whose title matches are listed underneath and lead straight to their city.
  */
 export function CitySearch() {
   const [query, setQuery] = useState("");

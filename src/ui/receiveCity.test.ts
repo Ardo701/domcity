@@ -12,7 +12,7 @@ const CITY: CityDoc = {
   root: { tag: "body", children: [{ tag: "h1", text: 10, heading: "Les livres" }] },
 };
 
-/** Le module garde une seule réception par chargement de page : on le recharge à chaque test. */
+/** The module keeps a single reception per page load: it is reloaded for each test. */
 async function freshReceive() {
   vi.resetModules();
   return (await import("./receiveCity")).receiveCity;
@@ -28,13 +28,13 @@ function reply(source: unknown, data: unknown, origin: string) {
   window.dispatchEvent(event);
 }
 
-describe("réception d'une ville dans /nouveau", () => {
+describe("receiving a city in /nouveau", () => {
   const blocklist = vi.fn<(url: string) => Promise<Response>>();
 
   beforeEach(() => {
     sessionStorage.clear();
     window.history.replaceState(null, "", "/nouveau");
-    // La liste des sites refusés, telle que la sert /api/blocklist.
+    // The list of refused sites, as /api/blocklist serves it.
     blocklist.mockReset().mockImplementation(async () => Response.json({ adult: ["pornhub.com"], bank: ["bnpparibas.com"] }));
     vi.stubGlobal("fetch", blocklist);
   });
@@ -44,7 +44,7 @@ describe("réception d'une ville dans /nouveau", () => {
     vi.unstubAllGlobals();
   });
 
-  it("appelle le favori, accepte sa ville et confirme la réception", async () => {
+  it("calls the bookmarklet, accepts its city and confirms reception", async () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
     const pending = (await freshReceive())();
@@ -59,7 +59,7 @@ describe("réception d'une ville dans /nouveau", () => {
     expect(JSON.parse(sessionStorage.getItem("domcity:nouveau")!).doc.title).toBe("Les livres");
   });
 
-  it("refuse une ville qui ne vient pas du site qu'elle décrit", async () => {
+  it("refuses a city that does not come from the site it describes", async () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
     const pending = (await freshReceive())();
@@ -67,7 +67,7 @@ describe("réception d'une ville dans /nouveau", () => {
     await expect(pending).rejects.toThrow(/ne vient pas/);
   });
 
-  it("refuse un site de la liste, ou une page qui se déclare réservée aux adultes, sans rien garder", async () => {
+  it("refuses a site on the list, or a page that declares itself adults only, without keeping anything", async () => {
     const cases: Array<[CityDoc, string]> = [
       [{ ...CITY, url: "https://fr.pornhub.com/video" }, "https://fr.pornhub.com"],
       [{ ...CITY, url: "https://mabanque.bnpparibas.com/comptes" }, "https://mabanque.bnpparibas.com"],
@@ -81,11 +81,11 @@ describe("réception d'une ville dans /nouveau", () => {
       await expect(pending).rejects.toMatchObject({ title: "Site refusé", refused: true });
       expect(sessionStorage.getItem("domcity:nouveau")).toBeNull();
     }
-    // Le navigateur a téléchargé la liste : il n'a rien envoyé de la page visitée.
+    // The browser downloaded the list: it sent nothing about the visited page.
     expect(blocklist).toHaveBeenCalledWith("/api/blocklist");
   });
 
-  it("construit quand même la ville si la liste ne peut pas être lue (rien ne sera publié sans le serveur)", async () => {
+  it("still builds the city if the list cannot be read (nothing will be published without the server)", async () => {
     blocklist.mockImplementation(async () => new Response("", { status: 503 }));
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
@@ -94,7 +94,7 @@ describe("réception d'une ville dans /nouveau", () => {
     expect((await pending).doc).toEqual(CITY);
   });
 
-  it("signale un favori d'une version précédente", async () => {
+  it("reports a bookmarklet from a previous version", async () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);
     const pending = (await freshReceive())();
@@ -102,14 +102,14 @@ describe("réception d'une ville dans /nouveau", () => {
     expect((await pending).outdated).toBe(true);
   });
 
-  it("lit le plan B dans l'ancre, puis l'efface de l'adresse", async () => {
+  it("reads plan B from the fragment, then erases it from the address", async () => {
     window.history.replaceState(null, "", `/nouveau#ville=${await packCity(CITY)}`);
     const received = await (await freshReceive())();
     expect(received.doc).toEqual(CITY);
     expect(window.location.hash).toBe("");
   });
 
-  it("explique quoi faire quand rien n'a été envoyé", async () => {
+  it("explains what to do when nothing was sent", async () => {
     await expect((await freshReceive())()).rejects.toThrow(/favori DOMCity/);
   });
 });

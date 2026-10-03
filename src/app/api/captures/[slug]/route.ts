@@ -3,7 +3,7 @@ import { clientActor, jsonError, sameOrigin, SLUG_PATTERN } from "@/server/secur
 import { deleteSharedCity } from "@/server/share";
 import { hitRateLimit } from "@/server/store";
 
-/** Supprimer une ville avec son lien secret. Corps JSON : { token }. */
+/** Deletes a city with its secret link. JSON body: { token }. */
 export async function DELETE(request: Request, ctx: RouteContext<"/api/captures/[slug]">) {
   if (!sharingEnabled()) return jsonError(503, "Le partage n'est pas encore configuré.");
   if (!sameOrigin(request)) return jsonError(403, "Requête refusée.");

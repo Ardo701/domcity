@@ -1,10 +1,10 @@
 -- =============================================================================
--- DOMCity : la mégalopole (étape 4)
+-- DOMCity: the megalopolis (step 4)
 --
---   known_sites  parmi des domaines, ceux qui ont des villes sur DOMCity :
---                l'aéroport d'une mégalopole propose d'aller voir les sites liés.
+--   known_sites  among some domains, those that have cities on DOMCity:
+--                a megalopolis airport offers to go and see the linked sites.
 --
--- Publique (lecture seule), comme site_city.
+-- Public (read only), like site_city.
 -- =============================================================================
 
 create function public.known_sites(p_domains text[])

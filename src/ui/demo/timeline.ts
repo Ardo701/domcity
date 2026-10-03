@@ -1,7 +1,7 @@
 /**
- * Le minutage de la démonstration, en secondes. Une boucle de 16 s :
- * glisser le favori dans la barre, taper l'adresse d'un site, cliquer sur le favori (le relevé),
- * puis la page se couche en plan, ses blocs sortent de terre, et la vraie maquette du moteur apparaît.
+ * The timing of the demo, in seconds. A 16 s loop:
+ * drag the bookmarklet into the bar, type a site's address, click the bookmarklet (the capture),
+ * then the page lies down into a plan, its blocks rise from the ground, and the engine's real model appears.
  */
 export const DURATION = 16;
 
@@ -32,14 +32,14 @@ export const T = {
   back: [15.7, 16],
 } as const;
 
-/** Les trois étapes sous la scène, avec l'instant qu'on montre quand l'animation est arrêtée. */
+/** The three steps under the scene, with the instant shown when the animation is stopped. */
 export const STEPS = [
   { n: 1, label: "Glisser", from: 0, to: 3.1, still: 2.9 },
   { n: 2, label: "Cliquer", from: 3.1, to: 9.0, still: 7.75 },
   { n: 3, label: "Visiter", from: 9.0, to: DURATION, still: 14.2 },
 ] as const;
 
-/** L'adresse tapée, lettre après lettre, d'un rythme un peu irrégulier comme une vraie frappe. */
+/** The typed address, letter by letter, at a slightly irregular pace like real typing. */
 export const TYPED = "exemple.org";
 const GAPS = [0.09, 0.07, 0.1, 0.08, 0.11, 0.07, 0.09, 0.12, 0.08, 0.09, 0.1];
 export const KEYSTROKES = GAPS.map((_, i) => T.typing + GAPS.slice(0, i).reduce((sum, gap) => sum + gap, 0));
@@ -52,26 +52,26 @@ export const ease = {
   in: (k: number) => k * k * k,
   out: (k: number) => 1 - (1 - k) ** 3,
   inOut: (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2),
-  /** Dépasse un peu son but, puis s'y pose : un bloc qui sort de terre. */
+  /** Overshoots its target a little, then settles on it: a block rising from the ground. */
   back: (k: number) => {
     const c1 = 1.3;
     return 1 + (c1 + 1) * (k - 1) ** 3 + c1 * (k - 1) ** 2;
   },
 };
 
-/** L'avancement entre deux instants (0 avant, 1 après), passé par une courbe. */
+/** Progress between two instants (0 before, 1 after), passed through a curve. */
 export function prog(t: number, from: number, to: number, curve: (k: number) => number = ease.linear): number {
   return curve(clamp01((t - from) / (to - from)));
 }
 
-/** Présent entre deux instants, avec un fondu d'entrée et de sortie. */
+/** Present between two instants, with a fade in and out. */
 export function fade(t: number, from: number, to: number, fadeIn = 0.2, fadeOut = 0.2): number {
   return Math.min(prog(t, from, from + fadeIn), 1 - prog(t, to - fadeOut, to));
 }
 
 type Key = readonly [time: number, x: number, y: number];
 
-/** Le trajet de la souris : d'un point à l'autre en arc léger, en accélérant puis en freinant. */
+/** The mouse's path: from one point to another in a slight arc, accelerating then braking. */
 export function along(t: number, keys: readonly Key[]): [number, number] {
   for (let i = 0; i < keys.length - 1; i += 1) {
     const [t0, x0, y0] = keys[i];

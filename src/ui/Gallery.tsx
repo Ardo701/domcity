@@ -5,7 +5,7 @@ import styles from "./Gallery.module.css";
 
 export const shortDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
-/** Une grille de cartes à miniature : les sites de la galerie, les pages d'un site. */
+/** A grid of thumbnail cards: the gallery's sites, a site's pages. */
 export function Gallery({ children }: { children: ReactNode }) {
   return <ul className={styles.grid}>{children}</ul>;
 }
@@ -18,7 +18,7 @@ export function GalleryCard({
   meta,
 }: {
   href: string;
-  /** Adresse de la miniature, ou null : des hachures à la place. */
+  /** Address of the thumbnail, or null: hatching instead. */
   thumb: string | null;
   title: string;
   where: string;
@@ -44,7 +44,7 @@ export function GalleryCard({
   );
 }
 
-/** Une place vide dans la grille : ce qui n'est pas encore relevé, et comment le relever. */
+/** An empty slot in the grid: what is not captured yet, and how to capture it. */
 export function GalleryGap({ label, title, where, children }: { label: string; title: string; where: string; children: ReactNode }) {
   return (
     <li>

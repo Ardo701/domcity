@@ -6,7 +6,7 @@ import { sharedCityPath } from "@/format/shared";
 import { forgetCity } from "./savedCities";
 import styles from "./Sheet.module.css";
 
-// Le jeton est après le « # » : il n'est jamais envoyé au serveur dans l'adresse, ni gardé dans ses journaux.
+// The token is after the "#": it is never sent to the server in the address, nor kept in its logs.
 const subscribeHash = (onChange: () => void) => {
   window.addEventListener("hashchange", onChange);
   return () => window.removeEventListener("hashchange", onChange);

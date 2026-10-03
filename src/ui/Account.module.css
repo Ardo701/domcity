@@ -1,4 +1,4 @@
-/* ---------- Bouton vers le compte (accueil) ---------- */
+/* ---------- Button to the account (home page) ---------- */
 
 .accountLink {
   justify-self: start;
@@ -40,7 +40,7 @@
   transform: translateX(3px);
 }
 
-/* ---------- Page du compte ---------- */
+/* ---------- Account page ---------- */
 
 .pending {
   min-height: 160px;
@@ -110,20 +110,20 @@
   color: var(--ink-3);
 }
 
-/* Une ville en carte, comme dans la galerie ; les actions restent en bas, quelle que soit la longueur du titre. */
+/* A city as a card, as in the gallery; the actions stay at the bottom, whatever the length of the title. */
 .card {
   grid-template-rows: auto 1fr;
 }
 
-/* Deux classes : l'emporte sur la grille du corps de carte de la galerie, quel que soit l'ordre des feuilles. */
+/* Two classes: wins over the gallery's card body grid, whatever the order of the stylesheets. */
 .card .cardBody {
   display: flex;
   flex-direction: column;
 }
 
 /*
- * Titre coupé à trois lignes. La police est plus haute que l'interligne de la galerie (1) : la coupe masquait le
- * soulignement de la dernière ligne et laissait dépasser les accents de la quatrième. À 1,2, tout tient dans sa ligne.
+ * Title clamped to three lines. The font is taller than the gallery's line height (1): the clamp hid the
+ * underline of the last line and let the accents of the fourth stick out. At 1.2, everything fits in its line.
  */
 .card .cardTitle {
   display: -webkit-box;

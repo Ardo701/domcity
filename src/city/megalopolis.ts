@@ -1,19 +1,19 @@
 /**
- * La mégalopole : toutes les pages d'un site, chacune sa ville, assemblées en une seule.
+ * The megalopolis: all the pages of a site, each its own city, assembled into one.
  *
- * - Les villes sont rangées selon leurs adresses, comme les éléments dans une page : de gauche
- *   à droite, puis du nord au sud. La page d'accueil ouvre la marche, puis chaque dossier
- *   (« /blog », « /wiki »…) groupe ses pages, de la plus grande ville à la plus petite :
- *   les petites s'empilent sous les grandes.
- * - Le placement tient compte de toutes les pages connues, affichées ou non : cocher ou
- *   décocher une page ne déplace jamais les autres. Une page masquée laisse place à des champs.
- * - Entre les villes courent des couloirs de campagne. Quand deux pages affichées sont liées
- *   (l'une a un lien vers l'autre), une autoroute les relie, par le plus court chemin dans les
- *   couloirs, branchée sur un coin du périphérique de chaque ville. Les autoroutes déjà tracées
- *   servent aux liaisons suivantes : le réseau reste lisible.
- * - Un grand aéroport pour tout le site, à l'est, relié par l'autoroute à la page qui a le plus de
- *   liens vers d'autres sites. Chaque ville qui en a assez garde son aérodrome, à l'est de son
- *   socle : le placement lui réserve cette bande.
+ * - Cities are arranged by their addresses, like elements in a page: from left
+ *   to right, then from north to south. The home page leads the way, then each folder
+ *   ("/blog", "/wiki"...) groups its pages, from the largest city to the smallest:
+ *   the small ones stack under the large ones.
+ * - Placement takes into account all known pages, shown or not: checking or
+ *   unchecking a page never moves the others. A hidden page leaves room for fields.
+ * - Countryside corridors run between the cities. When two shown pages are linked
+ *   (one has a link to the other), a highway connects them, by the shortest path in the
+ *   corridors, connected to a corner of each city's ring road. Highways already drawn
+ *   serve the following links: the network stays readable.
+ * - A large airport for the whole site, to the east, linked by the highway to the page that has the most
+ *   links to other sites. Each city that has enough of them keeps its airfield, east of its
+ *   base: placement reserves this strip for it.
  */
 
 import { linkKey } from "@/format/links";
@@ -41,60 +41,60 @@ import {
   type Road,
 } from "./layout";
 
-/** Largeur d'un couloir de campagne entre deux villes, l'autoroute en son milieu. */
+/** Width of a countryside corridor between two cities, the highway in its middle. */
 export const CORRIDOR = 16;
-/** Une liaison préfère les autoroutes déjà tracées : elles ne coûtent que cette part de leur longueur. */
+/** A link prefers highways already drawn: they only cost this share of their length. */
 const REUSE = 0.35;
-/** Un virage coûte autant que cette longueur droite : les autoroutes zigzaguent peu. */
+/** A turn costs as much as this straight length: highways zigzag little. */
 const TURN = 24;
-/** Une bretelle coûte un peu plus que sa longueur : on n'en ouvre pas sans raison. */
+/** A ramp costs a bit more than its length: none is opened without reason. */
 const RAMP = 12;
-/** En dessous de cette largeur, une bande libre reste en herbe : pas de champ en lanière. */
+/** Below this width, a free strip stays grass: no ribbon-thin field. */
 const FIELD = 14;
 
 export interface MegaPage {
   path: string;
-  /** Côté du socle de sa ville (citySide). */
+  /** Side of its city's base (citySide). */
   side: number;
-  /** Sa ville a un aérodrome (hasAerodrome) : une bande de plus à l'est du socle. */
+  /** Its city has an airfield (hasAerodrome): one more strip east of the base. */
   aerodrome?: boolean;
 }
 
 type Axis = "x" | "z";
 type Side = keyof Openings;
 
-/** Un couloir de campagne entre des villes : l'autoroute peut y passer, en son milieu. */
+/** A countryside corridor between cities: the highway can pass there, in its middle. */
 export interface Segment {
-  /** Le long de x (couloir horizontal) ou de z. */
+  /** Along x (horizontal corridor) or along z. */
   axis: Axis;
-  /** Sa ligne médiane : z pour un couloir horizontal, x pour un vertical. */
+  /** Its center line: z for a horizontal corridor, x for a vertical one. */
   at: number;
   from: number;
   to: number;
 }
 
 export interface Placement {
-  /** Coin nord-ouest du socle de chaque page, dans l'ordre donné. */
+  /** Northwest corner of each page's base, in the given order. */
   origins: Array<{ x: number; z: number }>;
-  /** Côté du socle de chaque page. */
+  /** Side of each page's base. */
   sides: number[];
-  /** Largeur de la place de chaque page : son socle, et son aérodrome à l'est s'il en a un. */
+  /** Width of each page's place: its base, and its airfield to the east if it has one. */
   widths: number[];
-  /** Les pages dans l'ordre de pose : l'accueil, puis dossier par dossier. */
+  /** Pages in placement order: the home page, then folder by folder. */
   order: number[];
-  /** Les couloirs de campagne. */
+  /** The countryside corridors. */
   segments: Segment[];
-  /** Les couloirs qui bordent chaque page (rangs dans `segments`). */
+  /** The corridors that line each page (indices in `segments`). */
   around: Array<Record<Side, number>>;
-  /** Les couloirs qui traversent toute la mégalopole d'ouest en est, du nord au sud. */
+  /** The corridors that cross the whole megalopolis from west to east, from north to south. */
   mains: number[];
-  /** Ce qui n'est à aucune page : le bas des colonnes, à côté d'une ville étroite, le bout des rangées. */
+  /** What belongs to no page: the bottom of columns, beside a narrow city, the end of rows. */
   fillers: Rect[];
   width: number;
   depth: number;
 }
 
-/** « /a/b » avant « /a/c », « /a » avant « /a/b », la racine d'abord. */
+/** "/a/b" before "/a/c", "/a" before "/a/b", the root first. */
 export function comparePaths(a: string, b: string): number {
   const pa = a.split("/").filter(Boolean);
   const pb = b.split("/").filter(Boolean);
@@ -104,16 +104,16 @@ export function comparePaths(a: string, b: string): number {
   return pa.length - pb.length || (a < b ? -1 : a > b ? 1 : 0);
 }
 
-/** Le dossier d'une page : « /wiki » pour « /wiki/Paris », « / » pour « /contact » et pour la racine. */
+/** A page's folder: "/wiki" for "/wiki/Paris", "/" for "/contact" and for the root. */
 function folderOf(path: string): string {
   const parts = path.split("/").filter(Boolean);
   return `/${parts.slice(0, -1).join("/")}`;
 }
 
 /**
- * L'ordre de pose : la page d'accueil d'abord, puis dossier par dossier (dans l'ordre des
- * adresses) ; dans un dossier, de la plus grande ville à la plus petite, pour que les petites
- * s'empilent sous les grandes au lieu de laisser des champs vides.
+ * Placement order: the home page first, then folder by folder (in address
+ * order); within a folder, from the largest city to the smallest, so that the small ones
+ * stack under the large ones instead of leaving empty fields.
  */
 function compareForPlacement(a: MegaPage, b: MegaPage): number {
   const rootA = a.path === "/" ? 0 : 1;
@@ -131,8 +131,8 @@ interface Column {
 }
 
 /**
- * Range une rangée en colonnes : une petite ville s'empile sous la précédente quand la plus
- * grande de la rangée lui laisse la place (et qu'elle n'est pas nettement plus large).
+ * Arranges a row into columns: a small city stacks under the previous one when the largest
+ * of the row leaves it room (and it is not markedly wider).
  */
 function columnsOf(row: number[], widths: number[], sides: number[]) {
   const g = CORRIDOR;
@@ -156,7 +156,7 @@ export function placePages(pages: MegaPage[]): Placement {
   const sides = pages.map((page) => page.side);
   const widths = pages.map((page) => page.side + (page.aerodrome ? AERODROME : 0));
   const order = pages.map((_, i) => i).sort((a, b) => compareForPlacement(pages[a], pages[b]) || a - b);
-  // Une mégalopole à peu près carrée.
+  // A roughly square megalopolis.
   const area = sides.reduce((sum, side, i) => sum + (widths[i] + g) * (side + g), 0);
   const target = Math.max(...widths.map((width) => width + 2 * g), Math.sqrt(area) * 1.05);
 
@@ -220,35 +220,35 @@ export function placePages(pages: MegaPage[]): Placement {
 }
 
 // ---------------------------------------------------------------------------
-// Les villes affichées, et le réseau qui les relie
+// The shown cities, and the network that links them
 // ---------------------------------------------------------------------------
 
 export interface MegaCity {
-  /** Rang de la page dans la liste donnée à placePages. */
+  /** Index of the page in the list given to placePages. */
   page: number;
   path: string;
-  /** Sa ville, construite avec son aérodrome (ou sans rien hors les murs), en coordonnées locales (socle centré sur l'origine). */
+  /** Its city, built with its airfield (or with nothing outside the walls), in local coordinates (base centered on the origin). */
   layout: CityLayout;
-  /** Empreintes des pages visées par ses liens. */
+  /** Fingerprints of the pages targeted by its links. */
   linksTo: string[];
-  /** Liens vers d'autres sites, et les sites visés. */
+  /** Links to other sites, and the targeted sites. */
   external: number;
   sites: Array<[string, number]>;
 }
 
 export interface Megalopolis {
-  /** Chaque ville affichée et le décalage qui la pose à sa place. */
+  /** Each shown city and the offset that puts it in its place. */
   parts: Array<{ city: MegaCity; offset: { x: number; z: number } }>;
-  /** La campagne, les autoroutes et l'aéroport, en coordonnées du monde (aucun lot). */
+  /** The countryside, the highways and the airport, in world coordinates (no lot). */
   land: CityLayout;
-  /** Paires de pages affichées reliées par une autoroute. */
+  /** Pairs of shown pages linked by a highway. */
   links: Array<[number, number]>;
 }
 
 interface GraphNode {
   x: number;
   z: number;
-  /** Ville et coin pour un bout de bretelle, côté ville. */
+  /** City and corner for one end of a ramp, on the city side. */
   exit?: { city: number; joint: Rect; side: Side };
 }
 
@@ -257,19 +257,19 @@ interface GraphEdge {
   b: number;
   axis: Axis;
   length: number;
-  /** Bretelle entre une ville et une autoroute (sinon : un tronçon d'autoroute). */
+  /** Ramp between a city and a highway (otherwise: a highway section). */
   ramp: boolean;
 }
 
 const key = (x: number, z: number) => `${Math.round(x * 100)},${Math.round(z * 100)}`;
 
-/** Côté d'une case par lequel on part de a vers b. */
+/** Side of a cell through which we leave from a toward b. */
 function sideTowards(a: { x: number; z: number }, b: { x: number; z: number }): Side {
   if (Math.abs(a.x - b.x) > Math.abs(a.z - b.z)) return b.x > a.x ? "east" : "west";
   return b.z > a.z ? "south" : "north";
 }
 
-/** Tas binaire minimal pour Dijkstra. */
+/** Minimal binary heap for Dijkstra. */
 class Heap {
   private items: Array<[number, number]> = [];
   get size() {
@@ -315,7 +315,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
   const socleOf = (page: number): Rect => ({ x: origins[page].x, z: origins[page].z, w: sides[page], d: sides[page] });
   const slotOf = (page: number): Rect => ({ x: origins[page].x, z: origins[page].z, w: widths[page], d: sides[page] });
 
-  // --- Le graphe des couloirs ------------------------------------------------
+  // --- The corridor graph -----------------------------------------------------
   const nodes: GraphNode[] = [];
   const index = new Map<string, number>();
   const nodeAt = (x: number, z: number): number => {
@@ -335,7 +335,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     onSegment[s].push(id);
     return id;
   };
-  // Les bouts des couloirs, et leurs croisements.
+  // The ends of the corridors, and their crossings.
   segments.forEach((segment, s) => {
     pointOn(s, segment.from);
     pointOn(s, segment.to);
@@ -351,7 +351,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     });
   });
 
-  // Les bretelles possibles : chaque coin du périphérique, vers le couloir au-dessus, en dessous, à côté.
+  // Possible ramps: each corner of the ring road, toward the corridor above, below, beside.
   const edges: GraphEdge[] = [];
   const cityNode: number[] = [];
   cities.forEach((city, c) => {
@@ -370,7 +370,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     for (const corner of corners) {
       const joint = { x: corner.cx - RING / 2, z: corner.cz - RING / 2, w: RING, d: RING };
       addRamp(c, hub, joint, corner.ns, pointOn(around[city.page][corner.ns], corner.cx), "z");
-      // Une bretelle vers l'est passerait sur l'aérodrome.
+      // A ramp toward the east would pass over the airfield.
       if (corner.ew === "west" || !city.layout.airport) {
         addRamp(c, hub, joint, corner.ew, pointOn(around[city.page][corner.ew], corner.cz), "x");
       }
@@ -385,7 +385,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     edges.push({ a: exit, b: landing, axis, length: Math.abs(to.x - nodes[exit].x) + Math.abs(to.z - nodes[exit].z), ramp: true });
   }
 
-  // L'aéroport : au bout est du grand couloir le plus proche du milieu.
+  // The airport: at the east end of the main corridor closest to the middle.
   const external = cities.reduce((sum, city) => sum + city.external, 0);
   let airportNode = -1;
   let airportAt = 0;
@@ -398,7 +398,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     airportNode = pointOn(main, segments[main].to);
   }
 
-  // Les tronçons d'autoroute : entre deux points voisins d'un même couloir.
+  // Highway sections: between two neighboring points of the same corridor.
   segments.forEach((segment, s) => {
     const coord = (id: number) => (segment.axis === "x" ? nodes[id].x : nodes[id].z);
     const ids = [...new Set(onSegment[s])].sort((a, b) => coord(a) - coord(b));
@@ -413,7 +413,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     adjacency[edge.b].push(e);
   });
 
-  // --- Les liaisons --------------------------------------------------------------
+  // --- The links -------------------------------------------------------------------
   const keys = cities.map((city) => linkKey(city.path));
   const pairs: Array<[number, number]> = [];
   for (let a = 0; a < cities.length; a += 1) {
@@ -426,9 +426,9 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
   const hubs = new Set(cityNode);
   const cityOfHub = new Map(cityNode.map((node, c) => [node, c]));
   const states = nodes.length * 3;
-  /** Plus court chemin d'une ville à une autre (ou à l'aéroport). Les tronçons empruntés rejoignent le réseau. */
+  /** Shortest path from one city to another (or to the airport). The sections used join the network. */
   const route = (from: number, to: number): boolean => {
-    // États : (nœud, sens d'arrivée : 0 le long de x, 1 de z, 2 aucun), pour compter les virages.
+    // States: (node, arrival direction: 0 along x, 1 along z, 2 none), to count the turns.
     const cost = new Float64Array(states).fill(Infinity);
     const viaState = new Int32Array(states).fill(-1);
     const viaEdge = new Int32Array(states).fill(-1);
@@ -450,7 +450,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
       for (const e of adjacency[node]) {
         const edge = edges[e];
         const next = edge.a === node ? edge.b : edge.a;
-        // On ne traverse pas une autre ville : ses bretelles ne mènent qu'à elle.
+        // We do not cross another city: its ramps only lead to it.
         const exit = nodes[next].exit;
         if (exit && !ends.has(exit.city)) continue;
         if (hubs.has(next) && next !== to) continue;
@@ -475,13 +475,13 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
   const links: Array<[number, number]> = [];
   for (const [a, b] of pairs) if (route(cityNode[a], cityNode[b])) links.push([cities[a].page, cities[b].page]);
 
-  // L'aéroport rejoint la page la plus ouverte sur le web.
+  // The airport joins the page most open to the web.
   if (airportNode >= 0) {
     const busiest = cities.reduce((best, city, c) => (city.external > cities[best].external ? c : best), 0);
     route(cityNode[busiest], airportNode);
   }
 
-  // --- Ce qui se dessine --------------------------------------------------------
+  // --- What gets drawn ---------------------------------------------------------------
   const roads: Road[] = [];
   const joints: Joint[] = [];
   const plates: Plate[] = [];
@@ -490,7 +490,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
   const bridges: Bridge[] = [];
   const half = HIGHWAY / 2;
 
-  // Les carrefours de l'autoroute, et ce qui en sort.
+  // The highway intersections, and what leaves them.
   const openings = new Map<number, Openings>();
   const open = (node: number, side: Side) => {
     const o = openings.get(node) ?? { north: false, east: false, south: false, west: false };
@@ -503,7 +503,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     const a = nodes[edge.a];
     const b = nodes[edge.b];
     if (edge.ramp) {
-      // La bretelle part du coin du périphérique (côté ville) jusqu'au bord de l'autoroute.
+      // The ramp leaves from the corner of the ring road (city side) to the edge of the highway.
       const [exitId, landingId] = a.exit ? [edge.a, edge.b] : [edge.b, edge.a];
       const exit = nodes[exitId].exit!;
       const landing = nodes[landingId];
@@ -535,7 +535,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     joints.push({ x: n.x - half, z: n.z - half, w: HIGHWAY, d: HIGHWAY, open: o, style: "highway", verge: "grass", owner: -1, y: BASE });
   }
 
-  /** Ouvre le coin du périphérique vers la bretelle, et écarte la ceinture verte. */
+  /** Opens the ring road's corner toward the ramp, and moves the green belt aside. */
   function openRing(city: MegaCity, joint: Rect, side: Side, ramp: Rect) {
     const { x: ox, z: oz } = offsetOf(city);
     const local = { x: joint.x - ox, z: joint.z - oz };
@@ -545,11 +545,11 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     city.layout.plates = city.layout.plates.flatMap((plate) => cutRect(plate, cut).map((piece) => ({ ...plate, ...piece })));
   }
   function offsetOf(city: MegaCity) {
-    // Le socle local va de -side/2 à side/2.
+    // The local base goes from -side/2 to side/2.
     return { x: origins[city.page].x + sides[city.page] / 2, z: origins[city.page].z + sides[city.page] / 2 };
   }
 
-  // --- L'aéroport ----------------------------------------------------------------------
+  // --- The airport ---------------------------------------------------------------------
   let airport: Airport | undefined;
   if (airportNode >= 0) {
     const sites = new Map<string, number>();
@@ -572,11 +572,11 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     );
   }
 
-  // --- Les ports ouverts sur le large --------------------------------------------------
-  // Le chenal d'un port sort de sa ville par le bord du socle : il continue tout droit à travers
-  // la campagne jusqu'au bord de la mégalopole, sous les autoroutes qu'il croise. Une autre
-  // ville (ou son aérodrome), un carrefour ou une route qui court le long de lui l'arrêtent avant.
-  // Ce que chaque ville occupe : son socle, et son aérodrome qui dessine son propre sol.
+  // --- Harbors open to the sea ------------------------------------------------------------
+  // A harbor's channel leaves its city through the edge of the base: it continues straight through
+  // the countryside to the edge of the megalopolis, under the highways it crosses. Another
+  // city (or its airfield), an intersection or a road that runs along it stops it earlier.
+  // What each city occupies: its base, and its airfield, which draws its own ground.
   const footprints = cities.map((city) => {
     const socle = socleOf(city.page);
     const strip = city.layout.airport;
@@ -633,14 +633,14 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     }
   }
 
-  // --- La campagne ---------------------------------------------------------------------
+  // --- The countryside -----------------------------------------------------------------
   const shown = new Set(cities.map((city) => city.page));
   const whole: Rect = { x: 0, z: 0, w: placement.width, d: placement.depth };
   let land: Rect[] = [whole];
   for (const footprint of footprints) land = land.flatMap((piece) => cutRect(piece, footprint));
   for (const piece of land) plates.push({ ...piece, y: 0, h: BASE, style: "base", owner: -1 });
 
-  // La campagne : les places des pages masquées et ce qui n'est à aucune page, en parcelles.
+  // The countryside: the places of hidden pages and what belongs to no page, in plots.
   const zones: Rect[] = [...placement.fillers];
   placement.order.forEach((page) => {
     if (!shown.has(page)) zones.push(slotOf(page));
@@ -653,7 +653,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
     const parcels: Array<{ rect: Rect; seed: number }> = [];
     split(zone, 7919 * (z + 1), parcels);
     for (const { rect, seed } of parcels) {
-      // Une haie entre deux parcelles : un peu d'herbe tout autour.
+      // A hedge between two plots: a little grass all around.
       const parcel = { x: rect.x + 0.7, z: rect.z + 0.7, w: rect.w - 1.4, d: rect.d - 1.4 };
       if (parcel.w < 3 || parcel.d < 3) continue;
       const r = noise(seed + 5);
@@ -661,7 +661,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
         decor.push({ ...parcel, type: "woods", owner: -1, y: BASE + CURB });
         continue;
       }
-      if (r >= 0.86) continue; // un pré : l'herbe suffit
+      if (r >= 0.86) continue; // a meadow: grass is enough
       const style = r < 0.38 ? "crops" : r < 0.55 ? "lawn" : "dirt";
       let pieces = [parcel];
       for (const block of blockers) pieces = pieces.flatMap((piece) => cutRect(piece, block));
@@ -684,7 +684,7 @@ export function buildMegalopolis(placement: Placement, cities: MegaCity[]): Mega
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.z < b.z + b.d && b.z < a.z + a.d;
 
-/** Découpe une zone en parcelles de tailles inégales, comme un cadastre de campagne. */
+/** Cuts an area into plots of unequal sizes, like a rural land register. */
 function split(zone: Rect, seed: number, out: Array<{ rect: Rect; seed: number }>) {
   const area = zone.w * zone.d;
   if (zone.w < 8 || zone.d < 8 || area < 260 || (area < 900 && noise(seed) < 0.4)) {
@@ -706,7 +706,7 @@ function split(zone: Rect, seed: number, out: Array<{ rect: Rect; seed: number }
   }
 }
 
-/** Tirage stable dans [0, 1[. */
+/** Stable draw in [0, 1[. */
 function noise(seed: number): number {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
   return x - Math.floor(x);

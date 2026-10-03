@@ -3,15 +3,15 @@ import { LOGO_BLOCKS, LOGO_VIEWBOX, LogoMark } from "./Logo";
 import styles from "./LogoLoader.module.css";
 
 /**
- * Chargement : les quatre blocs du repère sortent de terre l'un après l'autre, du plus petit au monument,
- * sur leurs parcelles tracées en pointillés ; une fois la ville bâtie, ils s'effondrent ensemble, et ça recommence.
- * Animation SVG (SMIL) : les sommets de chaque face passent de la hauteur zéro à la vraie hauteur, la perspective
- * reste juste à chaque instant. Un SVG ajouté à la page démarre sa propre horloge : la boucle part du début.
+ * Loading: the four blocks of the logo rise from the ground one after the other, from the smallest to the monument,
+ * on their plots drawn in dotted lines; once the city is built, they collapse together, and it starts again.
+ * SVG animation (SMIL): the vertices of each face go from zero height to the real height, the perspective
+ * stays correct at every moment. An SVG added to the page starts its own clock: the loop starts from the beginning.
  */
 const CYCLE = 2.6;
 const BUILD = 0.16;
 const FALL = 0.11;
-// Les plus petits d'abord, le monument en dernier.
+// The smallest first, the monument last.
 const ORDER = [...LOGO_BLOCKS].sort((a, b) => a.height - b.height);
 
 const t = (value: number) => value.toFixed(3);

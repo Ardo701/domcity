@@ -3,8 +3,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { storeConfig, type CloudConfig, type LocalConfig } from "./config";
 
 /**
- * Appel des fonctions SQL du schéma (supabase/migrations), à l'identique
- * sur Supabase et sur la base locale.
+ * Calls the SQL functions of the schema (supabase/migrations), identically
+ * on Supabase and on the local database.
  */
 export interface Rpc {
   rows<T>(fn: string, args: Record<string, unknown>): Promise<T[]>;
@@ -13,7 +13,7 @@ export interface Rpc {
 
 export type Access = "public" | "admin";
 
-/** Valeur binaire (empreinte) : texte « \\x… » pour Supabase, octets pour la base locale. */
+/** Binary value (fingerprint): "\\x..." text for Supabase, bytes for the local database. */
 export class Bytea {
   constructor(readonly hex: string) {}
 }
@@ -43,8 +43,8 @@ function supabase(config: CloudConfig, access: Access): SupabaseClient {
 }
 
 /**
- * L'API de Supabase ne rend jamais plus de lignes que son réglage « Max rows » (1 000 par défaut),
- * sans le dire : au-delà, on lit page par page (la liste des sites refusés en a plus de 1 500).
+ * The Supabase API never returns more rows than its "Max rows" setting (1,000 by default),
+ * without saying so: beyond that, we read page by page (the list of refused sites has more than 1,500).
  */
 export const SUPABASE_PAGE = 1000;
 
@@ -71,7 +71,7 @@ function supabaseRpc(config: CloudConfig, access: Access): Rpc {
 }
 
 // ---------------------------------------------------------------------------
-// Base locale (développement et tests)
+// Local database (development and tests)
 // ---------------------------------------------------------------------------
 
 type PGliteLike = {
@@ -79,7 +79,7 @@ type PGliteLike = {
   exec(sql: string): Promise<unknown>;
 };
 
-/** Ce que Supabase fournit d'office : rôles, schéma des extensions, droits par défaut. */
+/** What Supabase provides out of the box: roles, extensions schema, default privileges. */
 export const SUPABASE_DEFAULTS = `
   create role anon nologin;
   create role authenticated nologin;
@@ -94,8 +94,8 @@ export const SUPABASE_DEFAULTS = `
 const globalForPg = globalThis as unknown as { __domcityPg?: Map<string, Promise<PGliteLike>> };
 
 async function openLocal(config: LocalConfig): Promise<PGliteLike> {
-  // Remplacé à la compilation : en production, tout ce qui suit est retiré du paquet (et PGlite avec).
-  if (process.env.NODE_ENV === "production") throw new Error("base locale indisponible en production");
+  // Replaced at build time: in production, everything below is removed from the bundle (and PGlite with it).
+  if (process.env.NODE_ENV === "production") throw new Error("local database unavailable in production");
   const { PGlite } = await import("@electric-sql/pglite");
   const { pg_trgm } = await import("@electric-sql/pglite/contrib/pg_trgm");
   const { pgcrypto } = await import("@electric-sql/pglite/contrib/pgcrypto");
@@ -137,7 +137,7 @@ function localDb(config: LocalConfig): Promise<PGliteLike> {
 function toParam(value: unknown): unknown {
   if (value === null || value === undefined) return null;
   if (value instanceof Bytea) return new Uint8Array(Buffer.from(value.hex.replace(/^\\x/, ""), "hex"));
-  // Un tableau devient un tableau Postgres (text[]) ; un objet, du JSON.
+  // An array becomes a Postgres array (text[]); an object, JSON.
   if (Array.isArray(value)) return value;
   if (typeof value === "object") return JSON.stringify(value);
   return value;
@@ -179,7 +179,7 @@ function localRpc(config: LocalConfig): Rpc {
 
 // ---------------------------------------------------------------------------
 
-/** « public » lit comme un visiteur (droits anon) ; « admin » écrit (clé secrète, côté serveur seulement). */
+/** "public" reads as a visitor (anon privileges); "admin" writes (secret key, server side only). */
 export function rpc(access: Access): Rpc | null {
   const config = storeConfig();
   if (config.mode === "cloud") return supabaseRpc(config, access);

@@ -4,8 +4,8 @@ import { cityKey, thumbKey } from "@/format/shared";
 import { storeConfig, type CloudConfig, type LocalConfig } from "./config";
 
 /**
- * Fichiers des villes : city/<slug>.json.gz (la ville) et city/<slug>.jpg (la miniature).
- * Ils ne changent jamais une fois écrits : cache d'un an partout.
+ * City files: city/<slug>.json.gz (the city) and city/<slug>.jpg (the thumbnail).
+ * They never change once written: cached for a year everywhere.
  */
 export interface FileStore {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
@@ -30,24 +30,24 @@ function r2Files(config: CloudConfig): FileStore {
 
   return {
     async put(key, body, contentType) {
-      // On signe, puis on envoie le corps lui-même. Le fetch de Next refait un objet Request à partir de son
-      // flux (request.body) : la longueur se perd, l'envoi part en morceaux et R2 le refuse (411).
+      // We sign, then send the body itself. Next's fetch rebuilds a Request object from its
+      // stream (request.body): the length is lost, the upload goes out in chunks and R2 refuses it (411).
       const signed = await client.sign(endpoint(key), {
         method: "PUT",
         body: body as BodyInit,
         headers: { "content-type": contentType, "cache-control": IMMUTABLE },
       });
       const response = await fetch(signed.url, { method: "PUT", headers: signed.headers, body: body as BodyInit });
-      if (!response.ok) throw new Error(`R2 ${response.status} en écrivant ${key}`);
+      if (!response.ok) throw new Error(`R2 ${response.status} writing ${key}`);
     },
     async remove(keys) {
       await Promise.all(
         keys.map(async (key) => {
           const response = await client.fetch(endpoint(key), { method: "DELETE" });
-          if (!response.ok && response.status !== 404) throw new Error(`R2 ${response.status} en supprimant ${key}`);
+          if (!response.ok && response.status !== 404) throw new Error(`R2 ${response.status} deleting ${key}`);
         }),
       );
-      // Le cache de Cloudflare garderait sinon une copie : on la purge si un jeton est fourni.
+      // Cloudflare's cache would otherwise keep a copy: it is purged if a token is provided.
       if (config.cloudflareZoneId && config.cloudflareApiToken) {
         await fetch(`https://api.cloudflare.com/client/v4/zones/${config.cloudflareZoneId}/purge_cache`, {
           method: "POST",
@@ -65,7 +65,7 @@ function localFiles(config: LocalConfig): FileStore {
     const path = await import("node:path");
     const root = path.resolve(config.dataDir, "files");
     const full = path.resolve(root, key);
-    if (!full.startsWith(root + path.sep)) throw new Error("clé de fichier invalide");
+    if (!full.startsWith(root + path.sep)) throw new Error("invalid file key");
     return full;
   };
   return {
@@ -84,7 +84,7 @@ function localFiles(config: LocalConfig): FileStore {
   };
 }
 
-/** Lecture d'un fichier local (route /api/dev-files, développement uniquement). */
+/** Reads a local file (route /api/dev-files, development only). */
 export async function readLocalFile(key: string): Promise<Uint8Array | null> {
   const config = storeConfig();
   if (config.mode !== "local") return null;

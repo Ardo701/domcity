@@ -1,21 +1,21 @@
 /**
- * L'échange entre le favori (sur la page relevée) et DOMCity (/nouveau).
+ * The exchange between the bookmarklet (on the captured page) and DOMCity (/nouveau).
  *
- * 1. Le favori ouvre /nouveau dans un nouvel onglet, puis relève la page.
- * 2. /nouveau envoie « pret » à la page qui l'a ouvert, jusqu'à recevoir la ville.
- * 3. Le favori répond avec la ville, adressée à l'origine de DOMCity et à elle seule.
- * 4. /nouveau confirme « recu ».
+ * 1. The bookmarklet opens /nouveau in a new tab, then captures the page.
+ * 2. /nouveau sends "pret" to the page that opened it, until it receives the city.
+ * 3. The bookmarklet answers with the city, addressed to the DOMCity origin and to it alone.
+ * 4. /nouveau confirms "recu".
  *
- * Plan B, quand l'onglet n'a pas pu s'ouvrir ou que le site coupe le lien entre ses fenêtres :
- * la ville compressée voyage dans l'ancre de l'adresse (#ville=…), que le navigateur
- * n'envoie jamais à un serveur.
+ * Plan B, when the tab could not open or the site cuts the link between its windows:
+ * the compressed city travels in the address fragment (#ville=...), which the browser
+ * never sends to a server.
  *
- * Ce fichier est compilé dans le favori : aucune dépendance.
+ * This file is compiled into the bookmarklet: no dependencies.
  */
 
 import type { CityDoc } from "@/format/types";
 
-/** À augmenter quand le favori change : /nouveau propose alors de le réinstaller. */
+/** Increase when the bookmarklet changes: /nouveau then offers to reinstall it. */
 export const BOOKMARKLET_VERSION = 4;
 
 export const NEW_CITY_PATH = "/nouveau";
@@ -33,7 +33,7 @@ export interface CityMessage {
   city: unknown;
 }
 
-/** Ville → « 1.H4sIAAAA… » : version du favori, puis JSON compressé (gzip) en base64url. */
+/** City → "1.H4sIAAAA...": bookmarklet version, then gzip-compressed JSON in base64url. */
 export async function packCity(city: CityDoc): Promise<string> {
   const stream = new Response(JSON.stringify(city)).body!.pipeThrough(new CompressionStream("gzip"));
   const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
@@ -45,9 +45,9 @@ export async function packCity(city: CityDoc): Promise<string> {
   return `${BOOKMARKLET_VERSION}.${base64}`;
 }
 
-/** L'inverse de packCity. La ville n'est pas encore vérifiée : la passer à validateCityDoc. */
+/** The inverse of packCity. The city is not verified yet: pass it to validateCityDoc. */
 export async function unpackCity(packed: string): Promise<{ version: number; data: unknown }> {
-  /** Taille maximale d'une ville décompressée (contre les liens piégés). */
+  /** Maximum size of a decompressed city (against booby-trapped links). */
   const MAX_JSON_BYTES = 32 * 1024 * 1024;
   const match = /^(\d{1,4})\.([A-Za-z0-9_-]+)$/.exec(packed);
   if (!match) throw new Error("ancre illisible");
@@ -64,7 +64,7 @@ export async function unpackCity(packed: string): Promise<{ version: number; dat
     total += value.byteLength;
     if (total > MAX_JSON_BYTES) {
       await reader.cancel();
-      throw new Error("ville trop lourde");
+      throw new Error("city too large");
     }
     chunks.push(value);
   }

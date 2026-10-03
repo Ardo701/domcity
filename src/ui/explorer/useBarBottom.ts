@@ -1,9 +1,9 @@
 import { useEffect, type RefObject } from "react";
 
 /**
- * Les outils sont à droite de la barre du haut, et passent dessous quand la place manque :
- * sa hauteur change avec la largeur de l'écran. Les panneaux se placent sous elle grâce à la
- * variable `--bar-bottom`, posée sur le conteneur de la vue.
+ * The tools are on the right of the top bar, and move below it when space runs out:
+ * its height changes with the screen width. The panels go below it thanks to the
+ * `--bar-bottom` variable, set on the view's container.
  */
 export function useBarBottom(bar: RefObject<HTMLElement | null>) {
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useBarBottom(bar: RefObject<HTMLElement | null>) {
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
-    // Le haut de la barre change aussi d'un écran à l'autre, sans qu'elle change de taille.
+    // The top of the bar also changes from one screen to another, without the bar changing size.
     window.addEventListener("resize", update);
     return () => {
       observer.disconnect();

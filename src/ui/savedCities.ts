@@ -1,7 +1,7 @@
 /**
- * Les villes partagées depuis ce navigateur, avec leur lien secret de suppression : c'est le « compte »
- * d'un visiteur (il n'y a ni inscription ni mot de passe).
- * Simple confort : si le stockage est indisponible (navigation privée…), on fait sans.
+ * The cities shared from this browser, with their secret deletion link: this is a visitor's
+ * "account" (there is no sign-up and no password).
+ * A simple convenience: if storage is unavailable (private browsing...), we do without.
  */
 
 import { useMemo, useSyncExternalStore } from "react";
@@ -11,7 +11,7 @@ export interface MyCity {
   title: string;
   token: string;
   sharedAt: string;
-  /** L'adresse de la page relevée. Absente des villes publiées avant le 3 octobre 2026 : retrouvée dans leur fichier. */
+  /** The address of the captured page. Missing from cities published before October 3, 2026: recovered from their file. */
   pageUrl?: string;
 }
 
@@ -44,16 +44,16 @@ export function rememberCity(city: MyCity): void {
     const list = listMyCities().filter((c) => c.slug !== city.slug);
     localStorage.setItem(KEY, JSON.stringify([city, ...list].slice(0, 50)));
   } catch {
-    // stockage indisponible : le lien secret reste affiché à l'écran
+    // storage unavailable: the secret link stays displayed on screen
   }
 }
 
-/** Complète une ville déjà gardée, sans changer sa place dans la liste. */
+/** Completes an already kept city, without changing its place in the list. */
 export function updateCity(slug: string, patch: Partial<Omit<MyCity, "slug">>): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(listMyCities().map((c) => (c.slug === slug ? { ...c, ...patch } : c))));
   } catch {
-    // stockage indisponible : on la retrouvera la prochaine fois
+    // storage unavailable: we will find it next time
   }
 }
 
@@ -61,7 +61,7 @@ export function forgetCity(slug: string): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(listMyCities().filter((c) => c.slug !== slug)));
   } catch {
-    // rien à faire
+    // nothing to do
   }
 }
 
@@ -71,8 +71,8 @@ const subscribe = (onChange: () => void) => {
 };
 
 /**
- * Les villes de ce navigateur, la plus récente d'abord. `null` tant qu'on ne les a pas lues
- * (rendu côté serveur, puis la première image) : on n'affiche pas « aucune ville » par erreur.
+ * The cities of this browser, the most recent first. `null` until they have been read
+ * (server-side rendering, then the first frame): "no city" is not displayed by mistake.
  */
 export function useMyCities(): MyCity[] | null {
   const raw = useSyncExternalStore(subscribe, () => readRaw() ?? "[]", () => null);

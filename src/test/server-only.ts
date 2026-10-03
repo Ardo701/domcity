@@ -1,2 +1,2 @@
-// Remplace le paquet « server-only » dans les tests (il refuse d'être chargé hors du serveur Next.js).
+// Replaces the "server-only" package in tests (it refuses to load outside the Next.js server).
 export {};

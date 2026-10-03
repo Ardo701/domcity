@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Un faux R2 local : comme le vrai, il refuse un envoi dont la longueur n'est pas annoncée (411).
+// A fake local R2: like the real one, it refuses an upload whose length is not announced (411).
 let server: Server;
 let origin: string;
 const received: Array<{ length?: string; type?: string; bytes: number }> = [];
@@ -22,7 +22,7 @@ beforeAll(async () => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
-  // Le fetch de Next : un objet Request est refait à partir de son flux (request.body), sans sa longueur.
+  // Next's fetch: a Request object is rebuilt from its stream (request.body), without its length.
   const nativeFetch = globalThis.fetch;
   const local = (url: string) => origin + new URL(url).pathname;
   vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
@@ -54,8 +54,8 @@ afterAll(() => {
   server?.close();
 });
 
-describe("fichiers sur R2", () => {
-  it("annonce la longueur de l'envoi, même à travers le fetch de Next", async () => {
+describe("files on R2", () => {
+  it("announces the upload length, even through Next's fetch", async () => {
     const thumbnail = new Uint8Array(150_000).fill(7);
     await fileStore()!.put("city/abc.jpg", thumbnail, "image/jpeg");
     expect(received.at(-1)).toEqual({ length: "150000", type: "image/jpeg", bytes: 150_000 });

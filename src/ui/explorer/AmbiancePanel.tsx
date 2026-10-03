@@ -25,9 +25,9 @@ function Row({ kind, name, value, detail, muted }: { kind: Kind; name: string; v
 }
 
 /**
- * Le bulletin d'ambiance : ce que la page fait sans le montrer, et ce que la ville en a fait
- * (météo, usines, caméras, graffitis, ruines), plus les vraies couleurs du site en option.
- * Une seule ville : le détail. Plusieurs (la mégalopole) : les totaux.
+ * The ambiance report: what the page does without showing it, and what the city made of it
+ * (weather, factories, cameras, graffiti, ruins), plus the site's true colors as an option.
+ * A single city: the details. Several (the megalopolis): the totals.
  */
 export function AmbiancePanel({
   ambiances,
@@ -46,7 +46,7 @@ export function AmbiancePanel({
   const painted = ambiances.some((a) => a.colors);
   const fromBookmarklet = ambiances.some((a) => a.measured === "dom");
 
-  // Météo
+  // Weather
   let weather: { value: string; detail: string };
   if (single) {
     const weight = [
@@ -67,17 +67,17 @@ export function AmbiancePanel({
     };
   }
 
-  // Usines
+  // Factories
   const withScripts = known("scripts");
   const scripts = sum((a) => a.scripts ?? 0);
   const factories = sum((a) => a.factories);
 
-  // Caméras
+  // Cameras
   const withThirdParty = ambiances.filter((a) => a.thirdParty);
   const trackers = [...new Set(ambiances.flatMap((a) => a.trackers))];
   const cameras = sum((a) => a.cameras);
 
-  // Graffitis
+  // Graffiti
   const withComments = known("comments");
   const comments = sum((a) => a.comments ?? 0);
   const graffiti = sum((a) => a.graffiti);

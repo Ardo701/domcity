@@ -1,6 +1,6 @@
 import type { CityLayout, Lot, Rect } from "@/city/layout";
 
-/** La partie commune de deux rectangles, ou null. */
+/** The common part of two rectangles, or null. */
 function clip(rect: Rect, region: Rect): Rect | null {
   const x = Math.max(rect.x, region.x);
   const z = Math.max(rect.z, region.z);
@@ -22,14 +22,14 @@ const centerIn = (rect: Rect, region: Rect) => {
 };
 
 /**
- * Un morceau de la ville, découpé comme une maquette d'architecte : les sols et les rues sont
- * coupés net au bord, les bâtiments gardés entiers s'ils sont dedans, retirés sinon.
- * Les numéros des lots ne changent pas (le moteur les retrouve par leur place dans la liste) :
- * un lot retiré devient un îlot sans sol, que le moteur ne dessine pas.
+ * A piece of the city, cut out like an architect's model: grounds and streets are
+ * cut clean at the edge, buildings kept whole if they are inside, removed otherwise.
+ * Lot numbers do not change (the engine finds them by their position in the list):
+ * a removed lot becomes a block without ground, which the engine does not draw.
  */
 export function excerpt(layout: CityLayout, region: Rect): CityLayout {
   const lots: Lot[] = layout.lots.map((lot) => {
-    // Les sols (conteneurs, canal, champs) se coupent ; les bâtiments, non.
+    // Grounds (containers, canal, fields) are cut; buildings are not.
     if (lot.container || lot.kind === "river" || lot.kind === "fields") {
       const part = clip(lot, region);
       return part ? { ...lot, ...part } : { ...lot, kind: "block", container: true, h: 0, panel: undefined };

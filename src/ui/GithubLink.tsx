@@ -1,9 +1,9 @@
 import styles from "./GithubLink.module.css";
 
-/** Le dépôt du projet (privé pour l'instant, public à la mise en ligne). */
+/** The project's repository (private for now, public at launch). */
 export const REPO_URL = "https://github.com/Ardo701/domcity";
 
-/** Le logo de GitHub (le chat-poulpe), à la couleur du texte. */
+/** The GitHub logo (the octocat), in the text color. */
 export function GithubMark() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
@@ -15,7 +15,7 @@ export function GithubMark() {
   );
 }
 
-/** Bouton vers le code de DOMCity, à droite de l'en-tête. */
+/** Button to the DOMCity code, on the right of the header. */
 export function GithubLink({ className }: { className?: string }) {
   return (
     <a className={className ? `${styles.github} ${className}` : styles.github} href={REPO_URL} target="_blank" rel="noreferrer" aria-label="Le code de DOMCity sur GitHub">

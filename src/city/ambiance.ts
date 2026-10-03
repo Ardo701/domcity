@@ -1,16 +1,16 @@
 /**
- * L'ambiance d'une ville : ce que la page fait sans le montrer, rendu visible.
+ * The ambiance of a city: what the page does without showing it, made visible.
  *
- * - Météo : le poids de la page (octets chargés, éléments). Grand soleil pour une page légère,
- *   orage pour une page très lourde.
- * - Usines qui fument : les scripts de la page (le JavaScript).
- * - Caméras de surveillance : les traqueurs publicitaires parmi les sites tiers qu'elle sollicite.
- * - Graffitis : les commentaires laissés dans le HTML.
- * - Ruines : les images cassées.
- * - Vraies couleurs : les couleurs de fond relevées, en option.
+ * - Weather: the weight of the page (loaded bytes, elements). Bright sun for a light page,
+ *   storm for a very heavy one.
+ * - Smoking factories: the page's scripts (the JavaScript).
+ * - Surveillance cameras: the ad trackers among the third-party sites it calls.
+ * - Graffiti: the comments left in the HTML.
+ * - Ruins: broken images.
+ * - True colors: the captured background colors, as an option.
  *
- * Le favori relève tout cela (`page`, `img.broken`, `bg`). Une ville Wikipédia ou un ancien relevé
- * n'en savent qu'une partie : la météo se calcule alors sur les éléments relevés, le reste manque.
+ * The bookmarklet captures all of this (`page`, `img.broken`, `bg`). A Wikipedia city or an old capture
+ * only knows part of it: the weather is then computed on the captured elements, the rest is missing.
  */
 
 import { trackersIn } from "@/format/trackers";
@@ -28,38 +28,38 @@ export const WEATHER_NAMES: Record<Weather, string> = {
 
 export interface Ambiance {
   weather: Weather;
-  /** Octets chargés par la page (favori, au moins). */
+  /** Bytes loaded by the page (bookmarklet, at least). */
   bytes?: number;
-  /** Éléments : ceux de tout le document (favori), sinon ceux relevés. */
+  /** Elements: those of the whole document (bookmarklet), otherwise the captured ones. */
   elements: number;
-  /** D'où vient le compte des éléments. */
+  /** Where the element count comes from. */
   measured: "dom" | "captured";
-  /** Balises <script> (favori). */
+  /** <script> tags (bookmarklet). */
   scripts?: number;
   factories: number;
-  /** Traqueurs parmi les sites tiers (favori). */
+  /** Trackers among the third-party sites (bookmarklet). */
   trackers: string[];
-  /** Les sites tiers sont-ils connus ? (favori) */
+  /** Are the third-party sites known? (bookmarklet) */
   thirdParty: boolean;
   cameras: number;
-  /** Commentaires HTML (favori). */
+  /** HTML comments (bookmarklet). */
   comments?: number;
   graffiti: number;
-  /** Images cassées au moment du relevé (favori). */
+  /** Images broken at capture time (bookmarklet). */
   ruins: number;
-  /** Couleurs de fond relevées : la ville peut prendre les vraies couleurs du site. */
+  /** Captured background colors: the city can take the site's true colors. */
   colors: boolean;
-  /** Couleur de fond de la page entière (favori). */
+  /** Background color of the whole page (bookmarklet). */
   background?: string;
 }
 
-/** Seuils de poids : au-delà de chacun, le temps se gâte d'un cran. */
+/** Weight thresholds: beyond each one, the weather gets one notch worse. */
 const BYTES = [600_000, 1_500_000, 3_000_000, 6_000_000];
 const ELEMENTS = [800, 1_500, 3_000, 6_000];
 const SKIES: Weather[] = ["clear", "fair", "cloudy", "overcast", "storm"];
 
 export const MAX_FACTORIES = 12;
-/** Une usine pour six scripts (la première dès un script). */
+/** One factory per six scripts (the first one from a single script). */
 const SCRIPTS_PER_FACTORY = 6;
 export const CAMERAS_PER_TRACKER = 3;
 export const MAX_CAMERAS = 36;

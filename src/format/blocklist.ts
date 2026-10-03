@@ -1,23 +1,23 @@
 import type { CityDoc, CityNode } from "./types";
 
 /**
- * Les sites refusés : DOMCity n'en construit pas de ville, ne les publie pas, et ne charge jamais
- * leurs images (même accrochées dans la ville d'un autre site). Sites pour adultes, banques,
- * données personnelles… : six catégories, toutes traitées de la même façon.
+ * Refused sites: DOMCity builds no city for them, does not publish them, and never loads
+ * their images (even when hung in another site's city). Adult sites, banks,
+ * personal data...: six categories, all treated the same way.
  *
- * La liste vit dans la base (table `blocked_domains`, voir docs/sites-refuses.md), pas dans le code :
- * on l'allonge dans Supabase sans redéployer. La base refuse elle-même de créer la ville d'un site
- * de la liste, et ses fonctions de lecture l'ignorent. Le navigateur télécharge la liste entière
- * (`/api/blocklist`) et vérifie seul : rien de la page visitée ne part avant la publication.
+ * The list lives in the database (table `blocked_domains`, see docs/refused-sites.md), not in the code:
+ * it grows in Supabase without redeploying. The database itself refuses to create the city of a site
+ * on the list, and its read functions ignore it. The browser downloads the whole list
+ * (`/api/blocklist`) and checks on its own: nothing about the visited page leaves before publishing.
  *
- * Un domaine couvre ses sous-domaines (« pornhub.com » couvre « fr.pornhub.com ») ; une entrée sans
- * point est une extension (« xxx »). Même règle que `domain_suffixes` dans la base.
+ * A domain covers its subdomains ("pornhub.com" covers "fr.pornhub.com"); an entry without
+ * a dot is an extension ("xxx"). Same rule as `domain_suffixes` in the database.
  */
 
 export const BLOCK_CATEGORIES = ["adult", "violence", "bank", "private", "gambling", "danger"] as const;
 export type BlockCategory = (typeof BLOCK_CATEGORIES)[number];
 
-/** Le nom de chaque catégorie, pour les montrer au visiteur (page Créer une ville). */
+/** The name of each category, to show them to the visitor (Créer une ville page). */
 export const BLOCK_LABELS: Record<BlockCategory, string> = {
   adult: "Sites pour adultes",
   violence: "Violence et images choquantes",
@@ -27,7 +27,7 @@ export const BLOCK_LABELS: Record<BlockCategory, string> = {
   danger: "Sites dangereux : pistage, logiciels espions, téléchargements piratés",
 };
 
-/** Ce que dit DOMCity d'un site refusé, selon sa catégorie. */
+/** What DOMCity says about a refused site, according to its category. */
 const REASONS: Record<BlockCategory, string> = {
   adult: "Ce site est sur la liste des sites refusés par DOMCity : sites pour adultes.",
   violence: "Ce site est sur la liste des sites refusés par DOMCity : images violentes ou choquantes.",
@@ -38,19 +38,19 @@ const REASONS: Record<BlockCategory, string> = {
   danger: "Ce site est sur la liste des sites refusés par DOMCity : pistage, logiciels espions ou téléchargements piratés.",
 };
 
-/** La liste, telle que la rend la base : domaine (ou extension) → catégorie. */
+/** The list, as the database returns it: domain (or extension) → category. */
 export type Blocklist = ReadonlyMap<string, BlockCategory>;
 
 export const isBlockCategory = (value: unknown): value is BlockCategory =>
   (BLOCK_CATEGORIES as readonly unknown[]).includes(value);
 
-/** Le domaine et tous ceux qui le contiennent : fr.pornhub.com, pornhub.com, com. */
+/** The domain and all those that contain it: fr.pornhub.com, pornhub.com, com. */
 export function domainSuffixes(hostname: string): string[] {
   const labels = hostname.toLowerCase().replace(/\.+$/, "").split(".");
   return labels.map((_, i) => labels.slice(i).join("."));
 }
 
-/** La catégorie qui refuse cet hôte (l'entrée la plus précise), ou undefined. */
+/** The category that refuses this host (the most precise entry), or undefined. */
 export function blockedCategory(hostname: string, list: Blocklist): BlockCategory | undefined {
   for (const suffix of domainSuffixes(hostname)) {
     const category = list.get(suffix);
@@ -67,13 +67,13 @@ function hostOf(url: string): string | null {
   }
 }
 
-/** Vrai si l'adresse (d'une page, d'une image) mène à un site refusé. */
+/** True if the address (of a page, of an image) leads to a refused site. */
 export function isBlockedUrl(url: string, list: Blocklist): boolean {
   const host = hostOf(url);
   return host !== null && blockedCategory(host, list) !== undefined;
 }
 
-/** Pourquoi cette ville ne se construit pas (le texte montré à la personne), ou null. */
+/** Why this city is not built (the text shown to the person), or null. */
 export function cityRefusal(doc: CityDoc, list: Blocklist): string | null {
   if (doc.page?.adult) return "Cette page se déclare réservée aux adultes : DOMCity n'en construit pas de ville.";
   const host = hostOf(doc.url);
@@ -82,9 +82,9 @@ export function cityRefusal(doc: CityDoc, list: Blocklist): string | null {
 }
 
 /**
- * La ville sans ce qui vient d'un site refusé : ses images restent à leur place mais perdent leur
- * adresse et leur texte (il peut être aussi cru qu'elles), et les sites refusés quittent ses départs.
- * Rend la même ville quand rien n'est à retirer.
+ * The city without what comes from a refused site: its images stay in place but lose their
+ * address and their text (it can be as crude as they are), and refused sites leave its departures.
+ * Returns the same city when there is nothing to remove.
  */
 export function withoutBlocked(doc: CityDoc, list: Blocklist): CityDoc {
   if (list.size === 0) return doc;
@@ -118,7 +118,7 @@ export function withoutBlocked(doc: CityDoc, list: Blocklist): CityDoc {
   };
 }
 
-/** Lit la liste envoyée par le serveur ({ adult: [...], bank: [...] }), en ignorant ce qui ne la suit pas. */
+/** Reads the list sent by the server ({ adult: [...], bank: [...] }), ignoring whatever does not follow it. */
 export function readBlocklist(data: unknown): Map<string, BlockCategory> {
   const list = new Map<string, BlockCategory>();
   if (!data || typeof data !== "object") return list;

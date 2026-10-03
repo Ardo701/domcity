@@ -2,26 +2,26 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { secretSalt, siteUrl } from "./config";
 
-/** Empreinte de l'IP du visiteur : jamais l'IP elle-même. */
+/** Fingerprint of the visitor's IP: never the IP itself. */
 export function clientActor(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || request.headers.get("x-real-ip") || "local";
   return toBytea(createHash("sha256").update(`${secretSalt()}:${ip}`).digest());
 }
 
-/** Les écritures ne sont acceptées que depuis le site lui-même. */
+/** Writes are only accepted from the site itself. */
 export function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   return origin === siteUrl(request) || origin === new URL(request.url).origin;
 }
 
-/** Jeton du lien secret de suppression : 24 octets aléatoires, en base64url. */
+/** Token of the secret deletion link: 24 random bytes, in base64url. */
 export function newDeleteToken(): string {
   return randomBytes(24).toString("base64url");
 }
 
-/** On ne garde que l'empreinte du jeton, au format bytea de Postgres. */
+/** Only the token's fingerprint is kept, in Postgres bytea format. */
 export function hashToken(token: string): string {
   return toBytea(createHash("sha256").update(token).digest());
 }

@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Base Postgres embarquée du mode local (développement) : chargée telle quelle, pas empaquetée…
+  // Embedded Postgres database for local mode (development): loaded as is, not bundled...
   serverExternalPackages: ["@electric-sql/pglite"],
-  // … et jamais copiée dans les fonctions déployées, qui utilisent Supabase.
+  // ... and never copied into the deployed functions, which use Supabase.
   outputFileTracingExcludes: {
     "*": ["node_modules/@electric-sql/pglite/**"],
   },
-  // Anciennes adresses : la page du favori (/installer), celle d'un site (/s/…), une ville partagée (/c/…)
-  // et son lien secret (le jeton, après le #, suit la redirection : le navigateur le garde).
+  // Old addresses: the bookmarklet page (/installer), a site page (/s/...), a shared city (/c/...)
+  // and its secret link (the token, after the #, follows the redirect: the browser keeps it).
   async redirects() {
     return [
       { source: "/installer", destination: "/create", permanent: true },

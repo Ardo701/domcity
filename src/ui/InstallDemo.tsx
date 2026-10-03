@@ -1,12 +1,12 @@
 import { demoCity } from "./demo/demoCity";
 import { DemoPlayer } from "./demo/DemoPlayer";
 
-// La ville d'exemple est préparée une fois, sur le serveur : le navigateur ne reçoit que ses chiffres.
+// The sample city is prepared once, on the server: the browser only receives its numbers.
 const CITY = demoCity();
 
 /**
- * Le geste de bout en bout, animé : glisser le favori depuis DOMCity, ouvrir un site, cliquer sur le favori,
- * et voir la page devenir sa ville (les blocs de la page sortent de terre, puis le rendu du vrai moteur).
+ * The gesture from start to finish, animated: drag the bookmarklet from DOMCity, open a site, click the bookmarklet,
+ * and watch the page become its city (the page's blocks rise from the ground, then the real engine's rendering).
  */
 export function InstallDemo() {
   return <DemoPlayer city={CITY} />;

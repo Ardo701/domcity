@@ -8,8 +8,8 @@ import { SUPABASE_DEFAULTS } from "./db";
 
 const dir = join(process.cwd(), "supabase");
 
-describe("le script de vérification de la base (supabase/verification.sql)", () => {
-  it("dit « ok » à chaque ligne sur une base neuve, deux fois de suite, et ne laisse rien", async () => {
+describe("the database check script (supabase/verification.sql)", () => {
+  it("says \"ok\" on every line on a fresh database, twice in a row, and leaves nothing behind", async () => {
     const db = await PGlite.create({ extensions: { pg_trgm, pgcrypto } });
     await db.exec(SUPABASE_DEFAULTS);
     for (const file of readdirSync(join(dir, "migrations")).filter((f) => f.endsWith(".sql")).sort()) {
@@ -18,9 +18,9 @@ describe("le script de vérification de la base (supabase/verification.sql)", ()
     const script = readFileSync(join(dir, "verification.sql"), "utf8");
     for (let run = 0; run < 2; run += 1) {
       const results = await db.exec(script);
-      const rows = results[results.length - 1].rows as Array<{ etape: string; statut: string; detail: string }>;
+      const rows = results[results.length - 1].rows as Array<{ step: string; status: string; detail: string }>;
       expect(rows.length).toBeGreaterThan(15);
-      expect(rows.filter((r) => r.statut !== "ok")).toEqual([]);
+      expect(rows.filter((r) => r.status !== "ok")).toEqual([]);
     }
     const left = await db.query<{ n: number }>(
       "select (select count(*) from public.sites) + (select count(*) from public.rate_events) + (select count(*) from public.blocked_domains where note = 'verification') as n",

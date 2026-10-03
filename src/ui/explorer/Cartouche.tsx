@@ -13,7 +13,7 @@ const longDate = (iso: string) =>
 
 const plural = (n: number, word: string) => `${formatCount(n)} ${word}${n > 1 ? "s" : ""}`;
 
-/** Ce que le favori a appris de la page entière : scripts, sites tiers, poids. */
+/** What the bookmarklet learned about the whole page: scripts, third-party sites, weight. */
 function pageFacts(page: CityPage | undefined): string[] {
   if (!page) return [];
   const facts: string[] = [];
@@ -26,7 +26,7 @@ function pageFacts(page: CityPage | undefined): string[] {
   return facts;
 }
 
-/** Le cartouche de la planche : titre, source, date du relevé et chiffres de la ville. */
+/** The sheet's cartouche: title, source, capture date and the city's figures. */
 export function Cartouche({
   title,
   url,
@@ -46,7 +46,7 @@ export function Cartouche({
   stats: CityStats;
   page?: CityPage;
   kicker: string;
-  /** Précision au survol de la mention du haut (ville relevée par un visiteur…). */
+  /** Detail shown on hover over the top mention (city captured by a visitor...). */
   kickerNote?: string;
   shared?: { views: number };
   versions?: CityVersion[];

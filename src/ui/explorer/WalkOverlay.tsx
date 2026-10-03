@@ -5,7 +5,7 @@ function Key({ children, wide = false }: { children: React.ReactNode; wide?: boo
   return <kbd className={`${styles.key} ${wide ? styles.keyWide : ""}`}>{children}</kbd>;
 }
 
-/** Mode promenade : mode d'emploi avant de partir, puis réticule (souris capturée) ou simple rappel. */
+/** Walk mode: instructions before setting off, then a crosshair (mouse captured) or a simple reminder. */
 export function WalkOverlay({
   state,
   onStart,

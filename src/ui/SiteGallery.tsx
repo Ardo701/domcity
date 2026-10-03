@@ -2,7 +2,7 @@ import { formatCount } from "@/city/describe";
 import { sitePath, type SiteCard } from "@/format/shared";
 import { Gallery, GalleryCard, GalleryEmpty, shortDate } from "./Gallery";
 
-/** Les sites mis à jour le plus récemment, chacun avec la miniature d'une de ses pages. */
+/** The most recently updated sites, each with the thumbnail of one of its pages. */
 export function SiteGallery({ sites, thumbUrl }: { sites: SiteCard[]; thumbUrl: (slug: string) => string }) {
   if (sites.length === 0) {
     return <GalleryEmpty>Aucune ville partagée pour l&apos;instant. Construisez-en une, puis cliquez sur « Partager ».</GalleryEmpty>;

@@ -9,7 +9,7 @@ function readTitle(raw: string): string {
   try {
     value = decodeURIComponent(raw);
   } catch {
-    // déjà décodé, ou un « % » isolé dans le titre
+    // already decoded, or a lone "%" in the title
   }
   return fromWikiSlug(value).trim();
 }

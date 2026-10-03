@@ -28,10 +28,10 @@ import { WalkOverlay } from "@/ui/explorer/WalkOverlay";
 import { useBarBottom } from "@/ui/explorer/useBarBottom";
 import styles from "@/ui/explorer/explorer.module.css";
 
-/** Ce que la vue affiche d'emblée : au-delà, les pages restent à cocher (elles gardent leur place). */
+/** What the view shows right away: beyond that, the pages remain to be checked (they keep their place). */
 const FIRST_ELEMENTS = 16_000;
 const FIRST_PAGES = 16;
-/** Au-delà, la mégalopole risque de ramer sur un ordinateur modeste. */
+/** Beyond this, the megalopolis may lag on a modest computer. */
 const HEAVY_ELEMENTS = 40_000;
 
 interface Entry {
@@ -72,7 +72,7 @@ function readPerf(): boolean {
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).replaceAll("/", ".");
 
-/** Les villes affichées, posées à leur place, et le réseau qui les relie. */
+/** The shown cities, placed where they belong, and the network that links them. */
 function build(entries: Entry[], placement: Placement, checked: number[]): Built {
   const cities: MegaCity[] = checked.map((i) => ({
     page: i,
@@ -90,14 +90,14 @@ function build(entries: Entry[], placement: Placement, checked: number[]): Built
   return { world, mega };
 }
 
-/** La page d'un aérodrome, d'usines ou de caméras (null pour le grand aéroport). */
+/** The page of an airfield, factories or cameras (null for the large airport). */
 function specialPage(built: Built, id: number): number | null {
   const entry = built.world.specials.find((candidate) => candidate.id === id);
   const part = entry ? built.mega.parts[entry.part] : undefined;
   return part ? part.city.page : null;
 }
 
-/** L'aérodrome d'une page, s'il est affiché. */
+/** A page's airfield, if it is shown. */
 function aerodromeOf(built: Built, page: number): Airport | null {
   const entry = built.world.specials.find(
     (candidate) => candidate.special.kind === "airport" && built.mega.parts[candidate.part]?.city.page === page,
@@ -105,7 +105,7 @@ function aerodromeOf(built: Built, page: number): Airport | null {
   return entry?.special.kind === "airport" ? entry.special.airport : null;
 }
 
-/** Télécharge les villes, six à la fois. */
+/** Downloads the cities, six at a time. */
 async function loadAll(pages: MegaPageInfo[], signal: AbortSignal, onProgress: (done: number) => void) {
   const docs: Array<CityDoc | null> = pages.map(() => null);
   let next = 0;
@@ -148,16 +148,16 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   const [legendOpen, setLegendOpen] = useState(false);
   const [ambianceOpen, setAmbianceOpen] = useState(false);
   const [realColors, setRealColors] = useState(false);
-  // Sur un téléphone, la liste cacherait la ville : elle s'ouvre à la demande.
+  // On a phone, the list would hide the city: it opens on demand.
   const [listOpen, setListOpen] = useState(() => typeof window === "undefined" || !matchMedia("(max-width: 720px)").matches);
-  /** Le tableau des départs ouvert : celui du grand aéroport, ou de l'aérodrome d'une page. */
+  /** The open departures board: the large airport's, or a page's airfield's. */
   const [departures, setDepartures] = useState<Airport | null>(null);
   const [imageStatus, setImageStatus] = useState<Record<number, ImageStatus>>({});
   const [viewing, setViewing] = useState<number | null>(null);
   const [measuring, setMeasuring] = useState(readPerf);
   const canWalk = useSyncExternalStore(subscribePointer, hasFinePointer, () => true);
 
-  // Téléchargement, placement, première construction.
+  // Download, placement, first build.
   useEffect(() => {
     const controller = new AbortController();
     let view: CityView | null = null;
@@ -166,7 +166,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       try {
         const blocked = loadBlocklist();
         const docs = await loadAll(pages, controller.signal, setLoaded);
-        // Les images des sites refusés ne sont jamais demandées (le site lui-même ne l'est pas : le serveur l'a servi).
+        // Images from refused sites are never requested (the site itself is not: the server served it).
         const refused = await blocked;
         if (cancelled) return;
         const list: Entry[] = [];
@@ -191,7 +191,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           list.map((entry) => ({ path: entry.info.path, side: citySide(entry.doc), aerodrome: hasAerodrome(entry.doc) })),
         );
         placementRef.current = placement;
-        // D'emblée, les premières pages dans l'ordre des adresses, tant que la vue les tient sans peine.
+        // Right away, the first pages in address order, as long as the view handles them easily.
         const first: number[] = [];
         let elements = 0;
         for (let i = 0; i < list.length; i += 1) {
@@ -239,11 +239,11 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       view?.dispose();
       if (viewRef.current === view) viewRef.current = null;
     };
-    // Les pages sont figées pour une instance (clé dans la page).
+    // The pages are fixed for an instance (key in the page).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domain]);
 
-  // Cocher ou décocher : on rebâtit, sans bouger la caméra ni les autres villes.
+  // Check or uncheck: we rebuild, without moving the camera or the other cities.
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggle = (index: number) => {
     const next = checked.includes(index) ? checked.filter((i) => i !== index) : [...checked, index].sort((a, b) => a - b);
@@ -259,7 +259,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       const result = build(entriesRef.current, placement, next);
       view.setWorld(result.world);
       setBuilt(result);
-      // Le grand aéroport change avec les pages affichées ; un aérodrome reste celui de sa page.
+      // The large airport changes with the shown pages; an airfield stays its page's.
       if (departures) setDepartures(openPage === null ? (result.world.layout.airport ?? null) : aerodromeOf(result, openPage));
       setImageStatus({});
       setHover(null);
@@ -282,7 +282,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
     [built, entries],
   );
 
-  /** La page d'un aérodrome, de ses usines ou de ses caméras (aucune pour le grand aéroport). */
+  /** The page of an airfield, its factories or its cameras (none for the large airport). */
   const pageOfSpecial = useCallback(
     (id: number) => {
       const page = built ? specialPage(built, id) : null;
@@ -318,7 +318,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
     try {
       localStorage.setItem(PERF_KEY, next ? "1" : "0");
     } catch {
-      // stockage refusé : le réglage vaut pour cette visite seulement
+      // storage refused: the setting holds for this visit only
     }
   };
   const showPage = (index: number) => {
@@ -360,7 +360,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           </Link>
           <h1 title={domain}>{domain}</h1>
         </div>
-        {/* Les outils, à droite de la barre (dessous sur un écran étroit). */}
+        {/* The tools, on the right of the bar (below it on a narrow screen). */}
         {ready && (
           <div className={styles.tools}>
             {canWalk && (

@@ -34,7 +34,7 @@ import { useBarBottom } from "./useBarBottom";
 import { WalkOverlay } from "./WalkOverlay";
 import styles from "./explorer.module.css";
 
-/** D'où vient la ville : un article relevé à l'instant, une page relevée par le favori, ou une ville déjà partagée. */
+/** Where the city comes from: an article captured just now, a page captured by the bookmarklet, or an already shared city. */
 export type CitySource =
   | { kind: "wikipedia"; lang: WikiLang; title: string }
   | { kind: "capture"; city: CityDoc; outdated: boolean }
@@ -49,14 +49,14 @@ const WIKI_STEPS = ["Relevé de l'article sur Wikipédia", "Tracé du plan et de
 const SHARED_STEPS = ["Ouverture de la ville partagée", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
 const CAPTURE_STEPS = ["Lecture du relevé", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
 
-/** Laisse le navigateur afficher l'étape en cours. Le minuteur prend le relais dans un onglet en arrière-plan, où requestAnimationFrame est suspendu. */
+/** Lets the browser display the current step. The timer takes over in a background tab, where requestAnimationFrame is suspended. */
 const nextFrame = () =>
   new Promise<void>((resolve) => {
     requestAnimationFrame(() => resolve());
     setTimeout(resolve, 60);
   });
 
-// La promenade capture la souris : pas de sens sur un écran tactile.
+// The walk captures the mouse: it makes no sense on a touch screen.
 const COARSE = "(pointer: coarse)";
 const subscribePointer = (onChange: () => void) => {
   const query = matchMedia(COARSE);
@@ -65,7 +65,7 @@ const subscribePointer = (onChange: () => void) => {
 };
 const hasFinePointer = () => !matchMedia(COARSE).matches;
 
-/** Le compteur FPS reste affiché d'une ville à l'autre, dans ce navigateur. */
+/** The FPS meter stays shown from one city to the next, in this browser. */
 const PERF_KEY = "domcity:fps";
 function readPerf(): boolean {
   try {
@@ -75,7 +75,7 @@ function readPerf(): boolean {
   }
 }
 
-/** Une instance par ville (voir la clé dans les pages) : l'état repart de zéro à chaque relevé. */
+/** One instance per city (see the key in the pages): the state starts from zero at each capture. */
 export function CityExplorer({ source, canShare = false }: { source: CitySource; canShare?: boolean }) {
   const router = useRouter();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -103,7 +103,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const shared = source.kind === "shared" ? source : null;
   const wiki = source.kind === "wikipedia" ? source : null;
   const capture = source.kind === "capture" ? source : null;
-  // Clé stable du relevé : on ne recharge que si la ville demandée change.
+  // Stable key of the capture: we only reload if the requested city changes.
   const sourceKey = shared
     ? `c/${shared.city.slug}`
     : capture
@@ -117,7 +117,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
     (async () => {
       try {
-        // La liste des sites refusés se télécharge pendant que la ville arrive.
+        // The list of refused sites downloads while the city arrives.
         const blocked = loadBlocklist();
         let cityDoc: CityDoc;
         if (source.kind === "shared") {
@@ -127,7 +127,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         } else {
           const result = await fetchWikipediaCity(source.lang, source.title, controller.signal);
           if (result.title !== source.title) {
-            // Titre exact après redirection : on corrige l'adresse sans recharger.
+            // Exact title after redirect: we fix the address without reloading.
             window.history.replaceState(null, "", wikiPath(source.lang, result.title));
           }
           cityDoc = result.doc;
@@ -139,7 +139,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           setStatus({ phase: "error", title: "Site refusé", message: refusal, refused: true });
           return;
         }
-        // Les images des sites refusés ne sont jamais demandées, même dans la ville d'un autre site.
+        // Images from refused sites are never requested, even in another site's city.
         cityDoc = withoutBlocked(cityDoc, list);
         setDoc(cityDoc);
         setStatus({ phase: "loading", step: 1 });
@@ -167,7 +167,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         });
         viewRef.current = view;
         view.setMeasuring(readPerf());
-        // En développement : la vue est joignable depuis la console (essais de rendu, captures).
+        // In development: the view is reachable from the console (rendering experiments, captures).
         if (process.env.NODE_ENV !== "production") (window as unknown as { __domcity?: CityView }).__domcity = view;
         setStatus({ phase: "loading", step: 3 });
         await nextFrame();
@@ -206,12 +206,12 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       view?.dispose();
       if (viewRef.current === view) viewRef.current = null;
     };
-    // La source est figée pour une instance (clé dans la page) : sourceKey suffit.
+    // The source is fixed for an instance (key in the page): sourceKey is enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceKey]);
 
   const hoverInfo = useMemo(
-    // L'aéroport n'est pas un lot : sa bulle se lit dans le plan, pas dans la page.
+    // The airport is not a lot: its tooltip reads from the plan, not the page.
     () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id) : null),
     [layout, hover],
   );
@@ -228,7 +228,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
     try {
       localStorage.setItem(PERF_KEY, next ? "1" : "0");
     } catch {
-      // stockage refusé : le réglage vaut pour cette visite seulement
+      // storage refused: the setting holds for this visit only
     }
   };
   const switchMode = (next: ViewMode) => {
@@ -243,7 +243,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      // presse-papiers refusé : l'adresse reste dans la barre du navigateur
+      // clipboard refused: the address stays in the browser's address bar
     }
   };
 
@@ -255,7 +255,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       : `${wiki!.lang}.wikipedia.org`;
   const displayTitle = doc?.title ?? (shared ? shared.city.title : capture ? capture.city.title : wiki!.title);
   const sourceUrl = doc?.url ?? (shared ? `https://${shared.city.domain}${shared.city.path}` : "");
-  // Une page locale (localhost, intranet…) se visite, mais ne se publie pas.
+  // A local page (localhost, intranet...) can be visited, but not published.
   const shareable = canShare && (wiki !== null || (capture !== null && isPublicHost(host)));
   const kicker = shared
     ? shared.city.source === "bookmarklet"
@@ -286,7 +286,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           )}
           <h1 title={displayTitle}>{displayTitle}</h1>
         </div>
-        {/* Les outils, à droite de la barre (dessous sur un écran étroit). */}
+        {/* The tools, on the right of the bar (below it on a narrow screen). */}
         {ready && (
           <div className={styles.tools}>
             {canWalk && (
@@ -471,7 +471,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             <h2>{status.title}</h2>
             <p>{status.message}</p>
             {status.refused ? (
-              // Comme dans /nouveau : le bouton de l'accueil, seule issue d'un site refusé.
+              // As in /nouveau: the home page button, the only way out of a refused site.
               <div className={styles.actionsRow}>
                 <InkLink href="/" size="small">
                   Retour à l&apos;accueil
@@ -479,7 +479,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
               </div>
             ) : (
               <>
-                {/* Un article mal orthographié : on peut en chercher un autre. */}
+                {/* A misspelled article: another one can be searched for. */}
                 {wiki && <WikiSearch initialLang={wiki.lang} />}
                 <Link href="/" className={styles.back}>
                   ← Retour à l&apos;accueil
@@ -493,14 +493,14 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   );
 }
 
-/** Une visite par ville et par session de navigateur. */
+/** One visit per city and per browser session. */
 function countView(slug: string) {
   const key = `domcity:vue:${slug}`;
   try {
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
   } catch {
-    // stockage indisponible : on compte quand même
+    // storage unavailable: we count anyway
   }
   const url = `/api/captures/${slug}/view`;
   if (!navigator.sendBeacon?.(url)) void fetch(url, { method: "POST", keepalive: true }).catch(() => undefined);

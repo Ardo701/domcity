@@ -7,11 +7,11 @@ export interface FigureAnnotation {
   match: (lot: Lot) => boolean;
   tag: string;
   name: string;
-  /** Le point visé, quand ce n'est pas le sommet du lot (l'arc d'une porte au milieu de sa place). */
+  /** The targeted point, when it is not the top of the lot (the arch of a gate in the middle of its square). */
   at?: (lot: Lot, city: CityLayout) => [number, number, number] | undefined;
 }
 
-/** Empile les étiquettes de haut en bas, sans chevauchement. */
+/** Stacks the labels from top to bottom, without overlap. */
 function stackLabels<T extends { y: number }>(anchors: T[], start: number, gap: number) {
   const placed: Array<T & { labelY: number }> = [];
   let cursor = start;
@@ -24,9 +24,9 @@ function stackLabels<T extends { y: number }>(anchors: T[], start: number, gap: 
 }
 
 /**
- * Une ville rendue par le vrai moteur 3D (une image, voir `figureMeta.ts`), annotée comme une
- * planche : des repères relient les éléments à leur balise. Les repères sont placés par
- * l'urbanisme de la page, projetés avec la caméra de l'image.
+ * A city rendered by the real 3D engine (an image, see `figureMeta.ts`), annotated like a
+ * drawing sheet: markers link the elements to their tag. The markers are placed by
+ * the page's urban plan, projected with the image's camera.
  */
 export function CityFigure({
   doc,
@@ -42,7 +42,7 @@ export function CityFigure({
   title: string;
 }) {
   const { width, height } = figure;
-  // L'image est dans un SVG : le navigateur ne la découvrirait qu'en le lisant.
+  // The image is inside an SVG: the browser would only discover it while reading it.
   preload(figure.src, { as: "image", fetchPriority: "high" });
   const city = annotations.length > 0 ? layoutCity(doc) : null;
   const fontSize = width * 0.024;
@@ -60,7 +60,7 @@ export function CityFigure({
 
   const { placed, bottom: labelsBottom } = stackLabels(anchors, fontSize, fontSize * 2.4);
   const bottom = Math.max(height, labelsBottom);
-  // Police à chasse fixe (Martian Mono, large) : environ 0,75 corps par signe, interlettre comprise.
+  // Monospaced font (Martian Mono, wide): about 0.75 em per character, letter spacing included.
   const longest = Math.max(0, ...anchors.map((a) => a.note.tag.length + 3 + a.note.name.length));
   const labelWidth = anchors.length > 0 ? width * 0.06 + longest * fontSize * 0.76 : 0;
   const pad = width * 0.01;

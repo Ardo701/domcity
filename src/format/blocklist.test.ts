@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { blockedCategory, cityRefusal, domainSuffixes, isBlockedUrl, readBlocklist, withoutBlocked, type Blocklist } from "./blocklist";
 import type { CityDoc } from "./types";
 
-// Un extrait de la liste de la base (la vraie est vérifiée dans src/server/blocklist.test.ts).
+// An excerpt of the database list (the real one is checked in src/server/blocklist.test.ts).
 const LIST: Blocklist = new Map([
   ["pornhub.com", "adult"],
   ["phncdn.com", "adult"],
@@ -33,8 +33,8 @@ const DOC: CityDoc = {
   },
 };
 
-describe("sites refusés", () => {
-  it("un domaine couvre ses sous-domaines, une entrée sans point est une extension", () => {
+describe("refused sites", () => {
+  it("a domain covers its subdomains, an entry without a dot is an extension", () => {
     expect(domainSuffixes("Fr.PornHub.com.")).toEqual(["fr.pornhub.com", "pornhub.com", "com"]);
     for (const host of ["pornhub.com", "fr.pornhub.com", "WWW.PORNHUB.COM.", "ei.phncdn.com", "rule34.xxx", "a.b.xxx"]) {
       expect(blockedCategory(host, LIST), host).toBe("adult");
@@ -42,20 +42,20 @@ describe("sites refusés", () => {
     expect(blockedCategory("mabanque.bnpparibas.com", LIST)).toBe("bank");
   });
 
-  it("une entrée précise ne touche que son sous-domaine, et rien ne refuse ce qui ne fait que ressembler", () => {
+  it("a precise entry only affects its subdomain, and nothing refuses what merely looks similar", () => {
     expect(blockedCategory("mail.google.com", LIST)).toBe("private");
     for (const host of ["google.com", "www.google.com", "notpornhub.com", "pornhub.com.exemple.org", "pornic.fr", "xxx.fr", "xxxlutz.de"]) {
       expect(blockedCategory(host, LIST), host).toBeUndefined();
     }
   });
 
-  it("lit l'hôte d'une adresse d'image, et ignore une adresse illisible", () => {
+  it("reads the host of an image address, and ignores an unreadable address", () => {
     expect(isBlockedUrl("https://ei.phncdn.com/videos/a.jpg", LIST)).toBe(true);
     expect(isBlockedUrl("https://upload.wikimedia.org/a.jpg", LIST)).toBe(false);
     expect(isBlockedUrl("pas une adresse", LIST)).toBe(false);
   });
 
-  it("dit pourquoi une ville ne se construit pas, selon la catégorie", () => {
+  it("says why a city is not built, according to the category", () => {
     expect(cityRefusal(DOC, LIST)).toBeNull();
     expect(cityRefusal({ ...DOC, url: "https://www.pornhub.com/x" }, LIST)).toMatch(/sites pour adultes/);
     expect(cityRefusal({ ...DOC, url: "https://mabanque.bnpparibas.com/" }, LIST)).toMatch(/banques/);
@@ -63,21 +63,21 @@ describe("sites refusés", () => {
     expect(cityRefusal({ ...DOC, page: { adult: true } }, new Map())).toMatch(/réservée aux adultes/);
   });
 
-  it("retire d'une ville les images et les départs des sites refusés, sans toucher au reste", () => {
+  it("removes images and departures from refused sites from a city, without touching the rest", () => {
     const clean = withoutBlocked(DOC, LIST);
     const [hidden, kept] = clean.root.children![1].children!;
-    // L'image garde sa place et sa taille, perd son adresse et son texte.
+    // The image keeps its place and size, loses its address and its text.
     expect(hidden.img).toEqual({ src: "", w: 320, h: 180, refused: true });
     expect(kept).toBe(DOC.root.children![1].children![1]);
     expect(clean.root.children![0]).toBe(DOC.root.children![0]);
     expect(clean.linksTo).toEqual({ pages: ["0a1b2c3d"], sites: [["wikipedia.org", 2]] });
-    // L'original n'est pas modifié ; une ville sans rien à retirer est rendue telle quelle.
+    // The original is not modified; a city with nothing to remove is returned as is.
     expect(DOC.root.children![1].children![0].img?.src).toBe("https://ei.phncdn.com/a.jpg");
     expect(withoutBlocked(clean, LIST)).toBe(clean);
     expect(withoutBlocked(DOC, new Map())).toBe(DOC);
   });
 
-  it("lit la liste envoyée par le serveur et ignore ce qui ne la suit pas", () => {
+  it("reads the list sent by the server and ignores whatever does not follow it", () => {
     const list = readBlocklist({ adult: ["pornhub.com"], bank: ["bnpparibas.com", 3], inconnue: ["exemple.org"] });
     expect([...list]).toEqual([
       ["pornhub.com", "adult"],

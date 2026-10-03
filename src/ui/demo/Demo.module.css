@@ -1,4 +1,4 @@
-/* La démonstration du favori : la scène (un SVG redessiné à chaque image), les étapes et le bouton pause. */
+/* The bookmarklet demo: the scene (an SVG redrawn every frame), the steps and the pause button. */
 
 .demo {
   margin: 0;
@@ -18,7 +18,7 @@
   height: auto;
 }
 
-/* Les textes de la scène, dans les polices du site. */
+/* The texts of the scene, in the site's fonts. */
 .display {
   font-family: var(--display);
   font-weight: 900;
@@ -80,7 +80,7 @@
   border-color: var(--ink);
 }
 
-/* L'avancement de l'étape en cours, un trait d'encre qui court sous elle. */
+/* Progress of the current step, an ink line running under it. */
 .progress {
   position: absolute;
   left: 0;

@@ -19,13 +19,13 @@ const LABEL =
   "sort de terre en ville.";
 
 /**
- * La démonstration de bout en bout, en boucle. Elle ne tourne que visible à l'écran ; les étapes y mènent,
- * et un bouton l'arrête. Si l'on a demandé moins d'animations, elle reste arrêtée sur la ville (les étapes
- * montrent chacune leur image, le bouton la lance).
+ * The demo from start to finish, looping. It only runs while visible on screen; the steps lead to it,
+ * and a button stops it. If reduced motion was requested, it stays stopped on the city (the steps
+ * each show their frame, the button starts it).
  */
 export function DemoPlayer({ city }: { city: DemoCity }) {
   const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCED).matches, () => false);
-  // « auto » : elle tourne, sauf si l'on a demandé moins d'animations.
+  // "auto": it runs, unless reduced motion was requested.
   const [mode, setMode] = useState<"auto" | "playing" | "paused">("auto");
   const [time, setTime] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -47,7 +47,7 @@ export function DemoPlayer({ city }: { city: DemoCity }) {
     if (!playing || !visible) return;
     let last = performance.now();
     let frame = requestAnimationFrame(function tick(now) {
-      // Au retour d'un onglet en arrière-plan, on reprend où l'on en était, sans saut.
+      // When coming back from a background tab, we resume where we were, without a jump.
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       setTime((value) => (value + dt) % DURATION);
@@ -56,7 +56,7 @@ export function DemoPlayer({ city }: { city: DemoCity }) {
     return () => cancelAnimationFrame(frame);
   }, [playing, visible]);
 
-  // En développement : window.__demo(7.7) arrête la démonstration sur un instant, pour l'examiner.
+  // In development: window.__demo(7.7) stops the demo on an instant, to examine it.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const hook = window as unknown as { __demo?: (at: number) => void };

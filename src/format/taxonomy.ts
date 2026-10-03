@@ -1,12 +1,12 @@
 /**
- * Le dictionnaire HTML → ville.
+ * The HTML → city dictionary.
  *
- * Chaque élément gardé devient un « genre » (kind) : un quartier, un immeuble,
- * un monument… Les couleurs reprennent l'esprit d'un plan de zonage :
- * des tons neutres, et des pointes vives pour ce qui compte.
+ * Each kept element becomes a "kind": a district, a building,
+ * a monument... The colors follow the spirit of a zoning map:
+ * neutral tones, and vivid touches for what matters.
  */
 
-/** Balises gardées pendant la capture. Les autres sont transparentes : leur texte remonte au parent gardé. */
+/** Tags kept during capture. The others are transparent: their text moves up to the kept parent. */
 export const KEPT_TAGS = new Set([
   "body", "main", "header", "footer", "nav", "aside", "section", "article", "div",
   "p", "blockquote", "pre", "details", "dialog",
@@ -16,31 +16,31 @@ export const KEPT_TAGS = new Set([
   "button", "input", "textarea", "select",
 ]);
 
-/** Balises dont on ne lit ni le texte ni les enfants. */
+/** Tags whose text and children are not read. */
 export const SKIPPED_TAGS = new Set([
   "script", "style", "noscript", "template", "link", "meta", "head", "base", "title",
 ]);
 
-/** Balises gardées qui n'ont jamais d'enfants dans la ville. */
+/** Kept tags that never have children in the city. */
 export const LEAF_TAGS = new Set([
   "img", "video", "canvas", "iframe", "svg", "hr", "button", "input", "textarea", "select",
 ]);
 
-/** Titres dont on garde le texte (pour les graver sur les monuments). */
+/** Headings whose text is kept (to engrave them on the monuments). */
 export const HEADING_TEXT_TAGS = new Set(["h1", "h2", "h3"]);
 
 export type Kind =
-  // Conteneurs (un socle sur lequel on construit)
+  // Containers (a base to build on)
   | "terrain" | "district" | "block" | "boulevard" | "gate" | "port" | "park"
   | "estate" | "townhall" | "fields"
-  // Bâtiments
+  // Buildings
   | "tower" | "vacant" | "residence" | "house" | "gallery" | "monument" | "belfry" | "kiosk"
   | "bollard" | "billboard" | "ruin" | "screen" | "embassy" | "sculpture" | "counter"
-  // Infrastructures
+  // Infrastructure
   | "river"
-  // Hors les murs : pas un élément, toute la page (ses liens vers d'autres sites)
+  // Outside the walls: not an element, the whole page (its links to other sites)
   | "airport"
-  // L'ambiance : ce que la page fait sans le montrer (scripts, traqueurs, commentaires, poids)
+  // The ambiance: what the page does without showing it (scripts, trackers, comments, weight)
   | "factory" | "camera" | "graffiti" | "weather";
 
 export function kindOf(tag: string, isContainer: boolean, text: number): Kind {
@@ -79,11 +79,11 @@ export function kindOf(tag: string, isContainer: boolean, text: number): Kind {
 }
 
 export interface KindInfo {
-  /** Nom dans la ville. */
+  /** Name in the city. */
   name: string;
-  /** Balises d'origine, pour la légende. */
+  /** Original tags, for the legend. */
   tags: string;
-  /** Une phrase courte pour la légende et l'inspecteur. */
+  /** A short sentence for the legend and the inspector. */
   blurb: string;
   color: string;
   group: "Quartiers" | "Bâtiments" | "Monuments" | "Équipements" | "Nature et réseaux" | "Ambiance";

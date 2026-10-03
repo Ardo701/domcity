@@ -40,9 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# outils locaux
+# local tools
 /.claude/
 
-# villes partagées en mode local (base et fichiers)
+# cities shared in local mode (database and files)
 /.data/
 !.env.example
