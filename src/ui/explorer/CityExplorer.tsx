@@ -27,6 +27,7 @@ import { PerfMeter } from "./PerfMeter";
 import { ReportPanel } from "./ReportPanel";
 import { SharePanel } from "./SharePanel";
 import { Tooltip } from "./Tooltip";
+import { useBarBottom } from "./useBarBottom";
 import { WalkOverlay } from "./WalkOverlay";
 import styles from "./explorer.module.css";
 
@@ -75,6 +76,8 @@ function readPerf(): boolean {
 export function CityExplorer({ source, canShare = false }: { source: CitySource; canShare?: boolean }) {
   const router = useRouter();
   const stageRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  useBarBottom(barRef);
   const viewRef = useRef<CityView | null>(null);
   const [status, setStatus] = useState<Status>({ phase: "loading", step: 0 });
   const [doc, setDoc] = useState<CityDoc | null>(null);
@@ -256,7 +259,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
     <div className={styles.shell}>
       <div ref={stageRef} className={styles.stage} />
 
-      <header className={styles.bar}>
+      <header ref={barRef} className={styles.bar}>
         <Link href="/" className={styles.home} aria-label="DOMCity, accueil">
           <LogoMark size={26} />
           <span>
@@ -273,75 +276,75 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           )}
           <h1 title={displayTitle}>{displayTitle}</h1>
         </div>
-      </header>
-
-      {ready && (
-        <div className={styles.tools}>
-          {canWalk && (
-            <div className={styles.segmented} role="group" aria-label="Façon de visiter">
-              <button type="button" aria-pressed={mode === "aerial"} onClick={() => switchMode("aerial")}>
-                Vue aérienne
+        {/* Les outils, à droite de la barre (dessous sur un écran étroit). */}
+        {ready && (
+          <div className={styles.tools}>
+            {canWalk && (
+              <div className={styles.segmented} role="group" aria-label="Façon de visiter">
+                <button type="button" aria-pressed={mode === "aerial"} onClick={() => switchMode("aerial")}>
+                  Vue aérienne
+                </button>
+                <button type="button" aria-pressed={mode === "walk"} onClick={() => switchMode("walk")}>
+                  Promenade
+                </button>
+              </div>
+            )}
+            {mode === "aerial" && (
+              <button type="button" className={styles.tool} onClick={() => viewRef.current?.resetView()}>
+                Recadrer
               </button>
-              <button type="button" aria-pressed={mode === "walk"} onClick={() => switchMode("walk")}>
-                Promenade
-              </button>
-            </div>
-          )}
-          {mode === "aerial" && (
-            <button type="button" className={styles.tool} onClick={() => viewRef.current?.resetView()}>
-              Recadrer
-            </button>
-          )}
-          <button
-            type="button"
-            className={styles.tool}
-            aria-expanded={legendOpen}
-            onClick={() => {
-              setAmbianceOpen(false);
-              setLegendOpen((open) => !open);
-            }}
-          >
-            Légende
-          </button>
-          {layout?.ambiance && (
+            )}
             <button
               type="button"
               className={styles.tool}
-              aria-expanded={ambianceOpen}
+              aria-expanded={legendOpen}
               onClick={() => {
-                setLegendOpen(false);
-                setAmbianceOpen((open) => !open);
+                setAmbianceOpen(false);
+                setLegendOpen((open) => !open);
               }}
             >
-              Ambiance
+              Légende
             </button>
-          )}
-          <button
-            type="button"
-            className={styles.tool}
-            aria-pressed={measuring}
-            onClick={toggleMeasuring}
-            title="Afficher les images par seconde"
-          >
-            FPS
-          </button>
-          {shareable && mode === "aerial" && (
-            <button type="button" className={`${styles.tool} ${styles.toolAccent}`} onClick={() => setPanel("share")}>
-              Partager
+            {layout?.ambiance && (
+              <button
+                type="button"
+                className={styles.tool}
+                aria-expanded={ambianceOpen}
+                onClick={() => {
+                  setLegendOpen(false);
+                  setAmbianceOpen((open) => !open);
+                }}
+              >
+                Ambiance
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.tool}
+              aria-pressed={measuring}
+              onClick={toggleMeasuring}
+              title="Afficher les images par seconde"
+            >
+              FPS
             </button>
-          )}
-          {shared && (
-            <>
-              <button type="button" className={styles.tool} onClick={copyLink}>
-                {copied ? "Lien copié" : "Copier le lien"}
+            {shareable && mode === "aerial" && (
+              <button type="button" className={`${styles.tool} ${styles.toolAccent}`} onClick={() => setPanel("share")}>
+                Partager
               </button>
-              <button type="button" className={styles.tool} onClick={() => setPanel("report")}>
-                Signaler
-              </button>
-            </>
-          )}
-        </div>
-      )}
+            )}
+            {shared && (
+              <>
+                <button type="button" className={styles.tool} onClick={copyLink}>
+                  {copied ? "Lien copié" : "Copier le lien"}
+                </button>
+                <button type="button" className={styles.tool} onClick={() => setPanel("report")}>
+                  Signaler
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </header>
 
       {ready && legendOpen && <LegendPanel onClose={() => setLegendOpen(false)} />}
       {ready && ambianceOpen && layout?.ambiance && (
