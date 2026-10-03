@@ -308,7 +308,7 @@ Demandées par l'utilisateur avant l'étape 6.
   2. **La page se déclare réservée aux adultes** : le favori (version 4) lit la balise `<meta name="rating">` (« adult » ou le label RTA, que posent la plupart des sites pour adultes pour les moteurs de recherche et les contrôles parentaux) et le note (`page.adult`). Cela couvre les sites absents de la liste.
   3. **Les images d'un site refusé ne sont jamais chargées**, même accrochées dans la ville d'un autre site (un forum, un blog) : l'affiche dit « Image masquée · site refusé par DOMCity », sans son texte alternatif (il peut être aussi cru que l'image) ; l'inspecteur ne la montre pas. La miniature, rendue par le moteur, ne peut donc pas la contenir.
   Où ça s'applique : `/nouveau` affiche « Site refusé » au lieu de construire la ville (rien n'est gardé, pas de bouton « Installer le favori ») ; le serveur refuse le partage (403, même message) ; toutes les lectures (ville partagée, page du site, mégalopole, galerie, recherche, départs) ignorent un site refusé, même publié avant d'entrer dans la liste (`store.ts`). Ses lignes restent dans la base et ses fichiers dans R2 jusqu'à ce qu'on les efface à la main. La page Créer une ville, les conditions d'utilisation et la confidentialité le disent.
-  Limites : la liste ne sera jamais complète, et une page d'un site absent de la liste, sans balise `rating`, passe (le signalement reste le recours) ; les sites mixtes (Reddit, X, Tumblr) ne sont pas refusés ; une ville forgée hors du favori peut mentir sur son adresse (ses images d'un site refusé restent masquées) ; les images de Wikipédia ne sont pas filtrées.
+  Limites : la liste ne sera jamais complète, et une page d'un site absent de la liste, sans balise `rating`, passe (le signalement reste le recours) ; les sites mixtes (Reddit, X, Tumblr) ne sont pas refusés ; une ville forgée hors du favori peut mentir sur son adresse (ses images d'un site refusé restent masquées) ; les images de Wikipédia ne sont pas filtrées. Ce qu'un envoi forgé permet encore : voir « URGENT : contourner les sites refusés » (section 10).
   Vérifié : 95 tests (domaines et sous-domaines, faux amis comme Pornic ou XXXLutz, balise `rating` relevée, réception refusée sans rien garder, partage refusé, site publié avant la liste absent de toutes les lectures), TypeScript, ESLint. Dans le navigateur : la page « Site refusé » ; une ville d'exemple.org avec une image d'un serveur refusé (affiche « Image masquée », aucune requête vers ce serveur, inspecteur sans image ni texte alternatif).
 
 ### Pour activer le partage en production (fait le 3 octobre 2026, sauf l'éditeur)
@@ -343,6 +343,25 @@ Relevé le 3 octobre 2026, à la demande de l'utilisateur (« est-ce qu'il y a d
 5. **Règle du pare-feu Vercel pas encore posée** sur `/api/captures` : elle couperait l'excès avant même que le code tourne (ce qu'on peut régler dépend du plan Vercel : à vérifier dans son tableau de bord). Attack Challenge Mode en cas d'attaque.
 
 En cas d'abus d'ici là : signalement (masquée à 3), suppression à la main dans Supabase (la ligne du site, en cascade) et dans R2.
+
+### URGENT : contourner les sites refusés (avant d'annoncer le site)
+Relevé le 3 octobre 2026, à la demande de l'utilisateur (« on peut contourner en supprimant juste ce qu'il faut ? »). Rien n'est encore corrigé.
+
+**Ce qu'un envoi forgé permet** (une ville envoyée à la main, par un script ou une requête modifiée, sans le vrai favori) :
+- Retirer `page.adult` : c'est le favori qui note la balise `rating`, le serveur ne peut pas vérifier qu'elle manquait.
+- Mentir sur l'adresse : une ville relevée sur un site refusé, présentée comme venant d'`exemple.org`. Le serveur ne va jamais voir la page (pas de proxy, décision de départ) : il valide la ville, il ne peut pas la vérifier.
+- Modifier le code dans son propre navigateur pour sauter le refus : seul son écran change, sans risque pour les autres.
+
+**Ce qui tient quand même** :
+- Les images des sites de la liste restent masquées pour tous les visiteurs : le contrôle se fait à l'affichage, dans le navigateur de chaque visiteur, avec le code de DOMCity.
+- La limite de 10 partages par heure (côté serveur).
+
+**Les trous, à corriger** :
+1. **La miniature** (le plus grave) : le serveur vérifie seulement un JPEG de 1200 × 630 (`readThumbnail`). Un envoi forgé peut y mettre n'importe quelle photo, montrée dans la galerie de l'accueil, dans Découvrir et dans les aperçus des réseaux sociaux. Pistes : analyser la miniature à l'envoi avec un service de détection de nudité (Google Cloud Vision, AWS Rekognition ou équivalent ; un coût par image) ; ou ne montrer un nouveau site dans la galerie qu'après validation, ou après quelques heures sans signalement (le lien direct marche, l'accueil reste propre).
+2. **Images obscènes hébergées ailleurs** (son propre serveur, un hébergeur d'images) : absentes de la liste, elles s'affichent sur les affiches de la ville. Mêmes pistes (analyse, ou attente avant la galerie), plus le signalement.
+3. **Texte cru** dans le titre de la ville ou les titres h1 à h3, gravés sur les monuments et affichés dans la galerie et la recherche. Piste : une liste de mots refusés au partage (avec les mêmes risques de faux amis que pour les domaines).
+
+En attendant : signalement (masquée à 3), suppression à la main dans Supabase et R2, limite de partages.
 
 
 ### Étape 6 : mise en ligne
