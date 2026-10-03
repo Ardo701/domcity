@@ -1,13 +1,14 @@
 import "server-only";
 import type {
-  CityCard,
   CityStatsSummary,
   CityVersion,
   KnownSite,
   ReportReason,
   SearchHit,
   SharedCity,
+  SiteCard,
   SitePage,
+  SitePageCard,
   SiteSummary,
 } from "@/format/shared";
 import type { CaptureSource } from "@/format/types";
@@ -117,17 +118,16 @@ export async function pageVersions(domain: string, path: string): Promise<CityVe
   }));
 }
 
-export async function recentCaptures(limit = 12): Promise<CityCard[]> {
-  const rows = await reader().rows<Row>("recent_captures", { p_limit: limit });
+/** Les sites mis à jour le plus récemment (la galerie). */
+export async function recentSites(limit = 12, offset = 0): Promise<SiteCard[]> {
+  const rows = await reader().rows<Row>("recent_sites", { p_limit: limit, p_offset: offset });
   return rows.map((row) => ({
-    slug: String(row.slug),
-    title: String(row.title ?? ""),
-    capturedAt: String(row.captured_at),
-    source: row.source as CaptureSource,
-    stats: stats(row.stats),
-    views: num(row.views_count),
     domain: String(row.domain),
-    path: String(row.path),
+    pagesCount: num(row.pages_count),
+    capturesCount: num(row.captures_count),
+    lastCaptureAt: str(row.last_capture_at),
+    views: num(row.views_count),
+    cover: { slug: String(row.cover_slug), thumbnail: stats(row.cover_stats).thumbnail !== false },
   }));
 }
 
@@ -154,6 +154,19 @@ export async function sitePages(domain: string): Promise<SitePage[]> {
   }));
 }
 
+/** Les pages d'un site dans l'ordre des adresses, par morceaux, avec leur dernière version. */
+export async function sitePageList(domain: string, limit: number, offset: number): Promise<SitePageCard[]> {
+  const rows = await reader().rows<Row>("site_page_list", { p_domain: domain, p_limit: limit, p_offset: offset });
+  return rows.map((row) => ({
+    path: String(row.path),
+    title: str(row.title),
+    capturesCount: num(row.captures_count),
+    lastCaptureAt: str(row.last_capture_at),
+    slug: String(row.latest_slug),
+    stats: stats(row.latest_stats),
+  }));
+}
+
 /** La dernière version visible de chaque page du site (la mégalopole), dans l'ordre des adresses. */
 export async function siteCity(domain: string): Promise<Array<Omit<SharedCity, "views" | "pageTitle" | "pageVersions" | "domain">>> {
   const rows = await reader().rows<Row>("site_city", { p_domain: domain });
@@ -176,13 +189,19 @@ export async function knownSites(domains: string[]): Promise<KnownSite[]> {
   return rows.map((row) => ({ domain: String(row.domain), pages: num(row.pages_count) }));
 }
 
-export async function searchCities(query: string, limit = 12): Promise<SearchHit[]> {
-  const rows = await reader().rows<Row>("search_cities", { p_query: query, p_limit: limit });
-  return rows.map((row) => ({
-    kind: row.kind === "page" ? "page" : "site",
-    domain: String(row.domain),
-    path: str(row.path),
-    title: str(row.title),
-    lastCaptureAt: str(row.last_capture_at),
-  }));
+/** Un résultat par site ; les pages dont le titre répond sont rangées sous leur site. */
+export async function searchSites(query: string, limit = 12): Promise<SearchHit[]> {
+  const rows = await reader().rows<Row>("search_sites", { p_query: query, p_limit: limit });
+  return rows.map((row) => {
+    const pages = (typeof row.pages === "string" ? JSON.parse(row.pages) : (row.pages ?? [])) as Row[];
+    return {
+      domain: String(row.domain),
+      pagesCount: num(row.pages_count),
+      lastCaptureAt: str(row.last_capture_at),
+      pages: pages
+        .filter((page) => page.slug)
+        .map((page) => ({ path: String(page.path), title: str(page.title), slug: String(page.slug) })),
+      pagesMatched: num(row.pages_matched),
+    };
+  });
 }

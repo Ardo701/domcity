@@ -75,3 +75,53 @@
   color: var(--ink-3);
   font-size: 14px;
 }
+
+.results > li + li {
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+/* Les pages qui répondent, sous leur site. */
+.pages {
+  list-style: none;
+  margin: 0 0 4px 22px;
+  padding: 0 0 0 12px;
+  border-left: 1px solid var(--rule);
+}
+
+.pages .kind {
+  color: var(--ink-3);
+}
+
+.pages .where {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.others {
+  padding: 6px 10px 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.others a {
+  display: inline;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.others a:hover {
+  background: none;
+  color: var(--ink);
+}
+
+/* Sur téléphone, le titre de la page suffit : son adresse prendrait toute la ligne. */
+@media (max-width: 520px) {
+  .pages .where {
+    display: none;
+  }
+}

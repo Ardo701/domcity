@@ -1,32 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import type { MegaPageInfo } from "@/format/shared";
-import { siteHost } from "@/format/url";
-import { sharingEnabled } from "@/server/config";
 import { cityKey, fileStore } from "@/server/files";
-import { getSite, siteCity, sitePages } from "@/server/store";
+import { siteCity, sitePages } from "@/server/store";
 import { MegalopolisExplorer } from "@/ui/megalopolis/MegalopolisExplorer";
+import { loadSite, readDomain } from "../load";
 
 /** Au-delà, la mégalopole prend les pages relevées le plus récemment. */
 const MAX_PAGES = 48;
 
-const readDomain = (raw: string) => {
-  try {
-    return siteHost(decodeURIComponent(raw));
-  } catch {
-    return siteHost(raw);
-  }
-};
-
-const load = cache(async (domain: string) => {
-  if (!sharingEnabled() || !/^[a-z0-9.-]{3,253}$/.test(domain)) return null;
-  return getSite(domain);
-});
-
-export async function generateMetadata(props: PageProps<"/s/[domain]">): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<"/site/[domain]/megalopolis">): Promise<Metadata> {
   const domain = readDomain((await props.params).domain);
-  const site = await load(domain);
+  const site = await loadSite(domain);
   if (!site) return { title: "Site introuvable" };
   return {
     title: `${domain} · mégalopole`,
@@ -34,10 +19,10 @@ export async function generateMetadata(props: PageProps<"/s/[domain]">): Promise
   };
 }
 
-/** La page d'un site : toutes ses pages, chacune sa ville, assemblées en une mégalopole. */
-export default async function SitePage(props: PageProps<"/s/[domain]">) {
+/** Toutes les pages d'un site, chacune sa ville, assemblées en une mégalopole. */
+export default async function MegalopolisPage(props: PageProps<"/site/[domain]/megalopolis">) {
   const domain = readDomain((await props.params).domain);
-  const site = await load(domain);
+  const site = await loadSite(domain);
   if (!site) notFound();
   const [latest, list] = await Promise.all([siteCity(domain), sitePages(domain)]);
   const versions = new Map(list.map((page) => [page.path, page.capturesCount]));

@@ -84,7 +84,7 @@ describe("partage de bout en bout (base locale)", () => {
   });
 
   it("la retrouve par la recherche, même avec une faute", async () => {
-    const hits = await store.searchCities("exmple");
+    const hits = await store.searchSites("exmple");
     expect(hits.some((h) => h.domain === "exemple.org")).toBe(true);
   });
 
@@ -93,5 +93,50 @@ describe("partage de bout en bout (base locale)", () => {
     expect(await deleteSharedCity(slug, token)).toBe(true);
     expect(await store.getCapture(slug)).toBeNull();
     expect(await readLocalFile(cityKey(slug))).toBeNull();
+  });
+});
+
+describe("les sites au premier plan (base locale)", () => {
+  const page = (url: string, title: string): CityDoc => ({ ...DOC, url, title });
+  let reinette = "";
+  let accueil = "";
+
+  beforeAll(async () => {
+    // Une page du site d'abord, sans miniature ; l'accueil ensuite.
+    ({ slug: reinette } = await shareCity(page("https://vergers.fr/pommes/reinette", "La reinette"), null));
+  }, 60_000);
+
+  it("un site existe dès qu'une de ses pages est partagée, même sans son accueil", async () => {
+    expect(await store.getSite("vergers.fr")).toMatchObject({ domain: "vergers.fr", pagesCount: 1 });
+    const pages = await store.sitePageList("vergers.fr", 60, 0);
+    expect(pages).toMatchObject([{ path: "/pommes/reinette", title: "La reinette", slug: reinette, capturesCount: 1 }]);
+  });
+
+  it("la galerie montre le site une fois, avec la miniature de son accueil", async () => {
+    ({ slug: accueil } = await shareCity(page("https://vergers.fr/", "Les vergers"), JPEG));
+    await shareCity(page("https://vergers.fr/pommes/reinette", "La reinette"), null);
+    const sites = (await store.recentSites(60)).filter((site) => site.domain === "vergers.fr");
+    expect(sites).toEqual([
+      expect.objectContaining({ pagesCount: 2, capturesCount: 3, cover: { slug: accueil, thumbnail: true } }),
+    ]);
+  });
+
+  it("liste les pages d'un site dans l'ordre des adresses, par morceaux", async () => {
+    const all = await store.sitePageList("vergers.fr", 60, 0);
+    expect(all.map((p) => p.path)).toEqual(["/", "/pommes/reinette"]);
+    expect(all[1].capturesCount).toBe(2);
+    expect(all[1].slug).not.toBe(reinette); // la dernière version
+    expect((await store.sitePageList("vergers.fr", 1, 1)).map((p) => p.path)).toEqual(["/pommes/reinette"]);
+  });
+
+  it("la recherche rend un résultat par site, les pages qui répondent rangées dessous", async () => {
+    const byTitle = await store.searchSites("reinete");
+    const hit = byTitle.find((h) => h.domain === "vergers.fr");
+    expect(hit).toMatchObject({ pagesCount: 2, pagesMatched: 1, pages: [{ path: "/pommes/reinette", title: "La reinette" }] });
+    const [latest] = await store.sitePageList("vergers.fr", 1, 1);
+    expect(hit?.pages[0].slug).toBe(latest.slug);
+
+    const byDomain = await store.searchSites("vergrs");
+    expect(byDomain.filter((h) => h.domain === "vergers.fr")).toHaveLength(1);
   });
 });

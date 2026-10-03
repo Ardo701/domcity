@@ -8,7 +8,7 @@ import { buildMegalopolis, comparePaths, placePages, type MegaCity, type Megalop
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
 import { assembleWorld, isSpecial, partOf, type World } from "@/city/world";
-import { sharedCityPath, type MegaPageInfo } from "@/format/shared";
+import { sharedCityPath, sitePath, type MegaPageInfo } from "@/format/shared";
 import { linkPath } from "@/format/links";
 import type { CityDoc } from "@/format/types";
 import { loadSharedCity } from "@/ui/loadShared";
@@ -348,7 +348,9 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           </span>
         </Link>
         <div className={styles.place}>
-          <span className="mono-caps">Mégalopole</span>
+          <Link href={sitePath(domain)} className="mono-caps" title="La page du site, avec la liste de ses pages">
+            Mégalopole
+          </Link>
           <h1 title={domain}>{domain}</h1>
         </div>
         <div className={styles.search}>

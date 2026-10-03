@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { gateArch } from "@/city/layout";
-import type { CityCard } from "@/format/shared";
+import type { SiteCard } from "@/format/shared";
 import { KINDS, LEGEND_GROUPS, type Kind } from "@/format/taxonomy";
 import { sharingEnabled } from "@/server/config";
 import { fileStore, thumbKey } from "@/server/files";
-import { recentCaptures } from "@/server/store";
+import { recentSites } from "@/server/store";
 import { AccountLink } from "@/ui/AccountLink";
-import { CityGallery } from "@/ui/CityGallery";
 import { CitySearch } from "@/ui/CitySearch";
 import { CityFigure } from "@/ui/CityFigure";
 import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { SiteFooter } from "@/ui/SiteFooter";
+import { SiteGallery } from "@/ui/SiteGallery";
 import { SiteHeader } from "@/ui/SiteHeader";
 import { HERO_SAMPLE } from "@/ui/samples";
 import styles from "./page.module.css";
@@ -41,10 +41,10 @@ export const revalidate = 60;
 
 export default async function Home() {
   const sharing = sharingEnabled();
-  let recent: CityCard[] = [];
+  let recent: SiteCard[] = [];
   if (sharing) {
     try {
-      recent = await recentCaptures(9);
+      recent = await recentSites(9);
     } catch (error) {
       console.error("galerie", error);
     }
@@ -125,18 +125,18 @@ export default async function Home() {
               <p className="mono-caps">Planche 01</p>
               <h2>Les villes partagées</h2>
               <p className={styles.sectionLead}>
-                Chaque ville publiée garde la date de son relevé. Cherchez un site ou une page, ou parcourez les
-                dernières constructions.
+                Les pages d&apos;un même site se rangent ensemble, et s&apos;assemblent en mégalopole. Cherchez un site
+                ou une page, ou parcourez les derniers sites mis à jour.
               </p>
             </div>
             <div className={styles.sharedTools}>
               <CitySearch />
               <AccountLink />
             </div>
-            <CityGallery cities={recent} thumbUrl={(slug) => files.publicUrl(thumbKey(slug))} />
+            <SiteGallery sites={recent} thumbUrl={(slug) => files.publicUrl(thumbKey(slug))} />
             {recent.length > 0 && (
               <Link href="/explore" className={styles.allCities}>
-                Découvrir toutes les villes <span aria-hidden>→</span>
+                Découvrir tous les sites <span aria-hidden>→</span>
               </Link>
             )}
           </section>

@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { sitePath, type SearchHit } from "@/format/shared";
+import { linkPath } from "@/format/links";
+import { sharedCityPath, sitePath, type SearchHit } from "@/format/shared";
 import styles from "./CitySearch.module.css";
 
-/** Recherche dans les villes déjà partagées : un nom de site ou un titre de page. */
+/**
+ * Recherche dans les villes déjà partagées : un nom de site ou un titre de page.
+ * Un résultat par site ; les pages dont le titre répond sont rangées dessous et mènent droit à leur ville.
+ */
 export function CitySearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
@@ -47,12 +51,33 @@ export function CitySearch() {
         <ul className={styles.results} aria-live="polite">
           {visible.length === 0 && <li className={styles.empty}>Aucune ville pour l&apos;instant. À vous de la créer.</li>}
           {visible.map((hit) => (
-            <li key={`${hit.kind}-${hit.domain}-${hit.path ?? ""}`}>
+            <li key={hit.domain}>
               <Link href={sitePath(hit.domain)}>
-                <span className={`${styles.kind} mono-caps`}>{hit.kind === "site" ? "Site" : "Page"}</span>
-                <span className={styles.name}>{hit.kind === "site" ? hit.domain : hit.title ?? hit.path}</span>
-                {hit.kind === "page" && <span className={styles.where}>{hit.domain}</span>}
+                <span className={`${styles.kind} mono-caps`}>Site</span>
+                <span className={styles.name}>{hit.domain}</span>
+                <span className={styles.where}>
+                  {hit.pagesCount} ville{hit.pagesCount > 1 ? "s" : ""}
+                </span>
               </Link>
+              {hit.pages.length > 0 && (
+                <ul className={styles.pages}>
+                  {hit.pages.map((page) => (
+                    <li key={page.slug}>
+                      <Link href={sharedCityPath(page.slug)}>
+                        <span className={`${styles.kind} mono-caps`}>Page</span>
+                        <span className={styles.name}>{page.title ?? linkPath(page.path)}</span>
+                        <span className={styles.where}>{linkPath(page.path)}</span>
+                      </Link>
+                    </li>
+                  ))}
+                  {hit.pagesMatched > hit.pages.length && (
+                    <li className={styles.others}>
+                      et {hit.pagesMatched - hit.pages.length} autre{hit.pagesMatched - hit.pages.length > 1 ? "s" : ""} sur{" "}
+                      <Link href={sitePath(hit.domain)}>la page du site</Link>
+                    </li>
+                  )}
+                </ul>
+              )}
             </li>
           ))}
         </ul>

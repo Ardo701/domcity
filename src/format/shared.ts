@@ -32,17 +32,6 @@ export interface SharedCity {
   pageVersions: number;
 }
 
-export interface CityCard {
-  slug: string;
-  title: string;
-  capturedAt: string;
-  source: CaptureSource;
-  stats: Partial<CityStatsSummary>;
-  views: number;
-  domain: string;
-  path: string;
-}
-
 export interface CityVersion {
   slug: string;
   title: string | null;
@@ -66,6 +55,21 @@ export interface SitePage {
   latestSlug: string | null;
 }
 
+/** Un site dans la galerie, représenté par la miniature d'une de ses pages (son accueil d'abord). */
+export interface SiteCard extends SiteSummary {
+  cover: { slug: string; thumbnail: boolean };
+}
+
+/** Une page sur la page de son site : sa dernière version visible. */
+export interface SitePageCard {
+  path: string;
+  title: string | null;
+  capturesCount: number;
+  lastCaptureAt: string | null;
+  slug: string;
+  stats: Partial<CityStatsSummary>;
+}
+
 /** Une page du site dans la mégalopole : sa dernière version visible. */
 export interface MegaPageInfo {
   path: string;
@@ -86,12 +90,15 @@ export interface KnownSite {
   pages: number;
 }
 
+/** Un site trouvé par la recherche, par son domaine ou par le titre de ses pages. */
 export interface SearchHit {
-  kind: "site" | "page";
   domain: string;
-  path: string | null;
-  title: string | null;
+  pagesCount: number;
   lastCaptureAt: string | null;
+  /** Les pages dont le titre répond le mieux (3 au plus) : elles mènent droit à leur ville. */
+  pages: Array<{ path: string; title: string | null; slug: string }>;
+  /** Toutes les pages du site qui répondent. */
+  pagesMatched: number;
 }
 
 export const REPORT_REASONS = {
@@ -104,4 +111,5 @@ export const REPORT_REASONS = {
 export type ReportReason = keyof typeof REPORT_REASONS;
 
 export const sharedCityPath = (slug: string) => `/c/${slug}`;
-export const sitePath = (domain: string) => `/s/${encodeURIComponent(domain)}`;
+export const sitePath = (domain: string) => `/site/${encodeURIComponent(domain)}`;
+export const megalopolisPath = (domain: string) => `${sitePath(domain)}/megalopolis`;

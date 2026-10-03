@@ -18,7 +18,7 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.card:hover {
+.card:is(a):hover {
   transform: translate(-2px, -2px);
   box-shadow: 4px 4px 0 var(--ink);
 }
@@ -69,4 +69,36 @@
 
 .empty {
   color: var(--ink-3);
+}
+
+/* Une place vide : ce qui n'est pas encore relevé (la page d'accueil d'un site). */
+.gap {
+  border-style: dashed;
+  background: transparent;
+}
+
+.gap .thumb {
+  display: grid;
+  place-items: center;
+  border-bottom-style: dashed;
+  background: repeating-linear-gradient(45deg, transparent 0 8px, var(--paper-sunk) 8px 16px);
+}
+
+.gapLabel {
+  padding: 5px 9px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  font-size: 10px;
+}
+
+.gapText {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.gapText a {
+  color: var(--ink);
 }

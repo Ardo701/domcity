@@ -7,9 +7,12 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "*": ["node_modules/@electric-sql/pglite/**"],
   },
-  // La page du favori s'appelait /installer : les anciens liens y mènent encore.
+  // Anciennes adresses : la page du favori (/installer) et celle d'un site (/s/…).
   async redirects() {
-    return [{ source: "/installer", destination: "/create", permanent: true }];
+    return [
+      { source: "/installer", destination: "/create", permanent: true },
+      { source: "/s/:domain", destination: "/site/:domain", permanent: true },
+    ];
   },
 };
 
