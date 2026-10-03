@@ -2,5 +2,5 @@
 
 # DOMCity
 
-Feuille de route, décisions et règles du projet (à lire avant de travailler) :
+Roadmap, decisions and project rules (read before working):
 @docs/ROADMAP.md
