@@ -218,7 +218,7 @@
   display: inline-flex;
   align-items: center;
   padding: 0.7cqw 1.4cqw;
-  background: var(--signal);
+  background: var(--paper-raised);
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);
   box-shadow: 0.4cqw 0.4cqw 0 var(--ink);
