@@ -121,21 +121,26 @@
   flex-direction: column;
 }
 
-.cardTitle {
+/*
+ * Titre coupé à trois lignes. La police est plus haute que l'interligne de la galerie (1) : la coupe masquait le
+ * soulignement de la dernière ligne et laissait dépasser les accents de la quatrième. À 1,2, tout tient dans sa ligne.
+ */
+.card .cardTitle {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  line-height: 1.2;
   color: var(--ink);
   text-decoration: none;
   overflow-wrap: anywhere;
 }
 
-.cardTitle:hover {
+.card .cardTitle:hover {
   text-decoration: underline;
   text-decoration-color: var(--signal);
   text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
 }
 
 .actions {
