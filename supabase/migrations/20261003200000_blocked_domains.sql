@@ -18,9 +18,20 @@
 -- et services financiers), private (données personnelles), gambling (jeux d'argent),
 -- danger (pistage, logiciels espions, téléchargements piratés). La liste de départ,
 -- remplie à la fin, est détaillée dans docs/sites-refuses.md.
+--
+-- Relançable : si un essai s'est arrêté en route, on recolle le fichier entier.
 -- =============================================================================
 
-create table public.blocked_domains (
+-- Charge pg_trgm dans la session. Sans cela, son réglage word_similarity_threshold (posé
+-- sur search_sites, plus bas) est encore inconnu, et Supabase refuse de l'enregistrer :
+-- « permission denied to set parameter » (le rôle postgres n'y est pas superutilisateur).
+do $$
+begin
+  perform extensions.word_similarity('domcity', 'domcity');
+end
+$$;
+
+create table if not exists public.blocked_domains (
   domain     text primary key
              check (domain ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$'
                     and length(domain) <= 253),
@@ -30,7 +41,7 @@ create table public.blocked_domains (
   created_at timestamptz not null default now()
 );
 
-create index blocked_domains_category_idx on public.blocked_domains (category);
+create index if not exists blocked_domains_category_idx on public.blocked_domains (category);
 
 -- Réservée à l'API et aux fonctions ci-dessous : aucune policy, aucun droit pour les visiteurs.
 alter table public.blocked_domains enable row level security;
@@ -42,7 +53,7 @@ revoke all on public.blocked_domains from anon, authenticated;
 -- -----------------------------------------------------------------------------
 
 -- Le domaine et tous ceux qui le contiennent, du plus précis au plus large.
-create function public.domain_suffixes(p_domain text)
+create or replace function public.domain_suffixes(p_domain text)
 returns text[]
 language sql
 immutable
@@ -55,7 +66,7 @@ as $$
 $$;
 
 -- Lit la liste sans la montrer : les visiteurs n'ont aucun droit sur la table.
-create function public.is_blocked_domain(p_domain text)
+create or replace function public.is_blocked_domain(p_domain text)
 returns boolean
 language sql
 stable
@@ -70,7 +81,7 @@ as $$
 $$;
 
 -- La liste entière, pour le navigateur (quelques milliers de lignes) et pour le serveur au partage.
-create function public.blocklist()
+create or replace function public.blocklist()
 returns table (domain text, category text)
 language sql
 stable

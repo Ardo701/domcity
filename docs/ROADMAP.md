@@ -182,6 +182,8 @@ Migrations dans `supabase/migrations/`, testées sur PGlite :
 
 Vérifier une base : `supabase/verification.sql` (SQL Editor, relançable). Il contrôle la structure (extensions, tables, RLS, fonctions, droits des visiteurs et de l'API), la liste des sites refusés (remplie, ce qu'elle refuse ou non, `create_capture` qui refuse), puis fait un partage d'essai de bout en bout sur `verification.domcity.invalid` (créer, publier, chercher, refuser puis rendre, visiter, limite d'envois, signalements, suppression) et l'efface ; une ligne par contrôle, « ok » ou « ÉCHEC ». Un test le passe sur une base neuve.
 
+Chaque migration à partir de la 5e est collée seule dans le SQL Editor : `src/server/migrations.test.ts` l'applique dans une session neuve, avec un rôle qui n'est pas superutilisateur (comme `postgres` sur Supabase). Piège rencontré : un réglage de pg_trgm posé sur une fonction (`set pg_trgm.word_similarity_threshold`) est refusé tant que pg_trgm n'est pas chargé dans la session ; la migration 5 le charge d'abord. Une migration se relance sans risque si elle est écrite pour (`if not exists`, `create or replace`, `on conflict do nothing`).
+
 Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalements de personnes différentes masquent une version (la page retombe sur la précédente) ; une version est `pending` tant que ses fichiers ne sont pas dans R2. Ne jamais modifier une migration déjà appliquée : en ajouter une nouvelle.
 
 ## 8. API
@@ -324,7 +326,8 @@ Demande de l'utilisateur : bloquer aussi les banques (« comme les sites pour ad
 - **Le navigateur** télécharge la liste entière (`/api/blocklist`, ~1 550 domaines) une fois par page et vérifie seul : `/nouveau` affiche « Site refusé » (rien n'est gardé), et toute ville ouverte (relevé, ville partagée, Wikipédia, mégalopole) perd ses images et départs refusés avant d'être bâtie. On a préféré la liste entière à une question par site : DOMCity n'apprend pas quelle page est relevée, la promesse « rien ne part avant Publier » tient. Si la liste ne répond pas, la ville se construit quand même sur cet écran (la publication vérifie toujours sur le serveur).
 - **Coût** : un partage lit la liste (1 553 lignes) ; une lecture ajoute un test par site (quelques lectures d'index) ; le navigateur télécharge une trentaine de Ko (une dizaine compressés), gardés 5 minutes. La vraie limite est la taille de la liste : les grandes listes publiques (millions de domaines) ne tiendraient ni dans la base gratuite ni dans le navigateur.
 - Textes : page Créer une ville (limite « Sites refusés »), conditions d'utilisation (les six catégories), confidentialité (la liste téléchargée par le navigateur).
-Vérifié : 106 tests (correspondance et catégories, faux amis, même réponse dans le navigateur et dans la base, liste illisible pour les visiteurs, entrées mal écrites refusées, partage refusé par catégorie, images et départs retirés de la ville stockée, `create_capture` qui refuse, site ajouté puis retiré de la liste, `/nouveau` sans rien garder, liste injoignable), `verification.sql` sur une base neuve, TypeScript, ESLint, compilation de production. Dans le navigateur (base locale) : une banque relevée → « Site refusé », seule requête `/api/blocklist` ; un forum avec une image d'un serveur refusé → affiche « Image masquée » sur sa façade, aucune requête vers ce serveur, inspecteur sans image ni texte ; ville partagée et mégalopole Wikipédia inchangées.
+Vérifié : 107 tests (correspondance et catégories, faux amis, même réponse dans le navigateur et dans la base, liste illisible pour les visiteurs, entrées mal écrites refusées, partage refusé par catégorie, images et départs retirés de la ville stockée, `create_capture` qui refuse, site ajouté puis retiré de la liste, `/nouveau` sans rien garder, liste injoignable, migration collée seule par un rôle qui n'est pas superutilisateur), `verification.sql` sur une base neuve, TypeScript, ESLint, compilation de production. Dans le navigateur (base locale) : une banque relevée → « Site refusé », seule requête `/api/blocklist` ; un forum avec une image d'un serveur refusé → affiche « Image masquée » sur sa façade, aucune requête vers ce serveur, inspecteur sans image ni texte ; ville partagée et mégalopole Wikipédia inchangées.
+Premier essai de la migration dans Supabase refusé (« permission denied to set parameter "pg_trgm.word_similarity_threshold" ») : corrigé (pg_trgm chargé au début, migration relançable), et reproduit par un test.
 **À faire par l'utilisateur** : appliquer la migration 5 dans Supabase **avant** que ce code soit déployé (le code déjà en ligne fonctionne avec la nouvelle base ; le nouveau code a besoin de `blocklist()`), puis relancer `verification.sql`.
 
 ### Pour activer le partage en production (fait le 3 octobre 2026, sauf l'éditeur)
@@ -415,7 +418,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 106 tests
+npm test           # 107 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
