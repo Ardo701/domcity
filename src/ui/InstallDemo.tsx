@@ -56,7 +56,6 @@ export function InstallDemo() {
           <b>3</b> Visiter
         </li>
       </ol>
-      <figcaption className="mono-caps">Fig. 2 · Le favori se range dans la barre, puis relève la page ouverte</figcaption>
     </figure>
   );
 }

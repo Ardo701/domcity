@@ -459,12 +459,6 @@
   }
 }
 
-.demo figcaption {
-  color: var(--ink-3);
-  border-top: 1px solid var(--rule);
-  padding-top: 10px;
-}
-
 /* Sans animation : l'état final, favori rangé et ville construite. */
 @media (prefers-reduced-motion: reduce) {
   .tag,
