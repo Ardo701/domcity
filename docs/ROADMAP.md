@@ -8,7 +8,7 @@
 **Chaque page web est une ville.** DOMCity relève la structure d'une page (son DOM) et la construit en 3D. Les sections deviennent des quartiers, les blocs des immeubles, les titres des monuments, les images des panneaux publicitaires. On peut survoler la ville, inspecter chaque bâtiment (ce qu'il était dans la page) et s'y promener.
 
 - Dépôt : https://github.com/Ardo701/domcity (branche `main`, un commit par étape)
-- Domaine prévu : `domcity.app` (acheté sur Cloudflare), fichiers sur `files.domcity.app`
+- Domaine : `domcity.app` (acheté sur Cloudflare, DNS chez Cloudflare), relié à Vercel (nuage gris) ; fichiers sur `files.domcity.app` (à brancher sur R2)
 
 ## 2. Décisions prises, et pourquoi
 
@@ -313,6 +313,8 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 ## 10. Étapes suivantes
 
 ### Étape 6 : mise en ligne
+Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. Reste : `www.domcity.app` (n'existe pas encore : l'ajouter dans Vercel, redirigé vers `domcity.app`), Supabase, R2, variables.
+
 Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** pour `domcity.app` vers Vercel, **nuage orange** pour `files.domcity.app` vers R2), projet Vercel relié au dépôt, variables d'environnement, règles du pare-feu Vercel (limite sur `/api/captures`), Attack Mode en cas d'attaque, purge du cache Cloudflare à la suppression (jeton facultatif).
 
 ## 11. En réserve (idées et limites connues)
