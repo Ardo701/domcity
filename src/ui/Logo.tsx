@@ -1,19 +1,24 @@
 import { isoBox } from "./iso";
 
-/** Le repère DOMCity : quatre blocs, dont un monument orange. Dessinés du fond vers l'avant. */
-const MARK = [
-  ...isoBox(0, 0, 0, 1, 2.6, 1, "#ff4b12"),
-  ...isoBox(1.2, 0, 0, 1, 1.7, 1, "#e8c891"),
-  ...isoBox(0, 0, 1.2, 1, 1.1, 1, "#f6f3ec"),
-  ...isoBox(1.2, 0, 1.2, 1, 0.7, 1, "#d3d1cb"),
-];
+/** Le repère DOMCity : quatre blocs, dont un monument orange. Rangés du fond vers l'avant (ordre de dessin). */
+export const LOGO_BLOCKS = [
+  { x: 0, z: 0, height: 2.6, color: "#ff4b12" },
+  { x: 1.2, z: 0, height: 1.7, color: "#e8c891" },
+  { x: 0, z: 1.2, height: 1.1, color: "#f6f3ec" },
+  { x: 1.2, z: 1.2, height: 0.7, color: "#d3d1cb" },
+] as const;
+
+/** Cadrage du repère, partagé avec son animation de chargement. */
+export const LOGO_VIEWBOX = "-2.1 -2.75 4.2 5.1";
+
+const MARK = LOGO_BLOCKS.flatMap((block) => isoBox(block.x, 0, block.z, 1, block.height, 1, block.color));
 
 export function LogoMark({ size = 28, title }: { size?: number; title?: string }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="-2.1 -2.75 4.2 5.1"
+      viewBox={LOGO_VIEWBOX}
       role={title ? "img" : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}

@@ -1,0 +1,19 @@
+.animated {
+  display: block;
+}
+
+/* Sans animation : le repère, entier et immobile. */
+.still {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated {
+    display: none;
+  }
+
+  .still {
+    display: block;
+    line-height: 0;
+  }
+}

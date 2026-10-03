@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CardPending } from "./CardPending";
 import styles from "./Gallery.module.css";
 
 export const shortDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -31,6 +32,7 @@ export function GalleryCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumb} alt="" loading="lazy" />
           )}
+          <CardPending />
         </span>
         <span className={styles.body}>
           <span className={styles.title}>{title}</span>
