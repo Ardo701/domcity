@@ -10,6 +10,7 @@
 
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
+import { isBlockedUrl } from "@/format/blocklist";
 import { THUMBNAIL } from "@/format/shared";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
 import type { Weather } from "./ambiance";
@@ -947,6 +948,7 @@ export class CityView {
     const alive = () => !this.disposed && this.parts.includes(view);
     for (const board of scene.billboards) {
       const src = board.lot.node.img?.src ?? "";
+      const refused = src !== "" && isBlockedUrl(src);
       const apply = (texture: THREE.Texture, status: ImageStatus) => {
         if (!alive()) {
           texture.dispose();
@@ -959,6 +961,11 @@ export class CityView {
         this.events.onImageStatus?.(board.id, status);
         this.invalidate();
       };
+      // Une image d'un site refusé n'est jamais demandée à son site.
+      if (refused) {
+        apply(unavailableTexture(board.ratio, "refused"), "refused");
+        continue;
+      }
       void this.enqueue(async () => {
         if (!alive()) return;
         try {
@@ -975,6 +982,12 @@ export class CityView {
     const { atlas, owners } = scene.emblems;
     atlas.sources.forEach((src, i) => {
       const index = i + 1;
+      if (isBlockedUrl(src)) {
+        atlas.drawUnavailable(index);
+        for (const lotId of owners[i]) this.events.onImageStatus?.(lotId, "refused");
+        this.invalidate();
+        return;
+      }
       void this.enqueue(async () => {
         if (!alive()) return;
         let status: ImageStatus = "shown";

@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site, miniature automatique).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site, miniature automatique, bouton du favori en blanc, sites refusés).
 
 ## 1. Le concept
 
@@ -27,6 +27,7 @@
 | Anti-DDoS | Vercel (inclus, tous plans) pour le site ; Cloudflare pour les fichiers | Vercel déconseille un proxy Cloudflare devant lui (il perd la visibilité du trafic) |
 | Langue | **Français pour l'instant, anglais plus tard** ; les nouvelles adresses sont en anglais (`/create`, `/account`, `/explore`, `/site/…`) | L'application sera traduite : ses adresses n'auront pas à changer. Les autres (`/nouveau`, `/c/…/supprimer`) changeront avec la traduction. `/c/` (ville partagée) et `/w/` (Wikipédia) restent courts : ce sont les liens qu'on partage |
 | Recherche et galerie | **Par site** (amazon.com, fr.wikipedia.org), plus ville par ville | Une mégalopole a plusieurs villes : un site relevé vingt fois remplissait la galerie. Les pages dont le titre répond à la recherche sont rangées sous leur site et mènent droit à leur ville |
+| Sites pour adultes | **Refusés** : une liste de domaines tenue par le moteur, plus toute page qui se déclare réservée aux adultes ; leurs images ne sont jamais chargées, même dans la ville d'un autre site | Demande de l'utilisateur : pas d'images obscènes dans les villes ni dans la galerie. Voir « Sites refusés » (section 9) |
 | Rendu de la ville | **Ville plate et réaliste** : rues, trottoirs, pâtés denses, bâtiments composés, mobilier urbain (et non plus des socles empilés par profondeur) | Demande de l'utilisateur : l'ancien rendu faisait « compartimenté, très cubique, pas une grande ville ». Les rues n'ont pas à correspondre à un élément de la page : elles séparent les blocs et découpent les longs pâtés, parfois pour le seul décor |
 
 ### Principe clé : les données ne changent pas, le moteur si
@@ -125,6 +126,7 @@ Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1
 `page` (favori seulement) : `domSize` (éléments du DOM), `scripts`, `comments` (commentaires HTML), `resources`, `bytes` (octets transférés connus, minimum), `thirdParty` (hôtes tiers, 60 au plus, du plus sollicité au moins sollicité), `colors` (`background`, `text`, `link`). Ces ajouts sont facultatifs : les villes déjà stockées restent valides, le format reste en v1.
 `linksTo` (Wikipédia et favori, depuis l'étape 4) : `pages` (empreintes des chemins des pages du même site visées, 1 000 au plus, les plus visées d'abord, la page elle-même exclue) et `sites` (`[domaine, nombre de liens]`, 60 au plus). Facultatif : les villes relevées avant ne le savent pas (pas d'autoroute ni de vols pour elles tant qu'elles ne sont pas relevées à nouveau). Favori en version 2 (un bandeau propose de réinstaller l'ancien).
 `img.broken` (favori, depuis l'étape 5) : l'image était cassée dans la page au moment du relevé (chargement fini, rien d'affiché ; ni une image en chargement différé pas encore demandée, ni un SVG sans taille). Favori en version 3.
+`page.adult` (favori, depuis les sites refusés) : la page se déclare réservée aux adultes (balise `rating`). Une telle ville n'est jamais construite ni publiée. Favori en version 4.
 Limites : 30 000 éléments, profondeur 64, 2 Mo compressé. Validation zod dans `src/format/schema.ts`.
 
 Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés. Avec le favori, github.com/vercel/next.js : 3 244 éléments relevés en 13 ms, 24 Ko de JSON, 6 Ko compressés.
@@ -184,7 +186,7 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 
 | Route | Rôle | Protections |
 |---|---|---|
-| `POST /api/captures` | Partager (multipart : `source`, `lang` + `title` ou `city` gzip, `thumbnail` JPEG) | Même origine, 10 partages / heure / IP, gzip borné, zod, JPEG vérifié, pages locales ou d'intranet refusées |
+| `POST /api/captures` | Partager (multipart : `source`, `lang` + `title` ou `city` gzip, `thumbnail` JPEG) | Même origine, 10 partages / heure / IP, gzip borné, zod, JPEG vérifié, pages locales ou d'intranet refusées, sites refusés (403) |
 | `DELETE /api/captures/[slug]` | Supprimer avec `{ token }` | Même origine, 30 / heure |
 | `POST /api/captures/[slug]/report` | Signaler `{ reason, details? }` | Même origine, 20 / heure, un seul par IP et par ville |
 | `POST /api/captures/[slug]/view` | Compter une visite | Une fois par session de navigateur, **côté navigateur seulement** : aucune limite côté serveur (voir « Urgent ») |
@@ -300,6 +302,15 @@ Demandées par l'utilisateur avant l'étape 6.
 - **Page d'un site** (`/site/apple.com`, ancienne `/s/…` redirigée ; « pourquoi /s/ ? ») : légère, sans 3D. Le domaine, ses chiffres (villes, versions, visites, mise à jour), « Visiter la mégalopole » (dès 2 pages, à `/site/…/megalopolis` ; sinon « Visiter la ville »), « Ouvrir apple.com ↗ », puis ses pages en cartes dans l'ordre des adresses (titre, chemin décodé, bâtiments, versions, date), par morceaux de 60. Elle existe dès qu'une page du site est partagée : si la page d'accueil ne l'est pas, une carte vide « Pas encore relevée » invite à l'ouvrir et à cliquer sur le favori (pas pour Wikipédia, qui n'a pas d'accueil à cette adresse). Dans la mégalopole, le surtitre « Mégalopole » y ramène. Nouvelle migration (la 4e).
 - **Miniature automatique** (« je ne veux pas qu'une personne puisse faire sa propre image ») : la miniature n'est plus une photo de la vue au moment du partage (cadrage, zoom et vraies couleurs au choix de chacun, cartouche imprimé dedans), mais une prise de vue du moteur, toujours la même : toute la ville en axonométrie, vue du sud-ouest comme la figure de l'accueil, posée avec ses ombres sur le papier millimétré, sans sélection, survol ni vraies couleurs (`thumbnail` dans `view.ts`). Une seule image, un JPEG de 1200 × 630 (le format des aperçus sur les réseaux), qui sert aussi à la galerie : environ 150 Ko et 0,4 s de rendu pour Lyon. Le serveur refuse un JPEG d'une autre taille (`readThumbnail`) ; il ne peut pas vérifier ce qu'il montre (il ne sait pas rendre la 3D) : une image forgée hors de l'interface reste possible, comme une ville forgée, et le signalement s'en charge.
 
+- **Bouton du favori en blanc** (« met ça en blanc ») : le bouton « DOMCity » à glisser de la page Créer une ville, et sa copie dans l'animation, passent de l'orange chantier au blanc cassé du bouton « Créer une ville » de l'accueil.
+- **Sites refusés** (« une ban list de sites qui ne peuvent pas être mis en ville, notamment les sites porno qui auraient des images obscènes ») : `src/format/blocklist.ts`, tenue par le moteur comme la liste des traqueurs. Trois défenses :
+  1. **Une liste de domaines** (environ 80 : vidéos, webcams, abonnements, studios, dessins, et les serveurs d'images de ces sites, dont les vignettes s'accrochent ailleurs) et les extensions `.xxx`, `.porn`, `.adult`, `.sex`. Un domaine couvre ses sous-domaines. Pas de mots clés : « sex » refuserait essex.ac.uk, « porn » la ville de Pornic, « xxx » le magasin XXXLutz.
+  2. **La page se déclare réservée aux adultes** : le favori (version 4) lit la balise `<meta name="rating">` (« adult » ou le label RTA, que posent la plupart des sites pour adultes pour les moteurs de recherche et les contrôles parentaux) et le note (`page.adult`). Cela couvre les sites absents de la liste.
+  3. **Les images d'un site refusé ne sont jamais chargées**, même accrochées dans la ville d'un autre site (un forum, un blog) : l'affiche dit « Image masquée · site refusé par DOMCity », sans son texte alternatif (il peut être aussi cru que l'image) ; l'inspecteur ne la montre pas. La miniature, rendue par le moteur, ne peut donc pas la contenir.
+  Où ça s'applique : `/nouveau` affiche « Site refusé » au lieu de construire la ville (rien n'est gardé, pas de bouton « Installer le favori ») ; le serveur refuse le partage (403, même message) ; toutes les lectures (ville partagée, page du site, mégalopole, galerie, recherche, départs) ignorent un site refusé, même publié avant d'entrer dans la liste (`store.ts`). Ses lignes restent dans la base et ses fichiers dans R2 jusqu'à ce qu'on les efface à la main. La page Créer une ville, les conditions d'utilisation et la confidentialité le disent.
+  Limites : la liste ne sera jamais complète, et une page d'un site absent de la liste, sans balise `rating`, passe (le signalement reste le recours) ; les sites mixtes (Reddit, X, Tumblr) ne sont pas refusés ; une ville forgée hors du favori peut mentir sur son adresse (ses images d'un site refusé restent masquées) ; les images de Wikipédia ne sont pas filtrées.
+  Vérifié : 95 tests (domaines et sous-domaines, faux amis comme Pornic ou XXXLutz, balise `rating` relevée, réception refusée sans rien garder, partage refusé, site publié avant la liste absent de toutes les lectures), TypeScript, ESLint. Dans le navigateur : la page « Site refusé » ; une ville d'exemple.org avec une image d'un serveur refusé (affiche « Image masquée », aucune requête vers ce serveur, inspecteur sans image ni texte alternatif).
+
 ### Pour activer le partage en production (fait le 3 octobre 2026, sauf l'éditeur)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
 1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor), puis coller `supabase/verification.sql` : chaque ligne du résultat doit dire « ok ».
@@ -353,6 +364,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; les impasses (rues rattachées par un seul bout) n'ont pas encore de raquette de retournement.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
+- Sites refusés : tenir la liste à jour (des listes publiques, comme la catégorie « adult » des listes de l'université Toulouse 1 Capitole, comptent des millions de domaines : trop lourdes pour le navigateur, envisageables côté serveur) ; effacer de la base et de R2 les villes d'un site qui entre dans la liste ; filtrer les images explicites de Wikipédia si besoin.
 - Miniatures : figées au partage, elles vieillissent quand le dessin change. Les refaire toutes d'un coup (une page de développement comme `/dev/figure`, une route d'administration en production) ; noter la version du moteur avec chacune.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
 - Favori : utiliser `rect` pour ranger la ville selon la mise en page réelle (ordre visuel plutôt qu'ordre du code) ; lire les cadres (`iframe`) du même site ; les shadow DOM fermés restent invisibles.
@@ -367,7 +379,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 87 tests
+npm test           # 95 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

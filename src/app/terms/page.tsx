@@ -34,6 +34,10 @@ export default function TermsPage() {
           dans l&apos;aperçu avant de publier.
         </li>
         <li>Les pages locales ou d&apos;un réseau interne ne peuvent pas être publiées.</li>
+        <li>
+          Les sites pour adultes ne deviennent pas des villes : DOMCity en refuse une liste, ainsi que toute page qui se
+          déclare réservée aux adultes, et n&apos;affiche jamais les images de ces sites.
+        </li>
       </ul>
 
       <h2>Ce qui est interdit</h2>

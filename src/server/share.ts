@@ -3,6 +3,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { DOMParser } from "linkedom";
 import { fetchWikipediaCity, type WikiLang } from "@/capture/wikipedia";
 import { layoutCity } from "@/city/layout";
+import { cityRefusal } from "@/format/blocklist";
 import { validateCityDoc } from "@/format/schema";
 import { THUMBNAIL, type CityStatsSummary } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
@@ -119,6 +120,8 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   const address = normalizePageUrl(doc.url);
   if (!address) throw new ShareError(400, "Adresse de page invalide.");
   if (!isPublicHost(address.domain)) throw new ShareError(400, "Les pages locales ou d'intranet ne se partagent pas.");
+  const refusal = cityRefusal(doc);
+  if (refusal) throw new ShareError(403, refusal);
   if (address.path.length > 1024) throw new ShareError(400, "Adresse de page trop longue.");
 
   const canonical: CityDoc = { ...doc, url: address.url };

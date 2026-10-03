@@ -62,6 +62,8 @@ export interface CityPage {
   thirdParty?: string[];
   /** Couleurs réelles de la page (#rrggbb). */
   colors?: { background?: string; text?: string; link?: string };
+  /** La page se déclare réservée aux adultes (balise rating) : DOMCity n'en construit pas de ville. */
+  adult?: true;
 }
 
 /**

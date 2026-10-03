@@ -10,7 +10,8 @@ const dataDir = mkdtempSync(join(tmpdir(), "domcity-test-"));
 process.env.DOMCITY_DATA_DIR = dataDir;
 for (const key of ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "R2_BUCKET"]) delete process.env[key];
 
-const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, ShareError } = await import("./share");
+const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, statsOf, ShareError } = await import("./share");
+const { hashToken } = await import("./security");
 const store = await import("./store");
 const { readLocalFile, cityKey } = await import("./files");
 
@@ -61,6 +62,13 @@ describe("fichiers envoyés", () => {
     for (const url of ["http://localhost:3000/admin", "http://192.168.1.20/", "https://nas.local/photos"]) {
       await expect(shareCity({ ...DOC, url }, null)).rejects.toThrow(/locales/);
     }
+  });
+
+  it("refuse de publier un site refusé, ou une page qui se déclare réservée aux adultes", async () => {
+    for (const url of ["https://fr.pornhub.com/", "https://www.exemple.xxx/page"]) {
+      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ status: 403 });
+    }
+    await expect(shareCity({ ...DOC, page: { adult: true } }, null)).rejects.toThrow(/réservée aux adultes/);
   });
 
   it("n'accepte que des miniatures JPEG", () => {
@@ -149,5 +157,29 @@ describe("les sites au premier plan (base locale)", () => {
 
     const byDomain = await store.searchSites("vergrs");
     expect(byDomain.filter((h) => h.domain === "vergers.fr")).toHaveLength(1);
+  });
+});
+
+describe("un site refusé après avoir été publié (base locale)", () => {
+  it("n'apparaît plus nulle part : ville, site, galerie, recherche, départs", async () => {
+    // Écrit directement dans la base, comme une ville publiée avant que son site entre dans la liste.
+    const slug = await store.createCapture({
+      domain: "pornhub.com",
+      path: "/",
+      source: "bookmarklet",
+      title: "Essai",
+      sizeBytes: 10,
+      stats: statsOf(DOC),
+      deleteTokenHash: hashToken("jeton-de-test-refuse"),
+    });
+    expect(await store.publishCapture(slug)).toBe(true);
+
+    expect(await store.getCapture(slug)).toBeNull();
+    expect(await store.getSite("pornhub.com")).toBeNull();
+    expect(await store.sitePageList("pornhub.com", 60, 0)).toEqual([]);
+    expect(await store.siteCity("pornhub.com")).toEqual([]);
+    expect((await store.recentSites(60)).map((site) => site.domain)).not.toContain("pornhub.com");
+    expect((await store.searchSites("pornhub")).map((hit) => hit.domain)).not.toContain("pornhub.com");
+    expect(await store.knownSites(["pornhub.com"])).toEqual([]);
   });
 });

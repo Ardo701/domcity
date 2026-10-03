@@ -5,7 +5,8 @@
 
 import * as THREE from "three";
 
-export type ImageStatus = "loading" | "shown" | "blocked" | "missing";
+/** « refused » : l'image vient d'un site refusé par DOMCity, elle n'est jamais chargée. */
+export type ImageStatus = "loading" | "shown" | "blocked" | "missing" | "refused";
 
 /** Polices du site, lues dans les variables CSS posées par next/font. */
 export function fontFamily(variable: "--font-display" | "--font-mono", fallback: string): string {
@@ -67,7 +68,8 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  const text = alt?.trim() || "Image sans légende";
+  // Le texte alternatif d'une image refusée n'est pas montré : il peut être aussi cru qu'elle.
+  const text = status === "refused" ? "Image masquée" : alt?.trim() || "Image sans légende";
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
   ctx.fillStyle = PLACARDS[hash % PLACARDS.length];
@@ -78,7 +80,8 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
 
   const display = fontFamily("--font-display", "sans-serif");
   const mono = fontFamily("--font-mono", "monospace");
-  const caption = status === "missing" ? "IMAGE INTROUVABLE" : "IMAGE NON AFFICHÉE · CLIC POUR LA VOIR";
+  const caption =
+    status === "missing" ? "IMAGE INTROUVABLE" : status === "refused" ? "SITE REFUSÉ PAR DOMCITY" : "IMAGE NON AFFICHÉE · CLIC POUR LA VOIR";
   const box = { x: 34, y: 34, w: width - 68, h: height - 104 };
 
   // Le texte alternatif, aussi gros que la place le permet.

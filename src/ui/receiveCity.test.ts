@@ -59,6 +59,21 @@ describe("réception d'une ville dans /nouveau", () => {
     await expect(pending).rejects.toThrow(/ne vient pas/);
   });
 
+  it("refuse un site de la liste, ou une page qui se déclare réservée aux adultes, sans rien garder", async () => {
+    const cases: Array<[CityDoc, string]> = [
+      [{ ...CITY, url: "https://fr.pornhub.com/video" }, "https://fr.pornhub.com"],
+      [{ ...CITY, page: { adult: true } }, "https://exemple.org"],
+    ];
+    for (const [city, origin] of cases) {
+      const opener = { postMessage: vi.fn() };
+      setOpener(opener);
+      const pending = (await freshReceive())();
+      reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city }, origin);
+      await expect(pending).rejects.toMatchObject({ title: "Site refusé", offerInstall: false });
+      expect(sessionStorage.getItem("domcity:nouveau")).toBeNull();
+    }
+  });
+
   it("signale un favori d'une version précédente", async () => {
     const opener = { postMessage: vi.fn() };
     setOpener(opener);

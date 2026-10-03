@@ -180,4 +180,23 @@ describe("captureDocument sur la page affichée (live)", () => {
       restore();
     }
   });
+
+  it("note qu'une page se déclare réservée aux adultes (balise rating), et seulement elle", () => {
+    document.body.innerHTML = `<p>Bonjour</p>`;
+    const restore = mimicBrowserLayout(() => ({ left: 0, top: 0, width: 200, height: 30 }));
+    const adult = (meta: string) => {
+      document.head.innerHTML = meta;
+      return captureDocument(document, { source: "bookmarklet", url: "https://exemple.org/", live: true }).page?.adult;
+    };
+    try {
+      expect(adult(`<meta name="RATING" content="RTA-5042-1996-1400-1577-RTA">`)).toBe(true);
+      expect(adult(`<meta name="rating" content=" adult ">`)).toBe(true);
+      expect(adult(`<meta name="rating" content="general">`)).toBeUndefined();
+      expect(adult(`<meta name="description" content="adult">`)).toBeUndefined();
+      expect(adult("")).toBeUndefined();
+    } finally {
+      document.head.innerHTML = "";
+      restore();
+    }
+  });
 });

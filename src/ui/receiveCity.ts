@@ -1,4 +1,5 @@
 import { BOOKMARKLET_VERSION, HASH_KEY, MESSAGES, unpackCity, type CityMessage } from "@/bookmarklet/protocol";
+import { cityRefusal } from "@/format/blocklist";
 import { validateCityDoc } from "@/format/schema";
 import type { CityDoc } from "@/format/types";
 import { siteHost } from "@/format/url";
@@ -13,6 +14,8 @@ export class ReceiveError extends Error {
   constructor(
     readonly title: string,
     message: string,
+    /** Proposer de (ré)installer le favori : pas quand c'est le site qui est refusé. */
+    readonly offerInstall = true,
   ) {
     super(message);
   }
@@ -109,6 +112,8 @@ function check(data: unknown): CityDoc {
   if (!result.ok || result.doc.source !== "bookmarklet") {
     throw new ReceiveError("Relevé illisible", "La ville reçue ne suit pas le format de DOMCity. Réinstallez le favori, puis réessayez.");
   }
+  const refusal = cityRefusal(result.doc);
+  if (refusal) throw new ReceiveError("Site refusé", refusal, false);
   return result.doc;
 }
 
@@ -128,7 +133,7 @@ function readSaved(): ReceivedCity | null {
     if (!raw) return null;
     const saved = JSON.parse(raw) as ReceivedCity;
     const result = validateCityDoc(saved.doc);
-    return result.ok ? { doc: result.doc, outdated: Boolean(saved.outdated) } : null;
+    return result.ok && !cityRefusal(result.doc) ? { doc: result.doc, outdated: Boolean(saved.outdated) } : null;
   } catch {
     return null;
   }

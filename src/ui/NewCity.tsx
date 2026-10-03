@@ -9,7 +9,7 @@ import { ReceiveError, receiveCity, type ReceivedCity } from "@/ui/receiveCity";
 type State =
   | { phase: "waiting" }
   | { phase: "ready"; received: ReceivedCity }
-  | { phase: "error"; title: string; message: string };
+  | { phase: "error"; title: string; message: string; offerInstall: boolean };
 
 /** La ville envoyée par le favori : on l'attend, on la vérifie, puis on la construit. */
 export function NewCity({ canShare }: { canShare: boolean }) {
@@ -21,8 +21,16 @@ export function NewCity({ canShare }: { canShare: boolean }) {
       (received) => alive && setState({ phase: "ready", received }),
       (error: unknown) => {
         if (!alive) return;
-        if (error instanceof ReceiveError) setState({ phase: "error", title: error.title, message: error.message });
-        else setState({ phase: "error", title: "Relevé illisible", message: "La ville reçue n'a pas pu être lue. Relancez le favori." });
+        if (error instanceof ReceiveError) {
+          setState({ phase: "error", title: error.title, message: error.message, offerInstall: error.offerInstall });
+        } else {
+          setState({
+            phase: "error",
+            title: "Relevé illisible",
+            message: "La ville reçue n'a pas pu être lue. Relancez le favori.",
+            offerInstall: true,
+          });
+        }
       },
     );
     return () => {
@@ -55,10 +63,12 @@ export function NewCity({ canShare }: { canShare: boolean }) {
             <h2>{state.title}</h2>
             <p>{state.message}</p>
             <div className={styles.actionsRow}>
-              <Link href="/create" className={styles.primary}>
-                Installer le favori
-              </Link>
-              <Link href="/" className={styles.secondary}>
+              {state.offerInstall && (
+                <Link href="/create" className={styles.primary}>
+                  Installer le favori
+                </Link>
+              )}
+              <Link href="/" className={state.offerInstall ? styles.secondary : styles.primary}>
                 Retour à l&apos;accueil
               </Link>
             </div>

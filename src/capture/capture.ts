@@ -339,6 +339,13 @@ function pageFacts(
 
   const page: CityPage = { domSize: doc.getElementsByTagName("*").length, scripts, comments };
 
+  // Page réservée aux adultes, d'après sa propre étiquette : « adult » ou le label RTA, lus par
+  // les moteurs de recherche et les contrôles parentaux. DOMCity refuse d'en faire une ville.
+  for (const meta of Array.from(doc.getElementsByTagName("meta"))) {
+    if ((meta.getAttribute("name") ?? "").trim().toLowerCase() !== "rating") continue;
+    if (/^(adult|RTA-5042-1996-1400-1577-RTA)$/i.test((meta.getAttribute("content") ?? "").trim())) page.adult = true;
+  }
+
   // Hôtes tiers : ressources mesurées par le navigateur, plus les scripts, cadres et styles de la page.
   const hosts = new Map<string, number>();
   const siteRoot = rootDomain(pageHost);

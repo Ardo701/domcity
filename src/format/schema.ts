@@ -59,6 +59,7 @@ export const cityDocSchema = z.strictObject({
       colors: z
         .strictObject({ background: hexColor.optional(), text: hexColor.optional(), link: hexColor.optional() })
         .optional(),
+      adult: z.literal(true).optional(),
     })
     .optional(),
   linksTo: z

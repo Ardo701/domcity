@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatChars, formatCount, type LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
+import { isBlockedUrl } from "@/format/blocklist";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
@@ -11,6 +12,7 @@ const IMAGE_STATUS: Record<ImageStatus, string> = {
   shown: "Affichée dans la ville",
   blocked: "Le site de l'image interdit de l'utiliser en 3D. Elle reste visible ici.",
   missing: "Introuvable : l'image a disparu de son site.",
+  refused: "Masquée : son site est refusé par DOMCity.",
 };
 
 /** Fiche détaillée de l'élément sélectionné. */
@@ -38,6 +40,8 @@ export function Inspector({
   onViewImage: () => void;
 }) {
   const added = info.ownText || info.gallery;
+  // Une image d'un site refusé n'est ni montrée ni décrite (son texte alternatif peut être aussi cru qu'elle).
+  const refused = Boolean(info.img?.src && isBlockedUrl(info.img.src));
   const parent = info.path.length > 1 ? info.path[info.path.length - (added ? 1 : 2)] : null;
   const rows: Array<[string, ReactNode]> = [
     ["Texte propre", formatChars(info.text)],
@@ -93,15 +97,17 @@ export function Inspector({
 
       {info.img && (
         <div className={styles.imageBlock}>
-          {info.img.src ? (
+          {refused ? (
+            <p className={styles.imageMissing}>Image masquée : elle vient d&apos;un site refusé par DOMCity.</p>
+          ) : info.img.src ? (
             <button type="button" className={styles.imagePreview} onClick={onViewImage} aria-label="Voir l'image">
               <FitImage src={info.img.src} alt={info.img.alt ?? ""} minSide={160} lazy />
             </button>
           ) : (
             <p className={styles.imageMissing}>Pas d&apos;adresse d&apos;image.</p>
           )}
-          {imageStatus && <p className={`${styles.imageStatus} mono-caps`}>{IMAGE_STATUS[imageStatus]}</p>}
-          {info.img.alt && <p className={styles.alt}>{info.img.alt}</p>}
+          {imageStatus && !refused && <p className={`${styles.imageStatus} mono-caps`}>{IMAGE_STATUS[imageStatus]}</p>}
+          {info.img.alt && !refused && <p className={styles.alt}>{info.img.alt}</p>}
         </div>
       )}
 

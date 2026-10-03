@@ -39,6 +39,7 @@ const READ = [
   "La position et la couleur de fond des éléments affichés",
   "Le nombre de scripts et les sites tiers contactés par la page",
   "Le nombre de commentaires laissés dans le HTML (jamais leur texte) et les images cassées",
+  "Si la page se déclare réservée aux adultes : DOMCity n'en fait pas de ville",
 ];
 
 const NEVER = [

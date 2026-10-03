@@ -29,7 +29,8 @@ export default function PrivacyPage() {
       <p>
         Quand vous cliquez sur le favori, il lit dans votre navigateur la structure de la page affichée : les balises,
         la quantité de texte de chaque élément (jamais le texte lui-même), le texte des titres h1 à h3, les adresses des
-        images, la position et la couleur de fond des éléments, le nombre de scripts et les sites tiers contactés.
+        images, la position et la couleur de fond des éléments, le nombre de scripts et les sites tiers contactés, et si
+        la page se déclare réservée aux adultes (DOMCity n&apos;en fait alors pas de ville).
       </p>
       <p>
         Il ne lit jamais le texte des paragraphes, ce que vous tapez dans les formulaires, vos cookies, vos mots de passe
