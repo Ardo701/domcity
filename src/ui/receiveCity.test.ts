@@ -78,7 +78,7 @@ describe("réception d'une ville dans /nouveau", () => {
       setOpener(opener);
       const pending = (await freshReceive())();
       reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city }, origin);
-      await expect(pending).rejects.toMatchObject({ title: "Site refusé", offerInstall: false });
+      await expect(pending).rejects.toMatchObject({ title: "Site refusé", refused: true });
       expect(sessionStorage.getItem("domcity:nouveau")).toBeNull();
     }
     // Le navigateur a téléchargé la liste : il n'a rien envoyé de la page visitée.

@@ -42,7 +42,7 @@ export type CitySource =
 type Status =
   | { phase: "loading"; step: number }
   | { phase: "ready" }
-  | { phase: "error"; title: string; message: string };
+  | { phase: "error"; title: string; message: string; refused?: boolean };
 
 const WIKI_STEPS = ["Relevé de l'article sur Wikipédia", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
 const SHARED_STEPS = ["Ouverture de la ville partagée", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
@@ -135,7 +135,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         if (cancelled) return;
         const refusal = cityRefusal(cityDoc, list);
         if (refusal) {
-          setStatus({ phase: "error", title: "Site refusé", message: refusal });
+          setStatus({ phase: "error", title: "Site refusé", message: refusal, refused: true });
           return;
         }
         // Les images des sites refusés ne sont jamais demandées, même dans la ville d'un autre site.
@@ -466,7 +466,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       {status.phase === "error" && (
         <div className={styles.errorWrap}>
           <section className={styles.error} role="alert">
-            <p className="mono-caps">Erreur de relevé</p>
+            {!status.refused && <p className="mono-caps">Erreur de relevé</p>}
             <h2>{status.title}</h2>
             <p>{status.message}</p>
             {/* Un article mal orthographié : on peut en chercher un autre. */}

@@ -9,7 +9,7 @@ import { ReceiveError, receiveCity, type ReceivedCity } from "@/ui/receiveCity";
 type State =
   | { phase: "waiting" }
   | { phase: "ready"; received: ReceivedCity }
-  | { phase: "error"; title: string; message: string; offerInstall: boolean };
+  | { phase: "error"; title: string; message: string; refused: boolean };
 
 /** La ville envoyée par le favori : on l'attend, on la vérifie, puis on la construit. */
 export function NewCity({ canShare }: { canShare: boolean }) {
@@ -22,13 +22,13 @@ export function NewCity({ canShare }: { canShare: boolean }) {
       (error: unknown) => {
         if (!alive) return;
         if (error instanceof ReceiveError) {
-          setState({ phase: "error", title: error.title, message: error.message, offerInstall: error.offerInstall });
+          setState({ phase: "error", title: error.title, message: error.message, refused: error.refused });
         } else {
           setState({
             phase: "error",
             title: "Relevé illisible",
             message: "La ville reçue n'a pas pu être lue. Relancez le favori.",
-            offerInstall: true,
+            refused: false,
           });
         }
       },
@@ -59,16 +59,17 @@ export function NewCity({ canShare }: { canShare: boolean }) {
       ) : (
         <div className={styles.errorWrap}>
           <section className={styles.error} role="alert">
-            <p className="mono-caps">Favori DOMCity</p>
+            {/* Un site refusé : la raison seule, sans surtitre (le favori n'y est pour rien). */}
+            {!state.refused && <p className="mono-caps">Favori DOMCity</p>}
             <h2>{state.title}</h2>
             <p>{state.message}</p>
             <div className={styles.actionsRow}>
-              {state.offerInstall && (
+              {!state.refused && (
                 <Link href="/create" className={styles.primary}>
                   Installer le favori
                 </Link>
               )}
-              <Link href="/" className={state.offerInstall ? styles.secondary : styles.primary}>
+              <Link href="/" className={state.refused ? styles.primary : styles.secondary}>
                 Retour à l&apos;accueil
               </Link>
             </div>

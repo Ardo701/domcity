@@ -15,8 +15,8 @@ export class ReceiveError extends Error {
   constructor(
     readonly title: string,
     message: string,
-    /** Proposer de (ré)installer le favori : pas quand c'est le site qui est refusé. */
-    readonly offerInstall = true,
+    /** Le site est refusé par DOMCity : ni surtitre, ni proposition de (ré)installer le favori. */
+    readonly refused = false,
   ) {
     super(message);
   }
@@ -43,7 +43,7 @@ async function screen(received: ReceivedCity): Promise<ReceivedCity> {
   const refusal = cityRefusal(received.doc, await loadBlocklist());
   if (refusal) {
     forget();
-    throw new ReceiveError("Site refusé", refusal, false);
+    throw new ReceiveError("Site refusé", refusal, true);
   }
   return keep(received);
 }
