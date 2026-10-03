@@ -23,6 +23,7 @@ const cityNodeSchema: z.ZodType<CityNode> = z.lazy(() =>
         alt: z.string().max(300).optional(),
         w: z.number().min(0).max(100_000).optional(),
         h: z.number().min(0).max(100_000).optional(),
+        broken: z.literal(true).optional(),
       })
       .optional(),
     links: z

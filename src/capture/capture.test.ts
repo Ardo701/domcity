@@ -153,4 +153,31 @@ describe("captureDocument sur la page affichée (live)", () => {
       restore();
     }
   });
+
+  it("note les images cassées, pas celles qui attendent leur chargement différé", () => {
+    document.body.innerHTML = `
+      <img id="cassee" src="https://exemple.org/disparue.jpg" alt="disparue">
+      <img id="attente" src="https://exemple.org/plus-bas.jpg" loading="lazy">
+      <img id="vue" src="https://exemple.org/vue.jpg">
+      <img id="vecteur" src="https://exemple.org/logo.svg">`;
+    const state: Record<string, [boolean, number]> = { cassee: [true, 0], attente: [false, 0], vue: [true, 640], vecteur: [true, 0] };
+    for (const img of document.querySelectorAll("img")) {
+      const [complete, size] = state[img.id];
+      Object.defineProperty(img, "complete", { value: complete });
+      Object.defineProperty(img, "naturalWidth", { value: size });
+      Object.defineProperty(img, "naturalHeight", { value: size });
+    }
+    const restore = mimicBrowserLayout(() => ({ left: 0, top: 0, width: 200, height: 120 }));
+    try {
+      const city = captureDocument(document, { source: "bookmarklet", url: "https://exemple.org/", live: true });
+      const broken = (src: string) => find(city.root, (n) => n.img?.src === src)?.img?.broken;
+      expect(broken("https://exemple.org/disparue.jpg")).toBe(true);
+      expect(broken("https://exemple.org/plus-bas.jpg")).toBeUndefined();
+      expect(broken("https://exemple.org/vue.jpg")).toBeUndefined();
+      expect(broken("https://exemple.org/logo.svg")).toBeUndefined();
+      expect(validateCityDoc(city).ok).toBe(true);
+    } finally {
+      restore();
+    }
+  });
 });

@@ -17,6 +17,7 @@
 
 import { kindOf, type Kind } from "@/format/taxonomy";
 import type { CityDoc, CityNode } from "@/format/types";
+import { ambianceOf, type Ambiance, type Weather } from "./ambiance";
 
 export interface Panel {
   /** Largeur et hauteur de l'affiche. */
@@ -198,6 +199,54 @@ export interface Flight {
   pitch: number;
 }
 
+/** Une usine dans la ceinture verte : un hall et ses cheminées qui fument. */
+export interface Factory extends Rect {
+  /** Sens du hall : le long de la ceinture. */
+  axis: "x" | "z";
+  chimneys: number;
+  y: number;
+}
+
+/** Les usines de la ville : les scripts de la page. Un seul numéro de survol pour toutes. */
+export interface Industry {
+  id: number;
+  scripts: number;
+  factories: Factory[];
+}
+
+/** Une caméra de surveillance sur son mât, au bord d'une rue. */
+export interface Camera {
+  x: number;
+  y: number;
+  z: number;
+  /** Où regarde l'objectif (0 = vers l'est, comme un avion). */
+  heading: number;
+}
+
+/** Les caméras de la ville : les traqueurs publicitaires de la page. */
+export interface Surveillance {
+  id: number;
+  trackers: string[];
+  cameras: Camera[];
+}
+
+export interface Cloud {
+  x: number;
+  y: number;
+  z: number;
+  /** Rayon du gros du nuage. */
+  size: number;
+}
+
+/** Ce qui ne s'affiche pas dans la page mais se voit dans la ville : météo, usines, caméras. */
+export interface CityAmbiance {
+  info: Ambiance;
+  weather: Weather;
+  clouds: Cloud[];
+  industry?: Industry;
+  surveillance?: Surveillance;
+}
+
 export interface CityStats {
   buildings: number;
   districts: number;
@@ -221,6 +270,8 @@ export interface CityLayout {
   channels: Channel[];
   bridges: Bridge[];
   airport?: Airport;
+  /** Absent pour la campagne de la mégalopole. */
+  ambiance?: CityAmbiance;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number };
   stats: CityStats;
 }
@@ -312,6 +363,7 @@ function leafArea(kind: Kind, node: CityNode): number {
     case "kiosk": return 16;
     case "bollard": return 5;
     case "billboard": return emblemOf(node) ? 6 : 24;
+    case "ruin": return emblemOf(node) ? 6 : 18;
     case "screen": return 30;
     case "embassy": return 44;
     case "sculpture": return 12;
@@ -419,7 +471,9 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
   const kept = ownText ? [] : node.children ?? [];
   const container = kept.length > 0;
   const text = node.text ?? 0;
-  const kind = ownText ? ownTextKind(node.tag, text, textOf) : kindOf(node.tag, container, text);
+  let kind = ownText ? ownTextKind(node.tag, text, textOf) : kindOf(node.tag, container, text);
+  // Une image cassée dans la page : son panneau est en ruine.
+  if (kind === "billboard" && node.img?.broken) kind = "ruin";
   const plot: Plot = { node, kind, container, ownText, depth, children: [], area: 0, textTotal: text };
 
   if (!container) {
@@ -722,16 +776,141 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
     switch (lot.kind) {
       case "river": stats.rivers += 1; break;
       case "vacant": stats.vacant += 1; break;
-      case "billboard": stats.billboards += 1; break;
+      case "billboard": case "ruin": stats.billboards += 1; break;
       case "monument": case "belfry": case "kiosk": case "bollard": stats.monuments += 1; break;
       default: stats.buildings += 1;
     }
   }
+  // L'ambiance : usines dans la ceinture verte, caméras au bord des rues, nuages au-dessus.
+  const info = ambianceOf(doc);
+  const seed = hashOf(doc.url);
+  // Numéros de survol après le dernier lot : l'aéroport, puis les usines, puis les caméras.
+  let special = lots.length + (ctx.airport ? 1 : 0);
+  const factories = planFactories(ctx, edge, info.factories, seed);
+  const cameras = planCameras(ctx, edge, info.cameras, seed);
+  const ambiance: CityAmbiance = {
+    info,
+    weather: info.weather,
+    clouds: planClouds(info.weather, edge, bounds.maxY, seed),
+    industry: factories.length > 0 ? { id: special++, scripts: info.scripts ?? 0, factories } : undefined,
+    surveillance: cameras.length > 0 ? { id: special++, trackers: info.trackers, cameras } : undefined,
+  };
   if (ctx.airport) includeAirport(bounds, ctx.airport);
   return {
     lots, roads: ctx.roads, joints: ctx.joints, plates: ctx.plates, decor: ctx.decor,
-    channels: ctx.channels, bridges: ctx.bridges, airport: ctx.airport, bounds, stats,
+    channels: ctx.channels, bridges: ctx.bridges, airport: ctx.airport, ambiance, bounds, stats,
   };
+}
+
+// ---------------------------------------------------------------------------
+// L'ambiance
+// ---------------------------------------------------------------------------
+
+/** Tirage stable dans [0, 1[ à partir d'une graine et d'un rang. */
+function draw(seed: number, k: number): number {
+  const x = Math.sin((seed % 100_003) * 0.0173 + k * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+const FACTORY_LENGTH = 9;
+const FACTORY_GAP = 4;
+
+/**
+ * Les usines, dans la ceinture verte : d'abord à l'ouest (l'est est à l'aéroport), puis au sud,
+ * puis au nord, groupées au milieu de chaque côté comme une zone industrielle. Jamais près des
+ * coins (la mégalopole y branche ses bretelles), ni sur un chenal ou une rue qui traverse.
+ */
+function planFactories(ctx: Ctx, edge: Rect, count: number, seed: number): Factory[] {
+  if (count === 0) return [];
+  const b = BELT;
+  const across = b - 1.8;
+  const margin = BELT + RING + 3;
+  const y = BASE + CURB;
+  const sides: Array<{ axis: "x" | "z"; from: number; to: number; at: number }> = [
+    { axis: "z", from: edge.z + margin, to: edge.z + edge.d - margin, at: edge.x + 0.9 },
+    { axis: "x", from: edge.x + margin, to: edge.x + edge.w - margin, at: edge.z + edge.d - b + 0.9 },
+    { axis: "x", from: edge.x + margin, to: edge.x + edge.w - margin, at: edge.z + 0.9 },
+  ];
+  const blockers: Rect[] = [...ctx.channels, ...ctx.bridges, ...ctx.roads, ...ctx.joints];
+  const factories: Factory[] = [];
+  for (const side of sides) {
+    const pitch = FACTORY_LENGTH + FACTORY_GAP;
+    const slots = Math.floor((side.to - side.from + FACTORY_GAP) / pitch);
+    if (slots <= 0) continue;
+    const start = (side.from + side.to) / 2 - (slots * pitch - FACTORY_GAP) / 2;
+    const middle = (slots - 1) / 2;
+    const order = Array.from({ length: slots }, (_, k) => k).sort((a, b2) => Math.abs(a - middle) - Math.abs(b2 - middle) || a - b2);
+    const taken: Factory[] = [];
+    for (const k of order) {
+      if (factories.length + taken.length >= count) break;
+      const along = start + k * pitch;
+      const rect: Rect =
+        side.axis === "z"
+          ? { x: side.at, z: along, w: across, d: FACTORY_LENGTH }
+          : { x: along, z: side.at, w: FACTORY_LENGTH, d: across };
+      if (blockers.some((block) => overlap(block, rect))) continue;
+      const n = factories.length + taken.length;
+      taken.push({ ...rect, axis: side.axis, chimneys: draw(seed, 40 + n) < 0.45 ? 2 : 1, y });
+    }
+    factories.push(...taken.sort((a, b2) => a.x - b2.x || a.z - b2.z));
+  }
+  return factories;
+}
+
+/**
+ * Les caméras, au bord des rues de la ville : une par rue tirée au sort (les plus longues
+ * d'abord parmi un lot pris au hasard), au milieu du trottoir, l'objectif tourné vers la chaussée.
+ */
+function planCameras(ctx: Ctx, edge: Rect, count: number, seed: number): Camera[] {
+  if (count === 0) return [];
+  const inside = { x: edge.x + BELT - 0.01, z: edge.z + BELT - 0.01, w: edge.w - 2 * BELT + 0.02, d: edge.d - 2 * BELT + 0.02 };
+  const roads = ctx.roads
+    .filter((road) => (road.style === "ring" || road.style === "avenue" || road.style === "street") && inside.x <= road.x && road.x + road.w <= inside.x + inside.w && inside.z <= road.z && road.z + road.d <= inside.z + inside.d)
+    .filter((road) => (road.axis === "x" ? road.w : road.d) >= 10)
+    .map((road, i) => ({ road, r: draw(seed, 100 + i) }))
+    .sort((a, b) => a.r - b.r)
+    .slice(0, count)
+    .map(({ road }) => road);
+  return roads.map((road, i) => {
+    const alongX = road.axis === "x";
+    const length = alongX ? road.w : road.d;
+    const t = length * (0.35 + draw(seed, 200 + i) * 0.3);
+    const near = draw(seed, 300 + i) < 0.5;
+    const tilt = (draw(seed, 400 + i) - 0.5) * 1.2;
+    // Le mât au bord du trottoir ; l'objectif vers la chaussée, un peu de biais.
+    if (alongX) {
+      const z = near ? road.z - 0.4 : road.z + road.d + 0.4;
+      return { x: road.x + t, y: road.y + CURB, z, heading: (near ? -Math.PI / 2 : Math.PI / 2) + tilt };
+    }
+    const x = near ? road.x - 0.4 : road.x + road.w + 0.4;
+    return { x, y: road.y + CURB, z: road.z + t, heading: (near ? 0 : Math.PI) + tilt };
+  });
+}
+
+/** Nuages : d'autant plus nombreux que la page est lourde, toujours au-dessus des toits. */
+const CLOUDS: Record<Weather, { density: number; min: number }> = {
+  clear: { density: 0, min: 0 },
+  fair: { density: 0.25, min: 1 },
+  cloudy: { density: 0.55, min: 2 },
+  overcast: { density: 0.9, min: 3 },
+  storm: { density: 0.9, min: 3 },
+};
+
+function planClouds(weather: Weather, edge: Rect, maxY: number, seed: number): Cloud[] {
+  const { density, min } = CLOUDS[weather];
+  const count = density === 0 ? 0 : clamp(Math.round((density * edge.w * edge.d) / 10_000), min, 16);
+  const base = Math.max(maxY + 14, 34);
+  const clouds: Cloud[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const size = (weather === "storm" || weather === "overcast" ? 7 : 5) + draw(seed, 500 + i) * 6;
+    clouds.push({
+      x: edge.x + size + draw(seed, 600 + i) * Math.max(0, edge.w - 2 * size),
+      y: base + draw(seed, 700 + i) * 10,
+      z: edge.z + size + draw(seed, 800 + i) * Math.max(0, edge.d - 2 * size),
+      size,
+    });
+  }
+  return clouds;
 }
 
 /** Liens vers d'autres sites, dans toute la page. */
@@ -1419,6 +1598,11 @@ function shapeLeaf(lot: Lot, node: CityNode): void {
     }
     case "house": capRatio(2.4); break;
     case "counter": capRatio(1.7); break;
+    case "ruin": {
+      capRatio(1.8);
+      lot.h = 2.6;
+      break;
+    }
     default:
       break;
   }

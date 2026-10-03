@@ -7,7 +7,7 @@ import { citySide, externalLinks, hasAerodrome, layoutCity, type Airport } from 
 import { buildMegalopolis, comparePaths, placePages, type MegaCity, type Megalopolis, type Placement } from "@/city/megalopolis";
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
-import { assembleWorld, partOf, type World } from "@/city/world";
+import { assembleWorld, isSpecial, partOf, type World } from "@/city/world";
 import { sharedCityPath, type MegaPageInfo } from "@/format/shared";
 import { linkPath } from "@/format/links";
 import type { CityDoc } from "@/format/types";
@@ -17,6 +17,7 @@ import { WikiSearch } from "@/ui/WikiSearch";
 import { Departures } from "@/ui/explorer/Departures";
 import { ImageViewer } from "@/ui/explorer/ImageViewer";
 import { Inspector } from "@/ui/explorer/Inspector";
+import { AmbiancePanel } from "@/ui/explorer/AmbiancePanel";
 import { LegendPanel } from "@/ui/explorer/LegendPanel";
 import { LoadingPanel } from "@/ui/explorer/LoadingPanel";
 import { NorthArrow } from "@/ui/explorer/NorthArrow";
@@ -87,15 +88,19 @@ function build(entries: Entry[], placement: Placement, checked: number[]): Built
   return { world, mega };
 }
 
-/** La page dont c'est l'aérodrome (null pour le grand aéroport). */
-function airportPage(built: Built, airport: Airport): number | null {
-  const entry = built.world.aerodromes.find((candidate) => candidate.airport.id === airport.id);
-  return entry ? built.mega.parts[entry.part].city.page : null;
+/** La page d'un aérodrome, d'usines ou de caméras (null pour le grand aéroport). */
+function specialPage(built: Built, id: number): number | null {
+  const entry = built.world.specials.find((candidate) => candidate.id === id);
+  const part = entry ? built.mega.parts[entry.part] : undefined;
+  return part ? part.city.page : null;
 }
 
 /** L'aérodrome d'une page, s'il est affiché. */
 function aerodromeOf(built: Built, page: number): Airport | null {
-  return built.world.aerodromes.find((entry) => built.mega.parts[entry.part].city.page === page)?.airport ?? null;
+  const entry = built.world.specials.find(
+    (candidate) => candidate.special.kind === "airport" && built.mega.parts[candidate.part]?.city.page === page,
+  );
+  return entry?.special.kind === "airport" ? entry.special.airport : null;
 }
 
 /** Télécharge les villes, six à la fois. */
@@ -137,6 +142,8 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   const [mode, setMode] = useState<ViewMode>("aerial");
   const [walking, setWalking] = useState<WalkState>("off");
   const [legendOpen, setLegendOpen] = useState(false);
+  const [ambianceOpen, setAmbianceOpen] = useState(false);
+  const [realColors, setRealColors] = useState(false);
   // Sur un téléphone, la liste cacherait la ville : elle s'ouvre à la demande.
   const [listOpen, setListOpen] = useState(() => typeof window === "undefined" || !matchMedia("(max-width: 720px)").matches);
   /** Le tableau des départs ouvert : celui du grand aéroport, ou de l'aérodrome d'une page. */
@@ -233,7 +240,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggle = (index: number) => {
     const next = checked.includes(index) ? checked.filter((i) => i !== index) : [...checked, index].sort((a, b) => a - b);
-    const openPage = departures && built ? airportPage(built, departures) : null;
+    const openPage = departures && built ? specialPage(built, departures.id) : null;
     setChecked(next);
     setRebuilding(true);
     if (pending.current) clearTimeout(pending.current);
@@ -268,21 +275,22 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
     [built, entries],
   );
 
-  /** La page d'un aérodrome. */
-  const pageOfAirport = useCallback(
-    (airport: Airport) => {
-      const page = built ? airportPage(built, airport) : null;
+  /** La page d'un aérodrome, de ses usines ou de ses caméras (aucune pour le grand aéroport). */
+  const pageOfSpecial = useCallback(
+    (id: number) => {
+      const page = built ? specialPage(built, id) : null;
       return page === null ? null : entries[page];
     },
     [built, entries],
   );
+  const pageOfAirport = useCallback((airport: Airport) => pageOfSpecial(airport.id), [pageOfSpecial]);
 
   const hoverInfo = useMemo(
-    () => (layout && hover && hover.part?.kind !== "airport" ? describeLot(layout, hover.id) : null),
+    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id) : null),
     [layout, hover],
   );
   const hoverPage =
-    hover?.part?.kind === "airport" ? pageOfAirport(hover.part.airport) : hover ? (pageOfLot(hover.id)?.entry ?? null) : null;
+    hover && isSpecial(hover.part) ? pageOfSpecial(hover.id) : hover ? (pageOfLot(hover.id)?.entry ?? null) : null;
   const departuresPage = departures ? pageOfAirport(departures) : null;
   const selectedInfo = useMemo(
     () => (layout && selected !== null && layout.lots[selected] ? describeLot(layout, selected) : null),
@@ -293,6 +301,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   const select = useCallback((id: number | null, focus = false) => viewRef.current?.select(id, focus), []);
   const switchMode = (next: ViewMode) => {
     setLegendOpen(false);
+    setAmbianceOpen(false);
     viewRef.current?.setMode(next);
   };
   const toggleMeasuring = () => {
@@ -319,7 +328,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
     return at && (!best || at > best) ? at : best;
   }, null);
   const airport = layout?.airport;
-  const aerodromes = built?.world.aerodromes.length ?? 0;
+  const aerodromes = built?.world.specials.filter((entry) => entry.special.kind === "airport" && entry.special.airport.kind === "aerodrome").length ?? 0;
   const steps = [
     `Ouverture des villes (${formatCount(loaded)} / ${formatCount(pages.length)})`,
     "Placement selon les adresses",
@@ -364,8 +373,27 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
               Recadrer
             </button>
           )}
-          <button type="button" className={styles.tool} aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-expanded={legendOpen}
+            onClick={() => {
+              setAmbianceOpen(false);
+              setLegendOpen((o) => !o);
+            }}
+          >
             Légende
+          </button>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-expanded={ambianceOpen}
+            onClick={() => {
+              setLegendOpen(false);
+              setAmbianceOpen((o) => !o);
+            }}
+          >
+            Ambiance
           </button>
           <button type="button" className={styles.tool} aria-pressed={measuring} onClick={toggleMeasuring} title="Afficher les images par seconde">
             FPS
@@ -374,6 +402,17 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       )}
 
       {ready && legendOpen && <LegendPanel onClose={() => setLegendOpen(false)} />}
+      {ready && ambianceOpen && built && (
+        <AmbiancePanel
+          ambiances={built.mega.parts.flatMap((part) => (part.city.layout.ambiance ? [part.city.layout.ambiance.info] : []))}
+          realColors={realColors}
+          onRealColors={(on) => {
+            setRealColors(on);
+            viewRef.current?.setRealColors(on);
+          }}
+          onClose={() => setAmbianceOpen(false)}
+        />
+      )}
 
       {ready && mode === "aerial" && (
         <section className={styles.pagesPanel} aria-label="Pages du site">
@@ -488,7 +527,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
         <WalkOverlay state={walking} onStart={() => viewRef.current?.startWalk()} onLeave={() => switchMode("aerial")} />
       )}
 
-      {ready && hover && (hoverInfo || hover.part?.kind === "airport") && (hover.x >= 0 || walking === "locked") && (
+      {ready && hover && (hoverInfo || isSpecial(hover.part)) && (hover.x >= 0 || walking === "locked") && (
         <Tooltip
           info={hoverInfo}
           part={hover.part}

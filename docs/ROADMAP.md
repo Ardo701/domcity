@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (étape 4 : la mégalopole, et un aérodrome par ville).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (étape 5 : l'ambiance).
 
 ## 1. Le concept
 
@@ -51,7 +51,7 @@ Le JSON garde seulement l'URL. Si le site de l'image autorise CORS, elle s'affic
 
 - Chaque relevé d'une page crée une **version datée** ; on n'écrase jamais rien.
 - Mégalopole (étape 4, faite) : la dernière version visible de chaque page d'un site (48 au plus, les plus récentes), assemblée dans le navigateur, avec des cases à cocher pour ajouter ou retirer des pages. Placement selon l'adresse des pages (le chemin devient la géographie), stable quand on coche : une page masquée laisse des champs à sa place.
-- Machine à remonter le temps (étape 5) : la dernière version de chaque page avant une date.
+- Machine à remonter le temps (la dernière version de chaque page avant une date) : **mise de côté** par l'utilisateur, l'étape 5 se limite à l'ambiance. La base la permet déjà (`site_city` avec `p_as_of`).
 
 ## 3. Identité visuelle (règles de design)
 
@@ -100,6 +100,7 @@ Le rendu (`src/city/`) :
 - `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
 - `textures.ts` : affiches, panneau « indisponible », plaques des monuments, et l'atlas des icônes (toutes les petites images de la ville dans une seule texture, un seul appel de dessin).
 - `view.ts` : caméra, contrôles, ciel (carte d'environnement), lumière, survol et sélection. Elle affiche un « monde » (`world.ts`) : une ville seule, ou plusieurs posées à leur place.
+- `ambiance.ts` : ce que la page fait sans le montrer (météo, usines, caméras, graffitis, ruines, vraies couleurs), calculé depuis le relevé ; `layout.ts` place usines, caméras et nuages, `scene.ts` les dessine. La liste des traqueurs est dans `src/format/trackers.ts`, tenue par le moteur.
 - `megalopolis.ts` : le plan de la mégalopole (placement des villes et de leurs aérodromes, couloirs, autoroutes, campagne, grand aéroport commun). `world.ts` : l'assemblage. Chaque ville est bâtie dans ses propres coordonnées et avec ses propres numéros de lots (ses tirages au sort en dépendent : elle est identique seule et dans la mégalopole) ; la vue la pose à sa place et décale ses numéros dans un plan commun qui sert au survol et à l'inspecteur.
 
 Flux d'une mégalopole : `/s/[domain]` (serveur : `site_city`, 48 pages au plus) → le navigateur télécharge les villes (6 à la fois) → `citySide` de chacune → `placePages` (toutes les pages, affichées ou non) → pour les pages cochées : `layoutCity(doc, { airport: "aerodrome" })` → `buildMegalopolis` (autoroutes, campagne, grand aéroport) → `assembleWorld` (numéros de survol de l'aéroport puis des aérodromes, après le dernier lot) → `CityView`. Cocher ou décocher rebâtit le monde (`setWorld`) sans bouger la caméra ni les autres villes.
@@ -118,6 +119,7 @@ Flux du favori : clic → ouverture immédiate de `/nouveau` (tant que le clic c
 Chaque `CityNode` : `tag`, `text` (nombre de caractères propres), `heading` (h1 à h3), `label` (id lisible ou 1re classe), `img` (`src`, `alt`, `w`, `h`), `links` (`internal`, `external`), `rect` (position réelle, favori), `bg` (couleur de fond réelle `#rrggbb`, notée seulement là où elle change, favori), `children`.
 `page` (favori seulement) : `domSize` (éléments du DOM), `scripts`, `comments` (commentaires HTML), `resources`, `bytes` (octets transférés connus, minimum), `thirdParty` (hôtes tiers, 60 au plus, du plus sollicité au moins sollicité), `colors` (`background`, `text`, `link`). Ces ajouts sont facultatifs : les villes déjà stockées restent valides, le format reste en v1.
 `linksTo` (Wikipédia et favori, depuis l'étape 4) : `pages` (empreintes des chemins des pages du même site visées, 1 000 au plus, les plus visées d'abord, la page elle-même exclue) et `sites` (`[domaine, nombre de liens]`, 60 au plus). Facultatif : les villes relevées avant ne le savent pas (pas d'autoroute ni de vols pour elles tant qu'elles ne sont pas relevées à nouveau). Favori en version 2 (un bandeau propose de réinstaller l'ancien).
+`img.broken` (favori, depuis l'étape 5) : l'image était cassée dans la page au moment du relevé (chargement fini, rien d'affiché ; ni une image en chargement différé pas encore demandée, ni un SVG sans taille). Favori en version 3.
 Limites : 30 000 éléments, profondeur 64, 2 Mo compressé. Validation zod dans `src/format/schema.ts`.
 
 Mesures réelles : Wikipédia « Croissant » ~5 Ko, apple.com ~11 Ko, Wikipédia « Paris » ~24 Ko compressés. Avec le favori, github.com/vercel/next.js : 3 244 éléments relevés en 13 ms, 24 Ko de JSON, 6 Ko compressés.
@@ -147,7 +149,18 @@ Relevé « live » (favori) : composants web lus dans leur shadow DOM ouvert (av
 
 Le texte écrit directement dans un conteneur devient un bâtiment de plus : un immeuble, ou une maison dans une liste ou un parc. Dans un tableau, ce texte est celui de ses cases (le relevé ne garde que ses images) : il devient une ferme au milieu des champs, jamais un champ posé sur le champ. Ordre de la page : de gauche à droite, puis du nord (haut de page) au sud. Source : `src/format/taxonomy.ts` et `src/city/layout.ts`.
 
-Idées d'ambiance retenues pour l'étape 5 : usines qui fument (quantité de JavaScript), caméras de surveillance (traqueurs publicitaires), météo (poids de la page), ruines (images cassées), graffitis (commentaires HTML), vraies couleurs du site.
+### L'ambiance (étape 5) : ce que la page fait sans le montrer
+
+| Dans la page | Dans la ville |
+|---|---|
+| Poids : octets chargés (`page.bytes`) et éléments (`page.domSize`, sinon ceux relevés) | **Météo**, le pire des deux : grand soleil (moins de 0,6 Mo et 800 éléments), beau temps (1,5 Mo, 1 500), nuageux (3 Mo, 3 000), couvert (6 Mo, 6 000), orage au-delà. Nuages en boules de coton au-dessus des toits (ombre portée), d'autant plus nombreux que le ciel est chargé ; orage : nuages sombres, rideaux de pluie, un éclair. Une ville seule prend aussi la lumière du temps (soleil voilé, papier de la planche assombri) ; la mégalopole garde une lumière neutre, chaque ville a ses nuages |
+| Scripts (`page.scripts`) | **Usines** dans la ceinture verte (ouest, puis sud, puis nord, jamais près des coins) : hall de brique à sheds, une ou deux cheminées rayées qui fument vers l'est. Une usine pour six scripts, 12 au plus |
+| Traqueurs parmi les sites tiers (`page.thirdParty` comparé à `TRACKERS`) | **Caméras de surveillance** au bord des rues, sur leur mât, diode orange, champ de vision dessiné au sol. Trois par traqueur, 36 au plus |
+| Commentaires HTML (`page.comments`) | **Graffitis** au pied des façades sud (immeubles, palissades de chantier) : « TODO », « FIXME », « &lt;!-- --&gt; », « HACK »… (le texte des commentaires n'est jamais relevé : ce sont les mots qu'on y trouve). Un par commentaire, 40 au plus |
+| Image cassée (`img.broken`) | **Ruine** à la place du panneau : pans de mur en équerre, panneau tombé, poteaux penchés, gravats |
+| Couleurs de fond (`bg`, `page.colors.background`) | **Vraies couleurs du site**, en option : murs, toits et sols prennent la couleur de fond de leur élément (ou de son plus proche parent qui en a une). Le monument garde la sienne |
+
+Survol : « Usines · 48 scripts dans la page » et « Caméras de surveillance · 5 traqueurs publicitaires · googletagmanager.com, doubleclick.net… ». Bouton **Ambiance** dans la barre d'outils : le bulletin (météo et sa cause, usines, caméras et la liste des traqueurs, graffitis, ruines) et l'interrupteur des vraies couleurs ; dans la mégalopole, les totaux et la météo de chaque ville. La légende a un groupe « Ambiance ».
 
 ## 7. Base de données (Supabase)
 
@@ -223,6 +236,16 @@ Toute petite image, quel que soit le site, est agrandie d'un nombre entier de fo
 Vérifié : 69 tests (empreintes, relevé des liens, placement sans chevauchement et empilement, liaisons et seulement elles, autoroutes jamais sur une ville, stabilité quand on masque, aéroport et vols, aérodromes dans leur bande et à l'écart des autoroutes, chenal prolongé, plan identique d'une fois sur l'autre), TypeScript, ESLint, compilation de production. Dans le navigateur, sur la base locale : 9 articles de Wikipédia liés (Paris, Louvre, Lyon, Tour Eiffel…) : 12 417 éléments, 24 liaisons, 60 destinations ; 2,3 millions de triangles et 2 ms par image en vue d'ensemble sur ce poste ; prête en ~5 s en développement, une case cochée rebâtit en ~0,25 s ; 8 aérodromes sur 9 villes (la page d'homonymie n'en a pas), bulle et départs de la page au clic, tableau qui reste celui de sa page quand on coche une autre ville ; github.com (1 page) : chenal prolongé jusqu'au bord, autoroute vers l'aéroport ; téléphone 375 px sans débordement.
 **Non vérifié** : une mégalopole de 48 grandes pages ; un ordinateur peu puissant ; `known_sites` sur un vrai Supabase.
 
+### Étape 5 : l'ambiance ✅
+Demande de l'utilisateur : l'ambiance seule, pas la machine à remonter le temps. Voir la section 6 (« L'ambiance »).
+- Météo, usines, caméras, graffitis, ruines, vraies couleurs ; numéros de survol des usines et des caméras après le dernier lot, comme l'aéroport (`Special` dans `world.ts`, un seul mécanisme pour aéroport, aérodromes, usines et caméras).
+- Favori en version 3 : il note les images cassées. L'aperçu avant partage et la page Installer le disent (avec le nombre de commentaires HTML, déjà relevé depuis l'étape 3).
+- Les villes Wikipédia et les relevés plus anciens n'ont que la météo (sur les éléments relevés) ; le bulletin dit ce qui manque et propose le favori.
+- Aucune nouvelle migration SQL.
+
+Vérifié : 74 tests (traqueurs et sous-domaines, météo et comptes, usines dans la ceinture hors des rues, carrefours et chenaux, caméras au bord des rues, ruines, numéros de survol seule et dans le monde, image cassée relevée et pas celle en chargement différé), TypeScript, ESLint, compilation de production. Dans le navigateur : GitHub (relevé réel) : couvert, 2 usines, 7 graffitis, vraies couleurs sombres (la page avait été relevée en thème sombre) ; le même relevé chargé de 5 traqueurs, 7,5 Mo, 48 scripts et 3 images cassées : orage avec pluie et éclair, 8 usines, 15 caméras, 23 graffitis, 3 ruines ; mégalopole Wikipédia : 3 villes nuageuses, 1 de beau temps, 5 au soleil ; bulletin sur téléphone 375 px sans débordement.
+**Non vérifié** : la détection des images cassées dans un vrai navigateur (couverte par les tests) ; le favori v3 glissé dans une vraie barre ; le rendu sur un ordinateur peu puissant (nuages et fumées ajoutent quelques centaines d'instances).
+
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
 1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
@@ -234,20 +257,19 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
 
 ## 10. Étapes suivantes
 
-### Étape 5 : machine à remonter le temps et ambiance
-Curseur de date (même fonction `site_city` avec `as_of`) ; éléments d'ambiance listés en section 6. Les données sont déjà relevées par le favori : `page.scripts` (usines), `page.thirdParty` à comparer à une liste de traqueurs tenue par le moteur (caméras), `page.bytes` et `page.domSize` (météo), `page.comments` (graffitis), `bg` et `page.colors` (vraies couleurs).
-
 ### Étape 6 : mise en ligne
 Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** pour `domcity.app` vers Vercel, **nuage orange** pour `files.domcity.app` vers R2), projet Vercel relié au dépôt, variables d'environnement, règles du pare-feu Vercel (limite sur `/api/captures`), Attack Mode en cas d'attaque, purge du cache Cloudflare à la suppression (jeton facultatif).
 
 ## 11. En réserve (idées et limites connues)
 
+- Machine à remonter le temps (mise de côté à l'étape 5) : un curseur de date sur la page d'un site, la dernière version de chaque page avant cette date (`site_city` avec `p_as_of`, déjà dans la première migration).
+- Ambiance : le temps n'est pas animé (pluie, fumée et éclair sont figés, la ville ne se redessine que quand on bouge) ; la liste des traqueurs est à tenir à jour.
 - Promenade : pas encore de collisions avec les bâtiments.
 - Canaux (`hr`) : les mener eux aussi jusqu'au bord de la maquette, comme les ports (mis de côté par l'utilisateur pour l'instant).
 - Mégalopole : survoler une autoroute ne dit pas encore quelles pages elle relie ; les vols ne vont pas encore d'une mégalopole à l'autre en 3D (le tableau des départs y mène) ; un site de plus de 48 pages ne montre que les plus récentes ; les affiches d'une ville très illustrée (Louvre) font beaucoup d'appels de dessin, même de loin.
 - Port d'un `<footer>` peu profond (rangée pleine largeur) : bassin et chenal étroits (1,6 m sur GitHub).
 - Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
-- Rendu : immeubles en L ou à cour intérieure ; vraies couleurs des sites (relevées par le favori) en option d'ambiance.
+- Rendu : immeubles en L ou à cour intérieure.
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
@@ -264,7 +286,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 69 tests
+npm test           # 74 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

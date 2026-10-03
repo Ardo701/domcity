@@ -13,7 +13,8 @@ import * as THREE from "three";
 import * as shapes from "./geometries";
 import {
   BASE, CURB, FLOOR, PLANE, WATER_DEPTH, cutRect, harborWater,
-  type Airport, type Bridge, type CityLayout, type Decor, type Joint, type Lot, type Panel, type Rect, type Road,
+  type Airport, type Bridge, type Camera, type CityLayout, type Cloud, type Decor, type Factory, type Joint, type Lot,
+  type Panel, type Rect, type Road,
 } from "./layout";
 import { FACADE, GROUND, ROAD, ROAD_AXIS, emblemMaterial, type CityMaterials } from "./materials";
 import * as PALETTE from "./palette";
@@ -216,6 +217,12 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     plane: new Batch(shapes.planeGeometry(), materials.painted, pickable),
     sign: new Batch(shapes.faceGeometry(), emblemSurface, { attribute: "aIcon", cast: false, pickable: true }),
     flag: new Batch(shapes.flagGeometry(), emblemSurface, { attribute: "aIcon", pickable: true }),
+    // L'ambiance. Nuages, fumées, pluie et champs des caméras ne se survolent pas : on vise à travers.
+    graffiti: new Batch(shapes.faceGeometry(), materials.graffiti, { attribute: "aIcon", cast: false, pickable: true }),
+    cloud: new Batch(shapes.ballGeometry(), materials.cloud, { receive: false }),
+    glow: new Batch(shapes.boxGeometry(), materials.glow, { cast: false, receive: false }),
+    veil: new Batch(shapes.wedgeGeometry(), materials.veil, { cast: false, receive: false }),
+    rain: new Batch(shapes.boxGeometry(), materials.veil, { cast: false, receive: false }),
   };
 
   const billboards: BillboardSlot[] = [];
@@ -515,6 +522,41 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
   }
 
+  /** Une image cassée : le panneau s'est effondré, entre un pan de mur et des gravats. */
+  function ruin(lot: Lot) {
+    const { id, y } = lot;
+    const cx = lot.x + lot.w / 2;
+    const cz = lot.z + lot.d / 2;
+    ground(id, lot, y, 0.05, "dirt");
+    const brick = pick(BRICK, rand(id, 9));
+    // Deux pans de mur debout, déchiquetés, en équerre.
+    const wall = Math.min(lot.w * 0.75, 6);
+    const pieces = Math.max(3, Math.round(wall / 1.2));
+    for (let k = 0; k < pieces; k += 1) {
+      const piece = wall / pieces;
+      const h = 0.7 + rand(id, 10 + k) * 2.2 * (1 - Math.abs(k - pieces * 0.3) / pieces);
+      box(id, lot.x + lot.w * 0.08 + piece * (k + 0.5), y, lot.z + 0.35, piece * 0.97, Math.max(0.4, h), 0.35, brick);
+    }
+    const side = Math.min(lot.d * 0.6, 4);
+    for (let k = 0; k < 3; k += 1) {
+      const h = 0.5 + rand(id, 15 + k) * 1.6;
+      box(id, lot.x + lot.w * 0.08 + 0.17, y, lot.z + 0.35 + (side / 3) * (k + 0.5), 0.35, h, (side / 3) * 0.97, brick);
+    }
+    // Le panneau tombé, un poteau encore debout et penché.
+    kit.plain.add(id, at(cx, y + 0.35, cz + lot.d * 0.1, Math.min(lot.w * 0.7, 5), 0.08, Math.min(lot.d * 0.5, 2.6), 0.2, 0.35), "#2b2b31");
+    kit.plain.add(id, at(cx - lot.w * 0.25, y, cz, 0.16, 2.2, 0.16, 0, 0.25), "#5b5e64");
+    kit.plain.add(id, at(cx + lot.w * 0.22, y, cz + 0.4, 0.16, 1.4, 0.16, 0, -0.5), "#5b5e64");
+    // Les gravats, d'autant plus nombreux que le terrain est grand.
+    const rubble = clamp(Math.round((lot.w * lot.d) / 3), 8, 28);
+    for (let k = 0; k < rubble; k += 1) {
+      const s = 0.25 + rand(id, 20 + k) * 0.55;
+      const gx = lot.x + 0.3 + rand(id, 30 + k) * (lot.w - 0.6);
+      const gz = lot.z + 0.6 + rand(id, 40 + k) * (lot.d - 0.9);
+      box(id, gx, y, gz, s, s * 0.7, s * 0.9, pick(["#a39b8f", "#8a7f72", "#b5ab9c", brick], rand(id, 60 + k)), rand(id, 70 + k) * 3);
+    }
+    obstacles.add(lot, 0.2);
+  }
+
   function board(lot: Lot) {
     const panel = lot.panel!;
     if (panel.emblem) {
@@ -598,6 +640,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
       case "sculpture": sculpture(lot); break;
       case "counter": booth(lot); break;
       case "vacant": site(lot); break;
+      case "ruin": ruin(lot); break;
       case "fields": ground(lot.id, lot, lot.y, 0.08, "crops"); break;
       case "river": river(lot); break;
       case "billboard":
@@ -903,6 +946,128 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     obstacles.add({ x: cx - 1.7, z: cz - 1.7, w: 3.4, d: 3.4 });
   }
 
+  // --- L'ambiance : usines, caméras, graffitis, nuages ------------------------------
+
+  const ambiance = layout.ambiance;
+  if (ambiance?.industry) for (const factory of ambiance.industry.factories) factoryAt(ambiance.industry.id, factory);
+  if (ambiance?.surveillance) for (const camera of ambiance.surveillance.cameras) cameraAt(ambiance.surveillance.id, camera);
+  if (ambiance) {
+    graffiti(ambiance.info.graffiti);
+    const tone = ambiance.weather === "storm" ? 0.5 : ambiance.weather === "overcast" ? 0.8 : 0.96;
+    ambiance.clouds.forEach((cloud, i) => cloudAt(cloud, i, tone));
+    if (ambiance.weather === "storm") storm(ambiance.clouds);
+  }
+
+  /** Une usine : hall de brique à sheds, cheminées rayées, fumée poussée par le vent d'ouest. */
+  function factoryAt(id: number, f: Factory) {
+    const alongZ = f.axis === "z";
+    const cx = f.x + f.w / 2;
+    const cz = f.z + f.d / 2;
+    ground(id, { x: f.x - 0.4, z: f.z - 0.4, w: f.w + 0.8, d: f.d + 0.8 }, f.y, 0.04, "sidewalk");
+    const body = 3.4;
+    const hallW = alongZ ? f.w : f.w * 0.78;
+    const hallD = alongZ ? f.d * 0.78 : f.d;
+    const hx = alongZ ? cx : f.x + hallW / 2;
+    const hz = alongZ ? f.z + hallD / 2 : cz;
+    facade(id, hx, f.y, hz, hallW, body, hallD, pick(BRICK, rand(id, Math.round(f.x + f.z))), FACADE.brick, 0, 1.7);
+    // Toit à sheds : une rangée de pignons sur la longueur.
+    const teeth = 3;
+    for (let k = 0; k < teeth; k += 1) {
+      const step = (alongZ ? hallD : hallW) / teeth;
+      const tx = alongZ ? hx : f.x + step * (k + 0.5);
+      const tz = alongZ ? f.z + step * (k + 0.5) : hz;
+      kit.gable.add(id, at(tx, f.y + body, tz, alongZ ? hallW : step, 1.1, alongZ ? step : hallD, alongZ ? 0 : Math.PI / 2), "#7d8186");
+    }
+    obstacles.add({ x: f.x - 0.4, z: f.z - 0.4, w: f.w + 0.8, d: f.d + 0.8 });
+    // Les cheminées, au bout libre du terrain.
+    for (let c = 0; c < f.chimneys; c += 1) {
+      const sx = alongZ ? f.x + f.w * (f.chimneys === 1 ? 0.5 : 0.3 + c * 0.4) : f.x + f.w * 0.9;
+      const sz = alongZ ? f.z + f.d * 0.9 : f.z + f.d * (f.chimneys === 1 ? 0.5 : 0.3 + c * 0.4);
+      const tall = 11 + rand(id, Math.round(sx * 7 + sz * 3)) * 5;
+      kit.cylinder.add(id, at(sx, f.y, sz, 1.1, tall, 1.1), "#9a4a37");
+      kit.cylinder.add(id, at(sx, f.y + tall - 1.6, sz, 1.16, 0.5, 1.16), "#ece7dc");
+      kit.cylinder.add(id, at(sx, f.y + tall - 0.8, sz, 1.16, 0.5, 1.16), "#c4462e");
+      for (let k = 0; k < 6; k += 1) {
+        const size = 1.1 + k * 0.55;
+        const shade = 0.95 - k * 0.035;
+        kit.cloud.add(-1, at(sx + k * 1.15 + k * k * 0.12, f.y + tall + 0.2 + k * 1.05, sz + k * 0.25, size, size * 0.85, size), new THREE.Color(shade, shade * 0.99, shade * 0.97));
+      }
+    }
+  }
+
+  /** Une caméra sur son mât, l'objectif vers la chaussée, son champ dessiné au sol. */
+  function cameraAt(id: number, cam: Camera) {
+    const dx = Math.cos(cam.heading);
+    const dz = -Math.sin(cam.heading);
+    box(id, cam.x, cam.y, cam.z, 0.14, 3, 0.14, "#6f7378");
+    box(id, cam.x + dx * 0.3, cam.y + 2.95, cam.z + dz * 0.3, 0.6, 0.1, 0.1, "#6f7378", cam.heading);
+    kit.plain.add(id, at(cam.x + dx * 0.75, cam.y + 2.6, cam.z + dz * 0.75, 0.9, 0.34, 0.36, cam.heading, 0, -0.3), "#2b2d31");
+    kit.glow.add(id, at(cam.x + dx * 0.55, cam.y + 2.97, cam.z + dz * 0.55, 0.12, 0.08, 0.12), SIGNAL);
+    kit.veil.add(-1, at(cam.x + dx * 1.1, cam.y - CURB + 0.06, cam.z + dz * 1.1, 7.5, 1, 7.5, cam.heading), SIGNAL);
+    obstacles.add({ x: cam.x - 0.3, z: cam.z - 0.3, w: 0.6, d: 0.6 });
+  }
+
+  /**
+   * Les graffitis, sur la façade sud (celle qu'on voit d'emblée) d'immeubles et de palissades de
+   * chantier tirés au sort, au rez-de-chaussée.
+   */
+  function graffiti(count: number) {
+    if (count === 0) return;
+    const walls = layout.lots
+      .filter((lot) => !lot.container && (lot.kind === "residence" || lot.kind === "tower" || lot.kind === "vacant") && lot.w >= 2.4)
+      .sort((a, b) => rand(a.id, 900) - rand(b.id, 900) || a.id - b.id)
+      .slice(0, count);
+    walls.forEach((lot, i) => {
+      const w = Math.min(lot.w * 0.72, 3.6);
+      const h = w / 2;
+      const x = lot.x + lot.w / 2 + (rand(lot.id, 901) - 0.5) * (lot.w - w) * 0.8;
+      const z = lot.z + lot.d + (lot.kind === "vacant" ? 0.12 : 0.03);
+      const cell = materials.graffitiAtlas.cell(Math.floor(rand(lot.id, 902) * 97) + i);
+      kit.graffiti.add(lot.id, at(x, lot.y + 0.12, z, w, Math.min(h, 1.5), 1), "#ffffff", cell);
+    });
+  }
+
+  /** Un nuage : quelques boules aplaties autour d'une plus grosse. */
+  function cloudAt(cloud: Cloud, i: number, tone: number) {
+    const t = Math.min(1, tone + rand(i, 950) * 0.06);
+    const color = new THREE.Color(t, t, t * (tone < 0.6 ? 1.05 : 0.99));
+    const s = cloud.size;
+    kit.cloud.add(-1, at(cloud.x, cloud.y, cloud.z, s * 2, s * 1.1, s * 1.6), color);
+    const puffs = 5;
+    for (let k = 0; k < puffs; k += 1) {
+      const angle = (k / puffs) * Math.PI * 2 + rand(i, 960 + k);
+      const r = s * (0.7 + rand(i, 970 + k) * 0.4);
+      const size = s * (0.9 + rand(i, 980 + k) * 0.5);
+      kit.cloud.add(-1, at(cloud.x + Math.cos(angle) * r, cloud.y - s * 0.15, cloud.z + Math.sin(angle) * r * 0.7, size * 1.3, size * 0.8, size * 1.1), color);
+    }
+  }
+
+  /** L'orage : un rideau de pluie sous chaque nuage, et un éclair sous le plus gros. */
+  function storm(clouds: Cloud[]) {
+    const ground0 = BASE + CURB;
+    for (const cloud of clouds) {
+      const height = cloud.y - ground0;
+      kit.rain.add(-1, at(cloud.x, ground0, cloud.z, cloud.size * 1.5, height, cloud.size * 1.1), "#6f7f92");
+    }
+    const big = clouds.reduce<Cloud | null>((best, c) => (!best || c.size > best.size ? c : best), null);
+    if (!big) return;
+    let x = big.x + big.size * 0.3;
+    let y = big.y;
+    const z = big.z;
+    const legs = 5;
+    const drop = (y - ground0) / legs;
+    for (let k = 0; k < legs; k += 1) {
+      const nx = x + (k % 2 === 0 ? 1 : -1) * (1.2 + rand(k, 990) * 1.4);
+      const ny = y - drop;
+      const length = Math.hypot(nx - x, drop);
+      const angle = Math.atan2(nx - x, drop);
+      // Posé sur son bout bas, penché jusqu'à toucher le bout haut.
+      kit.glow.add(-1, at(nx, ny, z, 0.32, length, 0.32, 0, 0, angle), "#fff7d6");
+      x = nx;
+      y = ny;
+    }
+  }
+
   // --- Mobilier urbain : arbres d'alignement, lampadaires, voitures -------------
 
   for (const road of layout.roads) streetLife(road);
@@ -978,10 +1143,11 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
   const pickables: THREE.Object3D[] = [];
   const details: THREE.Object3D[] = [];
   const furniture = new Set<Batch>([kit.tree, kit.poplar, kit.car, kit.lamp]);
-  for (const batch of Object.values(kit)) {
+  for (const [name, batch] of Object.entries(kit)) {
     const mesh = batch.build(refs, baseColors, base);
     if (!mesh) continue;
     group.add(mesh);
+    mesh.userData.batch = name;
     if (furniture.has(batch)) details.push(mesh);
     // Une rue désigne le conteneur qui l'a fait tracer : le survol doit savoir que c'en est une.
     if (batch === kit.road || batch === kit.bend) mesh.userData.part = "road";

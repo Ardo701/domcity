@@ -17,6 +17,8 @@ export interface CityImage {
   /** Dimensions affichées ou déclarées, pour garder les proportions du panneau. */
   w?: number;
   h?: number;
+  /** Image cassée dans la page au moment du relevé (le navigateur n'a pas pu l'afficher). Favori. */
+  broken?: true;
 }
 
 export interface CityLinks {

@@ -259,7 +259,18 @@ function describeImage(img: HTMLImageElement, options: CaptureOptions): CityNode
   if (alt) image.alt = truncate(alt, 300);
   if (w) image.w = w;
   if (h) image.h = h;
+  if (options.live && isBroken(img, src)) image.broken = true;
   return image;
+}
+
+/**
+ * Image cassée : le navigateur a fini de la charger et n'a rien pu afficher. Une image en
+ * chargement différé pas encore demandée n'est pas « finie ». Les SVG sans taille propre
+ * ont parfois une largeur nulle : on ne les compte pas.
+ */
+function isBroken(img: HTMLImageElement, src: string): boolean {
+  if (!src || /\.svg(\?|$)/i.test(src)) return false;
+  return img.complete && img.naturalWidth === 0 && img.naturalHeight === 0;
 }
 
 /** Adresse absolue http(s) d'une image, ou "" (data:, blob:, trop longue, illisible). */

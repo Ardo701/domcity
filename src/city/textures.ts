@@ -306,3 +306,100 @@ export function loadCorsImage(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
+
+/**
+ * Les graffitis : ce que les développeurs laissent dans les commentaires du HTML, bombé sur les
+ * murs. Le relevé ne garde pas le texte des commentaires : les tags sont les mots qu'on y trouve
+ * le plus souvent, toujours les mêmes.
+ */
+export const GRAFFITI_TAGS = ["TODO", "FIXME", "<!-- -->", "HACK", "XXX", "WIP", "NE PAS TOUCHER", "V2", "DEBUG", "OLD", "TEMP", "BUG"];
+
+const TAG_W = 256;
+const TAG_H = 128;
+const TAG_COLUMNS = 4;
+const SPRAYS: Array<[string, string]> = [
+  ["#3657E0", "#7FD1E8"],
+  ["#2F8F6B", "#B8E06A"],
+  ["#C4462E", "#F2A33A"],
+  ["#7A3FB0", "#E2549A"],
+  ["#D9A21B", "#F4E06A"],
+  ["#22324A", "#5C8F80"],
+];
+
+/** Atlas des graffitis : un tag par case, fond transparent (le mur se voit autour). */
+export class GraffitiAtlas {
+  readonly texture: THREE.CanvasTexture;
+  private readonly canvas: HTMLCanvasElement;
+
+  constructor() {
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = TAG_W * TAG_COLUMNS;
+    this.canvas.height = TAG_H * Math.ceil(GRAFFITI_TAGS.length / TAG_COLUMNS);
+    this.texture = canvasTexture(this.canvas);
+  }
+
+  /** Coin bas-gauche et taille d'une case, en coordonnées de texture. */
+  cell(index: number): [number, number, number, number] {
+    const i = index % GRAFFITI_TAGS.length;
+    const { width, height } = this.canvas;
+    const x = (i % TAG_COLUMNS) * TAG_W;
+    const y = Math.floor(i / TAG_COLUMNS) * TAG_H;
+    return [x / width, 1 - (y + TAG_H) / height, TAG_W / width, TAG_H / height];
+  }
+
+  /** Bombe les tags (une fois les polices prêtes) : contour d'encre, remplissage en dégradé, coulures. */
+  draw() {
+    const ctx = this.canvas.getContext("2d")!;
+    const display = fontFamily("--font-display", "sans-serif");
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    GRAFFITI_TAGS.forEach((tag, i) => {
+      const x = (i % TAG_COLUMNS) * TAG_W;
+      const y = Math.floor(i / TAG_COLUMNS) * TAG_H;
+      const [deep, light] = SPRAYS[i % SPRAYS.length];
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, TAG_W, TAG_H);
+      ctx.clip();
+      ctx.translate(x + TAG_W / 2, y + TAG_H / 2 + 6);
+      ctx.rotate(((i * 37) % 9) / 100 - 0.04);
+      let size = 84;
+      ctx.font = `800 ${size}px ${display}`;
+      while (ctx.measureText(tag).width > TAG_W - 36 && size > 30) {
+        size -= 4;
+        ctx.font = `800 ${size}px ${display}`;
+      }
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      // Le contour, large et sombre, puis le remplissage en dégradé et un reflet blanc.
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = "#15151a";
+      ctx.strokeText(tag, 0, 0);
+      const fill = ctx.createLinearGradient(0, -size / 2, 0, size / 2);
+      fill.addColorStop(0, light);
+      fill.addColorStop(1, deep);
+      ctx.fillStyle = fill;
+      ctx.fillText(tag, 0, 0);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.strokeText(tag, -2, -3);
+      // Coulures sous les lettres.
+      const span = ctx.measureText(tag).width;
+      ctx.fillStyle = deep;
+      for (let k = 0; k < 4; k += 1) {
+        const dx = -span / 2 + ((k * 53 + i * 29) % Math.max(1, Math.round(span)));
+        const length = 10 + ((k * 17 + i * 11) % 22);
+        ctx.fillRect(dx, size * 0.32, 3, length);
+        ctx.beginPath();
+        ctx.arc(dx + 1.5, size * 0.32 + length, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    this.texture.needsUpdate = true;
+  }
+
+  dispose() {
+    this.texture.dispose();
+  }
+}

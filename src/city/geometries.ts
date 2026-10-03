@@ -238,3 +238,22 @@ export function lampGeometry(): THREE.BufferGeometry {
   const head = boxAt(0.14, 0.05, 0.09, 0.28, 0.93);
   return merge([part(pole, "#3b3d42"), part(arm, "#3b3d42"), part(head, "#f3e7c4")]);
 }
+
+/**
+ * Champ d'une caméra posé au sol : un secteur plat, la pointe à l'origine, ouvert vers +x
+ * (rayon 1, demi-ouverture `spread`).
+ */
+export function wedgeGeometry(spread = 0.42, segments = 10): THREE.BufferGeometry {
+  const vertices = [0, 0, 0];
+  for (let i = 0; i <= segments; i += 1) {
+    const angle = -spread + (2 * spread * i) / segments;
+    vertices.push(Math.cos(angle), 0, Math.sin(angle));
+  }
+  const index: number[] = [];
+  for (let i = 1; i <= segments; i += 1) index.push(0, i + 1, i);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  g.setIndex(index);
+  g.computeVertexNormals();
+  return g;
+}

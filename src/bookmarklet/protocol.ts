@@ -16,7 +16,7 @@
 import type { CityDoc } from "@/format/types";
 
 /** À augmenter quand le favori change : /nouveau propose alors de le réinstaller. */
-export const BOOKMARKLET_VERSION = 2;
+export const BOOKMARKLET_VERSION = 3;
 
 export const NEW_CITY_PATH = "/nouveau";
 export const HASH_KEY = "ville=";

@@ -35,11 +35,13 @@ export type Kind =
   | "estate" | "townhall" | "fields"
   // Bâtiments
   | "tower" | "vacant" | "residence" | "house" | "monument" | "belfry" | "kiosk"
-  | "bollard" | "billboard" | "screen" | "embassy" | "sculpture" | "counter"
+  | "bollard" | "billboard" | "ruin" | "screen" | "embassy" | "sculpture" | "counter"
   // Infrastructures
   | "river"
   // Hors les murs : pas un élément, toute la page (ses liens vers d'autres sites)
-  | "airport";
+  | "airport"
+  // L'ambiance : ce que la page fait sans le montrer (scripts, traqueurs, commentaires, poids)
+  | "factory" | "camera" | "graffiti" | "weather";
 
 export function kindOf(tag: string, isContainer: boolean, text: number): Kind {
   if (isContainer) {
@@ -84,7 +86,7 @@ export interface KindInfo {
   /** Une phrase courte pour la légende et l'inspecteur. */
   blurb: string;
   color: string;
-  group: "Quartiers" | "Bâtiments" | "Monuments" | "Équipements" | "Nature et réseaux";
+  group: "Quartiers" | "Bâtiments" | "Monuments" | "Équipements" | "Nature et réseaux" | "Ambiance";
 }
 
 export const KINDS: Record<Kind, KindInfo> = {
@@ -107,12 +109,17 @@ export const KINDS: Record<Kind, KindInfo> = {
   kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#C4683F", blurb: "Un sous-titre : un pavillon à coupole." },
   bollard:   { name: "Statue",             tags: "h4 · h5 · h6",        group: "Monuments",        color: "#6D5D45", blurb: "Un petit titre : une statue de bronze sur son socle." },
   billboard: { name: "Panneau",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, affichée sur un panneau. Une icône devient un panonceau, un petit drapeau flotte sur son mât." },
+  ruin:      { name: "Ruine",              tags: "img cassée",          group: "Ambiance",         color: "#8A7F72", blurb: "Une image cassée dans la page : son panneau s'est effondré, au milieu des gravats." },
   screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin." },
   embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#EFE8DA", blurb: "Un autre site, enclavé dans celui-ci : un édifice à colonnes, sous son drapeau." },
   sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },
   counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir : un petit kiosque à auvent." },
   river:     { name: "Canal",              tags: "hr",                  group: "Nature et réseaux", color: "#4F88A6", blurb: "Une ligne de séparation : un canal entre deux quais, franchi par des ponts." },
   airport:   { name: "Aéroport",           tags: "liens externes",      group: "Nature et réseaux", color: "#8E9197", blurb: "Les liens vers d'autres sites : un aéroport hors les murs, à l'est. Plus il y en a, plus il a de pistes et d'avions. Dans une mégalopole, le site a un grand aéroport et chaque ville son petit aérodrome." },
+  factory:   { name: "Usines",             tags: "script",              group: "Ambiance",         color: "#9A4A37", blurb: "Le JavaScript de la page : des usines qui fument dans la ceinture verte, une pour six scripts." },
+  camera:    { name: "Caméras",            tags: "traqueurs",           group: "Ambiance",         color: "#2B2D31", blurb: "Les traqueurs publicitaires que la page appelle : des caméras au bord des rues, trois par traqueur." },
+  graffiti:  { name: "Graffitis",          tags: "<!-- commentaires -->", group: "Ambiance",       color: "#7A3FB0", blurb: "Les commentaires laissés dans le HTML : des tags bombés au pied des immeubles." },
+  weather:   { name: "Météo",              tags: "poids de la page",    group: "Ambiance",         color: "#8FA3B5", blurb: "Le poids de la page (octets chargés, éléments) : grand soleil pour une page légère, orage pour une page très lourde." },
 };
 
 /** Toits des maisons, dans le dessin et les vignettes de la légende. */
@@ -120,5 +127,5 @@ export const ROOF_COLOR = "#A8503A";
 export const HIGHLIGHT_COLOR = "#FFD23F";
 
 export const LEGEND_GROUPS: KindInfo["group"][] = [
-  "Quartiers", "Bâtiments", "Monuments", "Équipements", "Nature et réseaux",
+  "Quartiers", "Bâtiments", "Monuments", "Équipements", "Nature et réseaux", "Ambiance",
 ];

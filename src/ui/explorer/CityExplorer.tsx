@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { fetchWikipediaCity, WikiNotFoundError, wikiPath, type WikiLang } from "@/capture/wikipedia";
 import { describeLot } from "@/city/describe";
 import { layoutCity, type CityLayout } from "@/city/layout";
+import { isSpecial } from "@/city/world";
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
 import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
@@ -18,6 +19,7 @@ import { Cartouche } from "./Cartouche";
 import { Departures } from "./Departures";
 import { ImageViewer } from "./ImageViewer";
 import { Inspector } from "./Inspector";
+import { AmbiancePanel } from "./AmbiancePanel";
 import { LegendPanel } from "./LegendPanel";
 import { LoadingPanel } from "./LoadingPanel";
 import { NorthArrow } from "./NorthArrow";
@@ -82,6 +84,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const [mode, setMode] = useState<ViewMode>("aerial");
   const [walking, setWalking] = useState<WalkState>("off");
   const [legendOpen, setLegendOpen] = useState(false);
+  const [ambianceOpen, setAmbianceOpen] = useState(false);
+  const [realColors, setRealColors] = useState(false);
   const [imageStatus, setImageStatus] = useState<Record<number, ImageStatus>>({});
   const [viewing, setViewing] = useState<number | null>(null);
   const [panel, setPanel] = useState<"share" | "report" | null>(null);
@@ -192,7 +196,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
   const hoverInfo = useMemo(
     // L'aéroport n'est pas un lot : sa bulle se lit dans le plan, pas dans la page.
-    () => (layout && hover && hover.part?.kind !== "airport" ? describeLot(layout, hover.id) : null),
+    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id) : null),
     [layout, hover],
   );
   const selectedInfo = useMemo(
@@ -213,6 +217,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   };
   const switchMode = (next: ViewMode) => {
     setLegendOpen(false);
+    setAmbianceOpen(false);
     viewRef.current?.setMode(next);
   };
   const takeSnapshot = useCallback(
@@ -294,10 +299,26 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             type="button"
             className={styles.tool}
             aria-expanded={legendOpen}
-            onClick={() => setLegendOpen((open) => !open)}
+            onClick={() => {
+              setAmbianceOpen(false);
+              setLegendOpen((open) => !open);
+            }}
           >
             Légende
           </button>
+          {layout?.ambiance && (
+            <button
+              type="button"
+              className={styles.tool}
+              aria-expanded={ambianceOpen}
+              onClick={() => {
+                setLegendOpen(false);
+                setAmbianceOpen((open) => !open);
+              }}
+            >
+              Ambiance
+            </button>
+          )}
           <button
             type="button"
             className={styles.tool}
@@ -326,6 +347,17 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       )}
 
       {ready && legendOpen && <LegendPanel onClose={() => setLegendOpen(false)} />}
+      {ready && ambianceOpen && layout?.ambiance && (
+        <AmbiancePanel
+          ambiances={[layout.ambiance.info]}
+          realColors={realColors}
+          onRealColors={(on) => {
+            setRealColors(on);
+            viewRef.current?.setRealColors(on);
+          }}
+          onClose={() => setAmbianceOpen(false)}
+        />
+      )}
 
       {ready && capture?.outdated && (
         <p className={styles.notice} role="status">
@@ -372,7 +404,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         />
       )}
 
-      {ready && hover && (hoverInfo || hover.part?.kind === "airport") && (hover.x >= 0 || walking === "locked") && (
+      {ready && hover && (hoverInfo || isSpecial(hover.part)) && (hover.x >= 0 || walking === "locked") && (
         <Tooltip
           info={hoverInfo}
           part={hover.part}

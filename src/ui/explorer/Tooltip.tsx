@@ -7,7 +7,8 @@ import styles from "./explorer.module.css";
  * Bulle de survol : ce qu'était ce bâtiment dans la page. Sur une rue, `info` est la fiche
  * du conteneur qui l'a fait tracer : la bulle nomme la rue, puis ce conteneur. L'aéroport
  * n'est pas un élément : sa bulle compte les liens de toute la page (ou de tout le site, dans
- * la mégalopole) vers d'autres sites ; celle d'un aérodrome, ceux de sa page.
+ * la mégalopole) vers d'autres sites ; celle d'un aérodrome, ceux de sa page. Usines et caméras
+ * non plus : elles disent les scripts et les traqueurs de la page.
  */
 export function Tooltip({
   info,
@@ -65,6 +66,59 @@ export function Tooltip({
       </div>
     );
   }
+  if (part?.kind === "industry") {
+    const { scripts, factories } = part.industry;
+    return (
+      <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+        {page && <p className={`${styles.tooltipPage} mono-caps`}>{page}</p>}
+        <div className={styles.tooltipHead}>
+          <KindSwatch kind="factory" size={26} />
+          <div>
+            <p className={styles.tooltipName}>Usines</p>
+            <p className={styles.tooltipSelector}>ceinture verte · toute la page</p>
+          </div>
+        </div>
+        <ul className={styles.tooltipFacts}>
+          <li>
+            {formatCount(scripts)} script{scripts > 1 ? "s" : ""} dans la page
+          </li>
+          <li>
+            {formatCount(factories.length)} usine{factories.length > 1 ? "s" : ""}, une pour six scripts
+          </li>
+          <li>Pas dans la page : le JavaScript qu&apos;elle fait tourner</li>
+        </ul>
+      </div>
+    );
+  }
+
+  if (part?.kind === "surveillance") {
+    const { trackers, cameras } = part.surveillance;
+    const first = trackers.slice(0, 3);
+    return (
+      <div className={styles.tooltip} style={{ left, top, width }} role="status" aria-live="polite">
+        {page && <p className={`${styles.tooltipPage} mono-caps`}>{page}</p>}
+        <div className={styles.tooltipHead}>
+          <KindSwatch kind="camera" size={26} />
+          <div>
+            <p className={styles.tooltipName}>Caméras de surveillance</p>
+            <p className={styles.tooltipSelector}>au bord des rues · toute la page</p>
+          </div>
+        </div>
+        <ul className={styles.tooltipFacts}>
+          <li>
+            {formatCount(trackers.length)} traqueur{trackers.length > 1 ? "s" : ""} publicitaire{trackers.length > 1 ? "s" : ""} ·{" "}
+            {formatCount(cameras.length)} caméras
+          </li>
+          <li>
+            {first.join(", ")}
+            {trackers.length > first.length ? "…" : ""}
+          </li>
+          <li>Ils suivent les visiteurs d&apos;un site à l&apos;autre</li>
+        </ul>
+      </div>
+    );
+  }
+
   if (!info) return null;
 
   if (part?.kind === "road") {

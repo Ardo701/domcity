@@ -11,6 +11,7 @@
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
+import type { Weather } from "./ambiance";
 import type { Airport, CityLayout, Lot, RoadStyle } from "./layout";
 import { createMaterials, type CityMaterials } from "./materials";
 import { buildCityScene, type CityScene, type InstanceRef, type LabelSlot } from "./scene";
@@ -25,7 +26,7 @@ import {
   unavailableTexture,
   type ImageStatus,
 } from "./textures";
-import { singleWorld, type World, type WorldPart } from "./world";
+import { singleWorld, type Special, type World, type WorldPart } from "./world";
 
 export type ViewMode = "aerial" | "walk";
 /** off : on lit le mode d'emploi · locked : souris capturée · free : on regarde en glissant. */
@@ -44,10 +45,11 @@ export interface ViewStats {
 }
 
 /**
- * Ce que désigne le survol quand ce n'est pas le lot lui-même : une rue qu'il a fait tracer,
- * ou un aéroport, un aérodrome (qui ne sont pas des lots : leurs numéros suivent le dernier).
+ * Ce que désigne le survol quand ce n'est pas le lot lui-même : une rue qu'il a fait tracer, ou
+ * un aéroport, un aérodrome, des usines, des caméras (qui ne sont pas des lots : leurs numéros
+ * suivent le dernier).
  */
-export type HoverPart = { kind: "road"; style: RoadStyle } | { kind: "airport"; airport: Airport } | null;
+export type HoverPart = { kind: "road"; style: RoadStyle } | Special | null;
 
 export interface ViewEvents {
   onHover?: (lotId: number | null, screen: { x: number; y: number } | null, part: HoverPart) => void;
@@ -60,6 +62,18 @@ export interface ViewEvents {
 }
 
 const PAPER = "#EEEAE1";
+
+/** Les meshes qu'on repeint aux vraies couleurs du site : murs, toits, sols. Pas les rues, l'eau, les affiches. */
+const PAINTABLE = new Set(["facade", "plain", "gable", "pyramid", "cylinder", "cone", "dome", "ground"]);
+
+/** Lumière selon le temps : soleil, ciel, reflets, et le papier de la planche qui s'assombrit un peu. */
+const WEATHER_LIGHT: Record<Weather, { sun: number; sunColor: string; sky: number; skyColor: string; environment: number; paper: string }> = {
+  clear: { sun: 3.3, sunColor: "#FFF0DA", sky: 0.7, skyColor: "#FFF7EA", environment: 0.55, paper: PAPER },
+  fair: { sun: 3.0, sunColor: "#FFF0DA", sky: 0.72, skyColor: "#FFF7EA", environment: 0.5, paper: PAPER },
+  cloudy: { sun: 2.3, sunColor: "#FBF3E6", sky: 0.88, skyColor: "#F4F2EC", environment: 0.45, paper: "#EAE7DF" },
+  overcast: { sun: 1.25, sunColor: "#EEEDEA", sky: 1.2, skyColor: "#E8E8E6", environment: 0.38, paper: "#E2E0DA" },
+  storm: { sun: 0.75, sunColor: "#DDE0E6", sky: 1.0, skyColor: "#C9CDD4", environment: 0.3, paper: "#D3D2CE" },
+};
 const GROUND = "#E7E2D7";
 /** Hauteur des yeux du promeneur. */
 const EYE = 1.9;
@@ -123,6 +137,11 @@ export class CityView {
   private readonly velocity = new THREE.Vector3();
   private readonly reducedMotion: boolean;
   private environment: THREE.Texture | null = null;
+  private sun: THREE.DirectionalLight | null = null;
+  private skyLight: THREE.HemisphereLight | null = null;
+  /** Vraies couleurs du site : les couleurs d'origine des instances repeintes, pour revenir en arrière. */
+  private realColors = false;
+  private originalColors = new Map<THREE.InstancedMesh, Float32Array>();
 
   private mode: ViewMode = "aerial";
   private walking: WalkState = "off";
@@ -186,6 +205,10 @@ export class CityView {
     this.addGround();
     this.addLights();
     this.addSky();
+    // Une ville seule a le temps qu'il fait sur sa page ; la mégalopole garde une lumière neutre
+    // (chaque ville y a ses nuages).
+    const ambiance = this.world.parts.length === 1 ? layout.ambiance : undefined;
+    if (ambiance) this.applyWeather(ambiance.weather);
 
     // Contrôles
     this.aerial = new MapControls(this.camera, this.renderer.domElement);
@@ -454,10 +477,84 @@ export class CityView {
     this.world = world;
     this.layout = world.layout;
     this.buildParts();
+    this.originalColors = new Map();
+    if (this.realColors) this.paintRealColors(true);
     if (this.fontsReady) this.addLabels();
     this.updateParts(true);
     this.renderer.shadowMap.needsUpdate = true;
     this.invalidate();
+  }
+
+  /**
+   * Les vraies couleurs du site (relevées par le favori) : chaque bâtiment, chaque sol de
+   * conteneur prend la couleur de fond de son élément dans la page (ou de son plus proche parent
+   * qui en a une). Le monument garde la sienne. Rien n'est reconstruit : on repeint.
+   */
+  setRealColors(on: boolean) {
+    if (on === this.realColors) return;
+    this.realColors = on;
+    this.paintRealColors(on);
+    this.invalidate();
+  }
+
+  private paintRealColors(on: boolean) {
+    const touched = new Set<THREE.InstancedMesh>();
+    const tint = new THREE.Color();
+    for (const part of this.world.parts) {
+      const { lots } = part.layout;
+      const page = part.layout.ambiance?.info.background;
+      const bgOf: Array<string | undefined> = [];
+      for (const lot of lots) {
+        // Les parents viennent avant leurs enfants : leur couleur est déjà connue.
+        bgOf[lot.id] = lot.node.bg ?? (lot.parent >= 0 ? bgOf[lot.parent] : page);
+        const bg = bgOf[lot.id];
+        if (!bg || lot.depth === 0 || lot.kind === "monument") continue;
+        tint.set(bg);
+        for (const { mesh, index } of this.refs[lot.id + part.base] ?? []) {
+          if (!PAINTABLE.has(mesh.userData.batch)) continue;
+          const base = this.baseColors.get(mesh)!;
+          let original = this.originalColors.get(mesh);
+          if (!original) {
+            original = base.slice();
+            this.originalColors.set(mesh, original);
+          }
+          const i = index * 3;
+          if (on) {
+            base[i] = original[i] + (tint.r - original[i]) * 0.78;
+            base[i + 1] = original[i + 1] + (tint.g - original[i + 1]) * 0.78;
+            base[i + 2] = original[i + 2] + (tint.b - original[i + 2]) * 0.78;
+          } else {
+            base[i] = original[i];
+            base[i + 1] = original[i + 1];
+            base[i + 2] = original[i + 2];
+          }
+          touched.add(mesh);
+        }
+      }
+    }
+    for (const mesh of touched) {
+      (mesh.instanceColor!.array as Float32Array).set(this.baseColors.get(mesh)!);
+      mesh.instanceColor!.needsUpdate = true;
+    }
+    if (this.selected !== null) this.repaintRange(this.selected, this.layout.lots[this.selected].subtreeEnd);
+    if (this.hovered !== null) this.paintLot(this.hovered);
+  }
+
+  /** Le temps qu'il fait : soleil franc pour une page légère, ciel bas et sombre pour une page lourde. */
+  private applyWeather(weather: Weather) {
+    const light = WEATHER_LIGHT[weather];
+    if (this.sun) {
+      this.sun.intensity = light.sun;
+      this.sun.color.set(light.sunColor);
+    }
+    if (this.skyLight) {
+      this.skyLight.intensity = light.sky;
+      this.skyLight.color.set(light.skyColor);
+    }
+    this.scene.environmentIntensity = light.environment;
+    (this.scene.background as THREE.Color).set(light.paper);
+    (this.scene.fog as THREE.Fog).color.set(light.paper);
+    this.materials.paper.color.set(light.paper);
   }
 
   dispose() {
@@ -573,8 +670,10 @@ export class CityView {
   private addLights() {
     const sky = new THREE.HemisphereLight("#FFF7EA", "#B9AE98", 0.7);
     this.scene.add(sky);
+    this.skyLight = sky;
 
     const sun = new THREE.DirectionalLight("#FFF0DA", 3.1);
+    this.sun = sun;
     // Soleil à l'ouest, un peu au sud : les ombres s'allongent vers l'est, du côté où l'on regarde.
     sun.position.set(this.center.x - this.size * 0.6, this.size * 0.8, this.center.z + this.size * 0.32);
     sun.target.position.copy(this.center);
@@ -652,6 +751,7 @@ export class CityView {
     await ensureFonts();
     if (this.disposed) return;
     this.fontsReady = true;
+    this.materials.graffitiAtlas.draw();
     this.addLabels();
     this.updateParts(true);
   }
@@ -907,10 +1007,9 @@ export class CityView {
     this.dirty = true;
   }
 
-  /** L'aéroport ou l'aérodrome qui porte ce numéro. */
-  private airportOf(id: number): Airport | undefined {
-    if (id === this.layout.airport?.id) return this.layout.airport;
-    return this.world.aerodromes.find((entry) => entry.airport.id === id)?.airport;
+  /** L'aéroport, l'aérodrome, les usines ou les caméras qui portent ce numéro. */
+  private specialAt(id: number): Special | undefined {
+    return this.world.specials.find((entry) => entry.id === id)?.special;
   }
 
   private pick(ndc: THREE.Vector2, fromPointer: boolean) {
@@ -928,8 +1027,8 @@ export class CityView {
       if (lotId !== null) {
         const style = object.userData.part === "road" ? this.roadAt(lotId, hit.point) : null;
         if (style) part = { kind: "road", style };
-        const airport = this.airportOf(lotId);
-        if (airport) part = { kind: "airport", airport };
+        const special = this.specialAt(lotId);
+        if (special) part = special;
         break;
       }
     }
@@ -1038,8 +1137,8 @@ export class CityView {
     }
     this.toNdc(event);
     this.pick(this.pointer, true);
-    const airport = this.hovered === null ? undefined : this.airportOf(this.hovered);
-    if (airport) this.events.onAirport?.(airport);
+    const special = this.hovered === null ? undefined : this.specialAt(this.hovered);
+    if (special?.kind === "airport") this.events.onAirport?.(special.airport);
     this.select(this.hovered);
   };
 

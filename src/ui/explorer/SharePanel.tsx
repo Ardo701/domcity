@@ -195,7 +195,8 @@ export function SharePanel({
                 <li>Les adresses des images, pas les images elles-mêmes.</li>
                 {bookmarklet && (
                   <li>
-                    La position et la couleur de fond de chaque élément
+                    La position et la couleur de fond de chaque élément, les images cassées, le nombre de
+                    commentaires HTML
                     {thirdParty > 0 ? `, le nombre de scripts et les ${thirdParty} sites tiers contactés par la page` : ""}.
                   </li>
                 )}

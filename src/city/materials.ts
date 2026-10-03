@@ -8,6 +8,7 @@
  */
 
 import * as THREE from "three";
+import { GraffitiAtlas } from "./textures";
 
 /** Styles de façade, passés par instance (aFacade.x). */
 export const FACADE = { glass: 0, office: 1, brick: 2, stucco: 3, house: 4, stone: 5 } as const;
@@ -335,6 +336,15 @@ export interface CityMaterials {
   water: THREE.MeshStandardMaterial;
   /** Le papier autour de la maquette. */
   paper: THREE.MeshStandardMaterial;
+  /** Nuages et fumées : blancs, mats, sans reflet. */
+  cloud: THREE.MeshStandardMaterial;
+  /** Ce qui brille sans lumière : la diode des caméras, l'éclair. */
+  glow: THREE.MeshBasicMaterial;
+  /** Voiles transparents : champ des caméras, rideaux de pluie (couleur de l'instance). */
+  veil: THREE.MeshBasicMaterial;
+  /** Les graffitis, tirés d'un atlas commun (dessiné une fois les polices prêtes). */
+  graffiti: THREE.MeshStandardMaterial;
+  graffitiAtlas: GraffitiAtlas;
   dispose(): void;
 }
 
@@ -357,6 +367,20 @@ export function createMaterials(paperColor: string): CityMaterials {
   const plain = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.02 });
   const painted = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0, vertexColors: true });
   const paper = new THREE.MeshStandardMaterial({ color: paperColor, roughness: 1, metalness: 0, envMapIntensity: 0.3 });
-  const all = [facade, ground, road, water, plain, painted, paper];
-  return { facade, plain, painted, ground, road, water, paper, dispose: () => all.forEach((m) => m.dispose()) };
+  const cloud = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, envMapIntensity: 0.2 });
+  const glow = new THREE.MeshBasicMaterial({ toneMapped: false });
+  const veil = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
+  const graffitiAtlas = new GraffitiAtlas();
+  const graffiti = emblemMaterial(graffitiAtlas.texture);
+  graffiti.alphaTest = 0.4;
+  graffiti.side = THREE.FrontSide;
+  graffiti.customProgramCacheKey = () => "domcity-graffiti";
+  const all = [facade, ground, road, water, plain, painted, paper, cloud, glow, veil, graffiti];
+  return {
+    facade, plain, painted, ground, road, water, paper, cloud, glow, veil, graffiti, graffitiAtlas,
+    dispose: () => {
+      all.forEach((m) => m.dispose());
+      graffitiAtlas.dispose();
+    },
+  };
 }
