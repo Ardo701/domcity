@@ -78,13 +78,6 @@
   line-height: 1.1;
 }
 
-.search {
-  margin-left: auto;
-  width: 330px;
-  box-shadow: var(--shadow);
-  border-radius: var(--radius);
-}
-
 /* ---------- Outils ---------- */
 
 .tools {
@@ -1657,10 +1650,6 @@
 }
 
 @media (max-width: 860px) {
-  .search {
-    display: none;
-  }
-
   .place {
     max-width: none;
     flex: 1;

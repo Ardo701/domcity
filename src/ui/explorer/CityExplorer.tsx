@@ -273,9 +273,6 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           )}
           <h1 title={displayTitle}>{displayTitle}</h1>
         </div>
-        <div className={styles.search}>
-          <WikiSearch compact initialLang={wiki?.lang ?? "fr"} />
-        </div>
       </header>
 
       {ready && (
@@ -460,7 +457,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             <p className="mono-caps">Erreur de relevé</p>
             <h2>{status.title}</h2>
             <p>{status.message}</p>
-            <WikiSearch initialLang={wiki?.lang ?? "fr"} />
+            {/* Un article mal orthographié : on peut en chercher un autre. */}
+            {wiki && <WikiSearch initialLang={wiki.lang} />}
             <Link href="/" className={styles.back}>
               ← Retour à l&apos;accueil
             </Link>

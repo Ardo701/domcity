@@ -140,36 +140,6 @@
   color: var(--ink-3);
 }
 
-/* Version compacte, pour la barre de la page de visite */
-.compact .field {
-  box-shadow: none;
-  border-width: 1px;
-}
-
-.compact .field:focus-within {
-  box-shadow: none;
-  transform: none;
-}
-
-.compact .lang,
-.compact .submit {
-  border-width: 1px;
-}
-
-.compact .prefix {
-  display: none;
-}
-
-.compact .input {
-  padding: 9px 10px;
-  font-size: 13px;
-}
-
-.compact .submit {
-  padding: 0 14px;
-  font-size: 16px;
-}
-
 @media (max-width: 720px) {
   .prefix {
     display: none;

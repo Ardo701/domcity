@@ -13,7 +13,6 @@ import { linkPath } from "@/format/links";
 import type { CityDoc } from "@/format/types";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
-import { WikiSearch } from "@/ui/WikiSearch";
 import { Departures } from "@/ui/explorer/Departures";
 import { ImageViewer } from "@/ui/explorer/ImageViewer";
 import { Inspector } from "@/ui/explorer/Inspector";
@@ -352,9 +351,6 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
             Mégalopole
           </Link>
           <h1 title={domain}>{domain}</h1>
-        </div>
-        <div className={styles.search}>
-          <WikiSearch compact initialLang="fr" />
         </div>
       </header>
 

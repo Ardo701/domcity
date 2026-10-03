@@ -13,11 +13,9 @@ import {
 import styles from "./WikiSearch.module.css";
 
 export function WikiSearch({
-  compact = false,
   initialLang = "fr",
   autoFocus = false,
 }: {
-  compact?: boolean;
   initialLang?: WikiLang;
   autoFocus?: boolean;
 }) {
@@ -88,7 +86,7 @@ export function WikiSearch({
   const showList = open && query.trim().length >= 2 && suggestions.length > 0;
 
   return (
-    <form className={`${styles.form} ${compact ? styles.compact : ""}`} onSubmit={submit} role="search">
+    <form className={styles.form} onSubmit={submit} role="search">
       <div className={styles.field} ref={boxRef}>
         <label className={styles.lang}>
           <span className="visually-hidden">Langue de Wikipédia</span>
@@ -112,7 +110,7 @@ export function WikiSearch({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder={compact ? "Autre article" : "Paris, Croissant, Jazz…"}
+          placeholder="Paris, Croissant, Jazz…"
           aria-label="Article Wikipédia à construire"
           role="combobox"
           aria-expanded={showList}
@@ -124,7 +122,7 @@ export function WikiSearch({
           autoFocus={autoFocus}
         />
         <button className={styles.submit} type="submit" disabled={pending || !query.trim()}>
-          <span className={styles.label}>{pending ? "Relevé…" : compact ? "Aller" : "Construire la ville"}</span>
+          <span className={styles.label}>{pending ? "Relevé…" : "Construire la ville"}</span>
           <span aria-hidden className={styles.arrow}>→</span>
         </button>
 
