@@ -7,6 +7,7 @@ import { sharingEnabled } from "@/server/config";
 import { fileStore, thumbKey } from "@/server/files";
 import { recentCaptures } from "@/server/store";
 import { CityGallery } from "@/ui/CityGallery";
+import { GithubLink } from "@/ui/GithubLink";
 import { CitySearch } from "@/ui/CitySearch";
 import { CityFigure } from "@/ui/CityFigure";
 import { HERO_FIGURE } from "@/ui/heroFigure.generated";
@@ -54,12 +55,6 @@ export default async function Home() {
 
   return (
     <div className={`${styles.sheet} graph-paper`}>
-      <div className={styles.frame} aria-hidden>
-        {["A", "B", "C", "D", "E", "F"].map((c) => (
-          <span key={c}>{c}</span>
-        ))}
-      </div>
-
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand} aria-label="DOMCity, accueil">
           <Wordmark />
@@ -70,16 +65,12 @@ export default async function Home() {
           <a href="#legende">La légende</a>
           <a href="#methode">La méthode</a>
         </nav>
-        <span className={`${styles.edition} mono-caps`}>Relevé expérimental · v0.1</span>
+        <GithubLink />
       </header>
 
       <main>
         <section className={styles.hero}>
           <div className={styles.heroText}>
-            <p className={`${styles.kicker} mono-caps`}>
-              <span className={styles.square} aria-hidden />
-              Planche 01 · Urbanisme du web
-            </p>
             <h1 className={styles.title}>
               Chaque page web
               <br />
@@ -151,7 +142,7 @@ export default async function Home() {
         {sharing && files && (
           <section id="villes" className={styles.section}>
             <div className={styles.sectionHead}>
-              <p className="mono-caps">Planche 02</p>
+              <p className="mono-caps">Planche 01</p>
               <h2>Les villes partagées</h2>
               <p className={styles.sectionLead}>
                 Chaque ville publiée garde la date de son relevé. Cherchez un site ou une page, ou parcourez les
@@ -168,7 +159,7 @@ export default async function Home() {
 
         <section id="legende" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche {sharing ? "03" : "02"}</p>
+            <p className="mono-caps">Planche {sharing ? "02" : "01"}</p>
             <h2>La légende du plan</h2>
             <p className={styles.sectionLead}>
               Chaque balise HTML a sa place dans la ville. Les couleurs suivent un plan de zonage : des tons calmes
@@ -199,7 +190,7 @@ export default async function Home() {
 
         <section id="methode" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche {sharing ? "04" : "03"}</p>
+            <p className="mono-caps">Planche {sharing ? "03" : "02"}</p>
             <h2>La méthode</h2>
           </div>
           <ol className={styles.steps}>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LIMITS } from "@/format/limits";
 import { BookmarkletButton, CopyBookmarklet } from "@/ui/BookmarkletButton";
+import { GithubLink } from "@/ui/GithubLink";
 import { InstallDemo } from "@/ui/InstallDemo";
 import { Wordmark } from "@/ui/Logo";
 import home from "../page.module.css";
@@ -52,12 +53,6 @@ const NEVER = [
 export default function InstallerPage() {
   return (
     <div className={`${home.sheet} graph-paper`}>
-      <div className={home.frame} aria-hidden>
-        {["A", "B", "C", "D", "E", "F"].map((c) => (
-          <span key={c}>{c}</span>
-        ))}
-      </div>
-
       <header className={home.topbar}>
         <Link href="/" className={home.brand} aria-label="DOMCity, accueil">
           <Wordmark />
@@ -67,16 +62,12 @@ export default function InstallerPage() {
           <a href="#releve">Ce qui est relevé</a>
           <a href="#telephone">Sur téléphone</a>
         </nav>
-        <span className={`${home.edition} mono-caps`}>Annexe A · Outil de relevé</span>
+        <GithubLink />
       </header>
 
       <main>
         <section className={`${home.hero} ${styles.hero}`}>
           <div className={home.heroText}>
-            <p className={`${home.kicker} mono-caps`}>
-              <span className={home.square} aria-hidden />
-              Annexe A · Le favori DOMCity
-            </p>
             <h1 className={`${home.title} ${styles.title}`}>
               Tout le web est
               <br />

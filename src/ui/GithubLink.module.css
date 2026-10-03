@@ -1,0 +1,43 @@
+.github {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.github span {
+  font-size: 11px;
+}
+
+.github:hover {
+  background: var(--beacon);
+}
+
+.github:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+@media (max-width: 640px) {
+  .github {
+    padding: 7px;
+  }
+
+  .github span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github {
+    transition: none;
+  }
+}

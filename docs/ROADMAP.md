@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub).
 
 ## 1. Le concept
 
@@ -64,7 +64,7 @@ Identité retenue : **« planche d'urbanisme »**.
 - Papier `#eeeae1`, encre `#15151a`, filets fins, papier millimétré en fond.
 - Orange chantier `#ff4b12` : actions principales et monuments. Jaune balise `#ffd23f` : surbrillance, survol, sélection.
 - Polices : **Big Shoulders** (titres, capitales), **Instrument Sans** (texte), **Martian Mono** (étiquettes techniques).
-- Motifs : cartouche d'architecte, flèche « Nord : haut de page » (elle tourne avec la caméra), figures axonométriques rendues par le vrai moteur 3D (la maquette posée sur la planche, ses repères reliés aux balises), vignettes de la légende cernées d'encre, repères de planche A à F.
+- Motifs : cartouche d'architecte, flèche « Nord : haut de page » (elle tourne avec la caméra), figures axonométriques rendues par le vrai moteur 3D (la maquette posée sur la planche, ses repères reliés aux balises), vignettes de la légende cernées d'encre. Le cadre de planche (repères A à F) et le surtitre « Planche 01 » du haut de page ont été retirés à la demande de l'utilisateur ; les sections gardent leur numéro de planche.
 - La ville elle-même est une **maquette posée sur la planche** : matériaux réels (béton, brique, enduit, verre, gazon, asphalte), ciel reflété dans les vitres, ombres d'un soleil d'ouest. L'orange chantier reste réservé au monument (h1) et aux accents ; le jaune balise au survol et à la sélection.
 
 ## 4. Architecture du code
@@ -275,6 +275,8 @@ Demandées par l'utilisateur avant l'étape 6.
 - **Flèche du nord** (« quand on tourne la caméra il n'y a plus de haut ni de bas logique ») : elle tourne avec la caméra, comme une boussole, et montre toujours où est le haut de la page ; le « N » la suit en restant droit. Le cap se lit sur la droite de l'écran, toujours à l'horizontale (`heading` dans `view.ts`), en vue aérienne comme en promenade. Un clic sur la flèche remet le nord en haut de l'écran (`faceNorth`) : la caméra tourne autour de ce qu'elle regarde par le plus court arc, sans changer de hauteur ni de distance ; en promenade, le promeneur se tourne vers le nord. Ville seule et mégalopole.
 - **Figure de l'accueil** (« c'est encore l'ancien type de ville, tout cubique ») : la page de démonstration n'est plus dessinée en boîtes SVG mais rendue par le vrai moteur 3D, en axonométrie (caméra orthographique), vue du sud-ouest (le monument entier, la porte, l'affiche), sur fond transparent : la maquette pose ses ombres sur le papier millimétré de la page. C'est une image (`public/figures/accueil.webp`, 1800 px, ~220 Ko) : l'accueil reste léger, sans Three.js. Les repères (`<h1>` Monument, `<header>` Porte, `<div>` Tour de bureaux, `<h2>` Beffroi, `<img>` Affiche, `<hr>` Canal, `<ul>` Lotissement, `<iframe>` Ambassade, `<footer>` Port) sont placés par l'urbanisme de la page et projetés avec la caméra de l'image (`src/ui/CityFigure.tsx`, `figureMeta.ts`). Les images de l'exemple sont dans `public/figures`. La page Installer montre la même image. L'ancien dessin (`IsoCity`) est retiré.
 - **Régénérer la figure** : `npm run dev`, puis ouvrir `/dev/figure` (développement seulement) : la ville est bâtie, rendue deux fois (fond noir puis blanc, pour la transparence), cadrée au plus près, puis enregistrée avec sa caméra et l'empreinte de son urbanisme (`src/ui/heroFigure.generated.ts`). Un test échoue si l'urbanisme de l'exemple a changé depuis. Un changement du seul dessin (`scene.ts`) ne le fait pas échouer : régénérer à la main.
+- **En-tête épuré** (accueil et page Installer) : plus de cadre autour de la page ni de lettres A à F, plus de surtitre au carré orange au-dessus du grand titre (« Planche 01 · Urbanisme du web », « Annexe A · Le favori DOMCity ») ; les sections de l'accueil sont renumérotées à partir de la planche 01. À droite de l'en-tête, à la place de « Relevé expérimental · v0.1 », un bouton **GitHub** (logo et libellé, le logo seul sur téléphone) qui mène au dépôt (`REPO_URL` dans `src/ui/GithubLink.tsx` ; le dépôt est encore privé, il sera public à la mise en ligne).
+- L'image de la figure est préchargée (`preload` de React) : sans cela, le navigateur ne la découvre qu'en lisant le SVG, et les repères apparaissaient un instant sans la ville.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).

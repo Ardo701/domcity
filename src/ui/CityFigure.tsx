@@ -1,3 +1,4 @@
+import { preload } from "react-dom";
 import { layoutCity, type CityLayout, type Lot } from "@/city/layout";
 import type { CityDoc } from "@/format/types";
 import { projectOn, type FigureMeta } from "./figureMeta";
@@ -41,6 +42,8 @@ export function CityFigure({
   title: string;
 }) {
   const { width, height } = figure;
+  // L'image est dans un SVG : le navigateur ne la découvrirait qu'en le lisant.
+  preload(figure.src, { as: "image", fetchPriority: "high" });
   const city = annotations.length > 0 ? layoutCity(doc) : null;
   const fontSize = width * 0.024;
   const labelX = width + width * 0.06;

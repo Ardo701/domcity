@@ -5,27 +5,6 @@
   border: 0;
 }
 
-/* Cadre de planche, avec ses repères A à F */
-.frame {
-  position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(21, 21, 26, 0.35);
-  pointer-events: none;
-  display: flex;
-  justify-content: space-around;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--ink-3);
-}
-
-.frame span {
-  transform: translateY(-50%);
-  background: var(--paper);
-  padding: 0 6px;
-  height: 14px;
-  line-height: 14px;
-}
-
 .topbar {
   position: relative;
   display: flex;
@@ -54,11 +33,6 @@
   border-bottom-color: var(--signal);
 }
 
-.edition {
-  margin-left: auto;
-  color: var(--ink-3);
-}
-
 /* ---------- Héros ---------- */
 
 .hero {
@@ -75,20 +49,6 @@
   flex-direction: column;
   gap: 26px;
   max-width: 640px;
-}
-
-.kicker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--ink-2);
-}
-
-.square {
-  width: 10px;
-  height: 10px;
-  background: var(--signal);
-  outline: 1px solid var(--ink);
 }
 
 .title {
@@ -428,17 +388,12 @@
 }
 
 @media (max-width: 640px) {
-  .frame {
-    display: none;
-  }
-
   .topbar {
     gap: 16px;
     padding-top: 20px;
   }
 
-  .nav,
-  .edition {
+  .nav {
     display: none;
   }
 
