@@ -5,14 +5,13 @@ import { KINDS, LEGEND_GROUPS, type Kind } from "@/format/taxonomy";
 import { sharingEnabled } from "@/server/config";
 import { fileStore, thumbKey } from "@/server/files";
 import { recentCaptures } from "@/server/store";
+import { AccountLink } from "@/ui/AccountLink";
 import { CityGallery } from "@/ui/CityGallery";
-import { GithubLink } from "@/ui/GithubLink";
 import { CitySearch } from "@/ui/CitySearch";
 import { CityFigure } from "@/ui/CityFigure";
 import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import { KindSwatch } from "@/ui/KindSwatch";
-import { Wordmark } from "@/ui/Logo";
-import { MyCities } from "@/ui/MyCities";
+import { SiteHeader } from "@/ui/SiteHeader";
 import { HERO_SAMPLE } from "@/ui/samples";
 import styles from "./page.module.css";
 
@@ -53,18 +52,7 @@ export default async function Home() {
 
   return (
     <div className={`${styles.sheet} graph-paper`}>
-      <header className={styles.topbar}>
-        <Link href="/" className={styles.brand} aria-label="DOMCity, accueil">
-          <Wordmark />
-        </Link>
-        <nav className={styles.nav} aria-label="Sections">
-          <Link href="/installer">Le favori</Link>
-          {sharing && <a href="#villes">Les villes</a>}
-          <a href="#legende">La légende</a>
-          <a href="#methode">La méthode</a>
-        </nav>
-        <GithubLink />
-      </header>
+      <SiteHeader />
 
       <main>
         <section className={styles.hero}>
@@ -142,9 +130,14 @@ export default async function Home() {
             </div>
             <div className={styles.sharedTools}>
               <CitySearch />
-              <MyCities />
+              <AccountLink />
             </div>
             <CityGallery cities={recent} thumbUrl={(slug) => files.publicUrl(thumbKey(slug))} />
+            {recent.length > 0 && (
+              <Link href="/explore" className={styles.allCities}>
+                Découvrir toutes les villes <span aria-hidden>→</span>
+              </Link>
+            )}
           </section>
         )}
 

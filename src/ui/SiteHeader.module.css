@@ -1,0 +1,285 @@
+/*
+ * La barre du haut reste en haut de l'écran. Au repos, elle se fond dans la planche et son filet s'arrête aux
+ * marges ; dès qu'on fait défiler, un fond de papier apparaît et le filet s'étire jusqu'aux bords de l'écran.
+ * Fond et filet débordent de la barre de la largeur des marges de la page (--gutter).
+ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 30px 0 18px;
+}
+
+.topbar::before,
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--gutter));
+  right: calc(-1 * var(--gutter));
+  pointer-events: none;
+}
+
+.topbar::before {
+  top: 0;
+  bottom: 0;
+  z-index: -1;
+  background: var(--paper);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.topbar::after {
+  bottom: 0;
+  height: 1.5px;
+  background: var(--ink);
+  clip-path: inset(0 var(--gutter));
+  transition: clip-path 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.topbar[data-scrolled]::before {
+  opacity: 1;
+}
+
+.topbar[data-scrolled]::after {
+  clip-path: inset(0 0);
+}
+
+/* Une ancre de la page ne passe pas sous la barre. */
+:root:has(.topbar) {
+  scroll-padding-top: 100px;
+}
+
+.brand {
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 22px;
+}
+
+.nav a {
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  border-bottom: 1.5px solid transparent;
+}
+
+.nav a:hover,
+.nav a[aria-current="page"] {
+  border-bottom-color: var(--signal);
+}
+
+/* Le bouton GitHub (sa forme est dans GithubLink.module.css) : il passe dans le menu sur téléphone. */
+.github {
+  flex-shrink: 0;
+}
+
+/* ---------- Menu du téléphone ---------- */
+
+.burger,
+.menu {
+  display: none;
+}
+
+.burger {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+}
+
+.burger span {
+  width: 18px;
+  height: 2px;
+  background: var(--ink);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+
+.burger:hover,
+.burger[aria-expanded="true"] {
+  background: var(--beacon);
+}
+
+/* Ouvert : les trois traits deviennent une croix. */
+.burger[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.burger[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.2);
+}
+
+.burger[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Le panneau descend sous la barre et couvre le reste de l'écran (100 % : la hauteur de la barre). */
+.menu {
+  position: absolute;
+  top: 100%;
+  left: calc(-1 * var(--gutter));
+  right: calc(-1 * var(--gutter));
+  height: calc(100dvh - 100%);
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 12px var(--gutter) 28px;
+  overflow-y: auto;
+  background: var(--paper);
+  clip-path: inset(0 0 100% 0);
+  visibility: hidden;
+  transition:
+    clip-path 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.45s;
+}
+
+.topbar[data-open] .menu {
+  clip-path: inset(0 0 0 0);
+  visibility: visible;
+  transition:
+    clip-path 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+
+.menuLinks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menuLinks li,
+.menuFoot {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.topbar[data-open] .menuLinks li,
+.topbar[data-open] .menuFoot {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(0.08s + var(--i) * 0.05s);
+}
+
+.menuLinks a {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+}
+
+.menuIndex {
+  color: var(--ink-3);
+}
+
+.menuLabel {
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.menuArrow {
+  font-size: 24px;
+  transition: transform 0.15s ease;
+}
+
+.menuLinks a:active .menuArrow {
+  transform: translateX(4px);
+}
+
+.menuLinks a[aria-current="page"] .menuIndex,
+.menuLinks a[aria-current="page"] .menuLabel {
+  color: var(--signal-deep);
+}
+
+.menuFoot {
+  display: grid;
+  gap: 14px;
+}
+
+.menuFoot p {
+  color: var(--ink-3);
+}
+
+.menuGithub {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: 2px 2px 0 var(--ink);
+  text-decoration: none;
+}
+
+.menuGithub span {
+  font-size: 11px;
+}
+
+/* ---------- Tailles d'écran ---------- */
+
+/* Écrans bas (portable de 13 pouces) : la barre se resserre pour laisser le héros tenir dans le premier écran. */
+@media (min-width: 981px) and (max-height: 760px) {
+  .topbar {
+    padding: 20px 0 14px;
+  }
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    gap: 22px;
+  }
+
+  .nav {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    gap: 16px;
+    padding: 16px 0 14px;
+  }
+
+  .nav,
+  .topbar .github {
+    display: none;
+  }
+
+  .burger,
+  .menu {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar::before,
+  .topbar::after,
+  .burger span,
+  .menu,
+  .menuLinks li,
+  .menuFoot {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,34 @@
+/* Pages secondaires du site (découvrir, compte) : un titre, une accroche, puis le contenu. */
+
+.main {
+  max-width: 980px;
+  display: grid;
+  gap: clamp(36px, 5vw, 56px);
+  padding-top: clamp(36px, 6vw, 72px);
+}
+
+.head {
+  display: grid;
+  gap: 16px;
+}
+
+.title {
+  font-size: clamp(52px, 8vw, 112px);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.88;
+}
+
+.lead {
+  max-width: 56ch;
+  font-size: clamp(17px, 1.5vw, 19px);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.more {
+  margin-top: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}

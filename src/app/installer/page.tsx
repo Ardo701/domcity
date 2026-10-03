@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LIMITS } from "@/format/limits";
 import { BookmarkletButton, CopyBookmarklet } from "@/ui/BookmarkletButton";
-import { GithubLink } from "@/ui/GithubLink";
 import { InstallDemo } from "@/ui/InstallDemo";
-import { Wordmark } from "@/ui/Logo";
+import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../page.module.css";
 import styles from "./installer.module.css";
 
@@ -53,17 +52,7 @@ const NEVER = [
 export default function InstallerPage() {
   return (
     <div className={`${home.sheet} graph-paper`}>
-      <header className={home.topbar}>
-        <Link href="/" className={home.brand} aria-label="DOMCity, accueil">
-          <Wordmark />
-        </Link>
-        <nav className={home.nav} aria-label="Sections">
-          <Link href="/">L&apos;accueil</Link>
-          <a href="#releve">Ce qui est relevé</a>
-          <a href="#telephone">Sur téléphone</a>
-        </nav>
-        <GithubLink />
-      </header>
+      <SiteHeader current="create" />
 
       <main>
         <section className={`${home.hero} ${styles.hero}`}>

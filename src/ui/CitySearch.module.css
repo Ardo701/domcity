@@ -75,27 +75,3 @@
   color: var(--ink-3);
   font-size: 14px;
 }
-
-.mine li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mine li > a:first-child {
-  flex: 1;
-  min-width: 0;
-  grid-template-columns: 52px minmax(0, 1fr);
-}
-
-.remove {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--signal-deep);
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-}
-
-.remove:hover {
-  background: #fde3d8;
-}

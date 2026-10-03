@@ -1,0 +1,205 @@
+/* ---------- Bouton vers le compte (accueil) ---------- */
+
+.accountLink {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.accountLink:hover {
+  background: var(--beacon);
+}
+
+.count {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--paper-raised);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+}
+
+.arrow {
+  transition: transform 0.12s ease;
+}
+
+.accountLink:hover .arrow {
+  transform: translateX(3px);
+}
+
+/* ---------- Page du compte ---------- */
+
+.pending {
+  min-height: 160px;
+}
+
+.empty {
+  max-width: 620px;
+  display: grid;
+  gap: 12px;
+  padding: 22px 24px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+
+.empty p {
+  color: var(--ink-2);
+}
+
+.empty .emptyTitle {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.start {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 16px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--signal);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.start:hover {
+  background: #ff6a37;
+}
+
+.cities {
+  display: grid;
+  gap: 16px;
+}
+
+.citiesHead {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.citiesHead h2 {
+  font-size: 32px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.citiesHead span {
+  color: var(--ink-3);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1.5px solid var(--ink);
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cityText {
+  min-width: 0;
+}
+
+.cityTitle {
+  font-size: 19px;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1.5px solid transparent;
+  overflow-wrap: anywhere;
+}
+
+.cityTitle:hover {
+  border-bottom-color: var(--signal);
+}
+
+.cityMeta {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action {
+  padding: 7px 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.action:hover {
+  background: var(--beacon);
+}
+
+.danger {
+  border-color: var(--signal-deep);
+  color: var(--signal-deep);
+}
+
+.danger:hover {
+  background: #fde3d8;
+}
+
+.note {
+  max-width: 64ch;
+  padding: 10px 12px;
+  border-left: 4px solid var(--beacon);
+  background: var(--paper-raised);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .list li {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accountLink,
+  .arrow {
+    transition: none;
+  }
+}

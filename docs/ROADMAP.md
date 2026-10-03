@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte).
 
 ## 1. Le concept
 
@@ -25,6 +25,7 @@
 | Comptes Supabase | **Jamais le compte connecté dans Claude** | Le projet est sur un autre compte : on livre des migrations SQL que l'utilisateur applique |
 | Dépôt | **Un seul dépôt Next.js** (pas de monorepo) | Une seule chose à déployer ; le bookmarklet est compilé depuis le même code |
 | Anti-DDoS | Vercel (inclus, tous plans) pour le site ; Cloudflare pour les fichiers | Vercel déconseille un proxy Cloudflare devant lui (il perd la visibilité du trafic) |
+| Langue | **Français pour l'instant, anglais plus tard** ; les nouvelles adresses sont en anglais (`/account`, `/explore`) | L'application sera traduite : ses adresses n'auront pas à changer. Les anciennes (`/installer`, `/nouveau`, `/c/…/supprimer`) changeront avec la traduction |
 | Rendu de la ville | **Ville plate et réaliste** : rues, trottoirs, pâtés denses, bâtiments composés, mobilier urbain (et non plus des socles empilés par profondeur) | Demande de l'utilisateur : l'ancien rendu faisait « compartimenté, très cubique, pas une grande ville ». Les rues n'ont pas à correspondre à un élément de la page : elles séparent les blocs et découpent les longs pâtés, parfois pour le seul décor |
 
 ### Principe clé : les données ne changent pas, le moteur si
@@ -73,7 +74,9 @@ Identité retenue : **« planche d'urbanisme »**.
 src/
 ├── app/                         Next.js 16 (App Router)
 │   ├── page.tsx                 accueil : bouton « Créer une ville » (vers le favori), villes partagées, légende, méthode
-│   ├── installer/               page « Installer le favori » (bouton à glisser, animation, installation à la main)
+│   ├── installer/               page « Créer une ville » : installer le favori (bouton à glisser, animation, installation à la main)
+│   ├── explore/                 « Découvrir les villes » : recherche et les 60 dernières villes partagées
+│   ├── account/                 « Votre compte » : les villes publiées depuis ce navigateur, leur lien secret
 │   ├── nouveau/                 reçoit la ville envoyée par le favori (non publiée tant qu'on ne clique pas)
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
 │   ├── c/[slug]/                ville partagée (+ supprimer/ : lien secret)
@@ -280,6 +283,9 @@ Demandées par l'utilisateur avant l'étape 6.
 - L'image de la figure est préchargée (`preload` de React) : sans cela, le navigateur ne la découvre qu'en lisant le SVG, et les repères apparaissaient un instant sans la ville.
 - **Le héros tient dans le premier écran** (« tout le hero n'est pas visible sur l'écran de mon Mac », 1470 × 800) : il faisait 1 085 px de haut, le bouton « Créer une ville » tombait sous le pli. Le titre passe sur trois lignes voulues (« Chaque page / web est une / ville. », il en faisait quatre par retour à la ligne), sa taille, les marges et les écarts suivent aussi la hauteur de l'écran (`svh`) ; sur un écran bas (760 px ou moins, portable de 13 pouces), l'en-tête et le texte se resserrent encore. Vérifié de 1280 × 700 à 2560 × 1300 ; une fenêtre plus basse (1024 × 640) défile encore un peu.
 - **Accueil centré sur le favori** (« pour éviter de mettre en avant Wikipédia ») : le champ Wikipédia et les exemples « Essayer » quittent l'accueil. Le bouton principal est « Créer une ville » : il mène aux instructions du favori (`/installer`). Il est blanc cassé ; au survol, l'orange chantier tombe au centre comme une goutte et s'étale jusqu'aux bords : deux taches irrégulières qui grandissent en se déformant, au bord ondulé par un bruit (filtre SVG `cta-liquide`). Le texte d'accroche parle du favori seulement. Le mode Wikipédia reste entier : adresses `/w/…`, champ de recherche dans la barre d'une ville et de la mégalopole, villes partagées. Le héros tient désormais dans le premier écran de 1024 × 640 à 1920 × 1000, et sur téléphone la figure aussi.
+- **Navigation commune** (accueil, Créer une ville, Découvrir, Votre compte : `src/ui/SiteHeader.tsx` et `HeaderBar.tsx`) : le logo ramène à l'accueil, puis « Découvrir », « Créer une ville » (la page du favori, ancien « Le favori »), « Votre compte » et le bouton GitHub. Les liens vers les sections de l'accueil (les villes, la légende, la méthode) et de la page du favori sont retirés à la demande de l'utilisateur. La barre reste en haut quand on fait défiler : un fond de papier apparaît et son filet s'étire, animé, jusqu'aux bords de l'écran. Sur téléphone (640 px ou moins), un bouton à trois traits (qui devient une croix) ouvre un menu plein écran : liens numérotés en grandes capitales, GitHub en bas ; Échap ou un lien le referme, la page ne défile pas tant qu'il est ouvert. De 641 à 860 px, GitHub n'a plus que son logo.
+- **Votre compte** (`/account`, « les villes publiées sur ce navigateur ») : il n'y a ni inscription ni mot de passe, le compte est le navigateur (les villes partagées et leur lien secret, gardés dans son stockage). Chaque ville : titre, date de publication, « Voir », « Copier le lien secret » (pour la supprimer depuis un autre navigateur), « Supprimer ». Sans ville : un mot et le bouton « Créer une ville ». Sur l'accueil, la liste « Vos villes, sur ce navigateur » devient un bouton « Vos villes publiées » (avec leur nombre) vers cette page. Page non indexée.
+- **Découvrir les villes** (`/explore`) : la recherche et les 60 dernières villes partagées (le plus que `recent_captures` rende d'un coup ; au-delà, la recherche). L'accueil garde les 9 dernières et un lien « Découvrir toutes les villes ». Aucune nouvelle migration.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).

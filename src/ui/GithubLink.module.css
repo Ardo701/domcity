@@ -26,7 +26,8 @@
   box-shadow: 0 0 0 var(--ink);
 }
 
-@media (max-width: 640px) {
+/* L'en-tête manque de place : le logo seul. */
+@media (max-width: 860px) {
   .github {
     padding: 7px;
   }

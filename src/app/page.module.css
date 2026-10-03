@@ -5,34 +5,6 @@
   border: 0;
 }
 
-.topbar {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding: 30px 0 18px;
-  border-bottom: 1.5px solid var(--ink);
-}
-
-.brand {
-  text-decoration: none;
-}
-
-.nav {
-  display: flex;
-  gap: 22px;
-}
-
-.nav a {
-  font-weight: 600;
-  text-decoration: none;
-  border-bottom: 1.5px solid transparent;
-}
-
-.nav a:hover {
-  border-bottom-color: var(--signal);
-}
-
 /* ---------- Héros ---------- */
 
 .hero {
@@ -236,6 +208,24 @@
   margin-bottom: 28px;
 }
 
+.allCities {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 12px 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.allCities:hover {
+  background: var(--beacon);
+}
+
 .legend {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -373,10 +363,6 @@
 
 /* Écrans bas (portable de 13 pouces) : le héros se resserre encore pour tenir dans le premier écran. */
 @media (min-width: 981px) and (max-height: 760px) {
-  .topbar {
-    padding: 20px 0 14px;
-  }
-
   .hero {
     padding-top: clamp(20px, 4svh, 40px);
   }
@@ -424,15 +410,6 @@
 }
 
 @media (max-width: 640px) {
-  .topbar {
-    gap: 16px;
-    padding-top: 20px;
-  }
-
-  .nav {
-    display: none;
-  }
-
   .cartouche {
     grid-template-columns: 1fr;
   }
