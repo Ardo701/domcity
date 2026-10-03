@@ -107,12 +107,12 @@ export function LegendMaker() {
       const blob = await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, "image/webp", 0.88));
       if (!blob) return setStatus("Image failed");
       const form = new FormData();
-      form.set("image", blob, "legende.webp");
+      form.set("image", blob, "legend.webp");
       form.set("meta", JSON.stringify({ cell: CELL, columns: COLUMNS, order: done.map((d) => d.key) }));
       const response = await fetch("/api/dev-legend", { method: "POST", body: form });
       setStatus(
         response.ok
-          ? `Saved: public/figures/legende.webp (${sheet.width} × ${sheet.height}, ${Math.round(blob.size / 1024)} KB)`
+          ? `Saved: public/figures/legend.webp (${sheet.width} × ${sheet.height}, ${Math.round(blob.size / 1024)} KB)`
           : `Saving failed (${response.status})`,
       );
     })();

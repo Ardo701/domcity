@@ -16,7 +16,7 @@ export const HERO_SAMPLE: CityDoc = {
       {
         tag: "header",
         children: [
-          { tag: "img", img: { src: "/figures/exemple-logo.svg", alt: "Exemple", w: 220, h: 80 } },
+          { tag: "img", img: { src: "/figures/sample-logo.svg", alt: "Exemple", w: 220, h: 80 } },
           { tag: "nav", children: [{ tag: "li", text: 8 }, { tag: "li", text: 12 }, { tag: "li", text: 9 }] },
         ],
       },
@@ -29,7 +29,7 @@ export const HERO_SAMPLE: CityDoc = {
             children: [
               { tag: "h2", text: 8, heading: "Histoire" },
               { tag: "p", text: 1900 },
-              { tag: "img", img: { src: "/figures/exemple-affiche.svg", alt: "Paysage", w: 420, h: 280 } },
+              { tag: "img", img: { src: "/figures/sample-poster.svg", alt: "Paysage", w: 420, h: 280 } },
               { tag: "p", text: 420 },
               { tag: "div", text: 5200 },
             ],

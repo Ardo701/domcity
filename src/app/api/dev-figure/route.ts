@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const root = process.cwd();
   await mkdir(join(root, "public", "figures"), { recursive: true });
-  await writeFile(join(root, "public", "figures", "accueil.webp"), bytes);
+  await writeFile(join(root, "public", "figures", "hero.webp"), bytes);
   const { width, height, matrix, layout } = meta.data;
   // The address changes with the image: browsers do not keep the old one.
   const version = createHash("sha256").update(bytes).digest("hex").slice(0, 8);
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 import type { FigureMeta } from "./figureMeta";
 
 export const HERO_FIGURE: FigureMeta = {
-  src: "/figures/accueil.webp?v=${version}",
+  src: "/figures/hero.webp?v=${version}",
   width: ${width},
   height: ${height},
   matrix: [${matrix.map((v) => Number(v.toPrecision(10))).join(", ")}],

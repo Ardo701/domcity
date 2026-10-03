@@ -471,7 +471,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
             <h2>{status.title}</h2>
             <p>{status.message}</p>
             {status.refused ? (
-              // As in /nouveau: the home page button, the only way out of a refused site.
+              // As in /new: the home page button, the only way out of a refused site.
               <div className={styles.actionsRow}>
                 <InkLink href="/" size="small">
                   Retour à l&apos;accueil

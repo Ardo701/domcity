@@ -42,7 +42,7 @@ describe("bookmarklet demo", () => {
   });
 
   it("hangs the page's two images on their facade", () => {
-    expect(city.panels.map((lot) => lot.panel?.src)).toEqual(["/figures/exemple-logo.svg", "/figures/exemple-affiche.svg"]);
+    expect(city.panels.map((lot) => lot.panel?.src)).toEqual(["/figures/sample-logo.svg", "/figures/sample-poster.svg"]);
   });
 
   it("chains the steps without gaps and loops without a jump", () => {

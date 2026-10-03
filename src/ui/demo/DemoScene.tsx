@@ -159,7 +159,7 @@ function AddressBar({ t }: { t: number }) {
   let text = "domcity.app/create";
   if (t >= T.typing && t < T.enter) text = TYPED.slice(0, typed);
   else if (t >= T.enter && t < T.newTab) text = TYPED;
-  else if (t >= T.newTab && t < T.back[0]) text = "domcity.app/nouveau";
+  else if (t >= T.newTab && t < T.back[0]) text = "domcity.app/new";
   const selected = t >= T.focus && t < T.typing;
   const caret = focused && (t >= T.typing || Math.floor((t - T.focus) * 5) % 2 === 0);
   // Martian Mono: about 0.74 em per character.

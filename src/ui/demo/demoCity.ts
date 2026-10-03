@@ -12,7 +12,7 @@ import { VIEW, tone, viewPoint, type DemoCamera, type DemoCity, type DemoLot, ty
 const PAGE: Array<{ tag: string; rect: [number, number, number, number]; look?: Look; label?: string }> = [
   { tag: "body", rect: [0, 0, 640, 388] },
   { tag: "header", rect: [0, 0, 640, 44], label: "<header>" },
-  { tag: "img", rect: [28, 10, 66, 24], look: { type: "image", src: "/figures/exemple-logo.svg" } },
+  { tag: "img", rect: [28, 10, 66, 24], look: { type: "image", src: "/figures/sample-logo.svg" } },
   { tag: "nav", rect: [436, 13, 176, 18] },
   { tag: "li", rect: [440, 17, 52, 10], look: { type: "words", text: "Histoire" } },
   { tag: "li", rect: [498, 17, 46, 10], look: { type: "words", text: "Lieux" } },
@@ -22,7 +22,7 @@ const PAGE: Array<{ tag: string; rect: [number, number, number, number]; look?: 
   { tag: "section", rect: [28, 94, 372, 116] },
   { tag: "h2", rect: [28, 94, 372, 16], look: { type: "title", text: "Histoire", size: 14 } },
   { tag: "p", rect: [28, 114, 222, 34], look: { type: "lines" }, label: "<p>" },
-  { tag: "img", rect: [262, 114, 138, 92], look: { type: "image", src: "/figures/exemple-affiche.svg" }, label: "<img>" },
+  { tag: "img", rect: [262, 114, 138, 92], look: { type: "image", src: "/figures/sample-poster.svg" }, label: "<img>" },
   { tag: "p", rect: [28, 152, 222, 12], look: { type: "lines" } },
   { tag: "div", rect: [28, 168, 222, 38], look: { type: "lines" } },
   { tag: "hr", rect: [28, 214, 372, 8], look: { type: "rule" }, label: "<hr>" },

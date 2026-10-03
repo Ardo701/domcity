@@ -7,7 +7,7 @@ buildings, headings become monuments, images become posters on the facades. You 
 building to see what it was in the page, and walk its streets.
 
 <p align="center">
-  <img src="public/figures/accueil.webp" alt="The DOMCity sample page rendered as a city: an Art Deco tower for the h1, a city gate for the header, a canal for the hr, a harbor for the footer" width="720">
+  <img src="public/figures/hero.webp" alt="The DOMCity sample page rendered as a city: an Art Deco tower for the h1, a city gate for the header, a canal for the hr, a harbor for the footer" width="720">
 </p>
 
 **Try it:** [domcity.app](https://domcity.app) · **Make your own city:** [domcity.app/create](https://domcity.app/create)
@@ -125,7 +125,7 @@ A stored city is a description of the page, never a drawing. Shapes, colors, hei
 engine every time a city opens, so improving the engine improves every city, old and new.
 
 ```
-bookmarklet ──► /nouveau ──► validation (zod) ──► layoutCity ──► buildCityScene ──► CityView
+bookmarklet ──► /new ──► validation (zod) ──► layoutCity ──► buildCityScene ──► CityView
  (any page)    (new tab,                          (urban plan)   (Three.js)
                postMessage)                            │
                                                        └──► Publier ──► API ──► Supabase + R2
@@ -138,7 +138,7 @@ src/
 ├── app/            Next.js routes: home, /create, /explore, /account, /city/…, /site/…, /w/… (Wikipedia), API
 ├── format/         the city format: types, zod schema, limits, addresses, the HTML → city dictionary, blocklist
 ├── capture/        web page → city JSON (no dependencies, compiled into the bookmarklet); Wikipedia mode
-├── bookmarklet/    the bookmarklet: entry point, exchange with /nouveau, compiled version
+├── bookmarklet/    the bookmarklet: entry point, exchange with /new, compiled version
 ├── city/           urban planning (layout), megalopolis, ambiance, Three.js scene, view and controls
 ├── server/         storage modes, database (Supabase or local), files (R2 or local), security, sharing
 └── ui/             interface components: explorer, inspector, legend, share panel, bookmarklet demo…

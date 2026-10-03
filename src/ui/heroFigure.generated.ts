@@ -2,7 +2,7 @@
 import type { FigureMeta } from "./figureMeta";
 
 export const HERO_FIGURE: FigureMeta = {
-  src: "/figures/accueil.webp?v=8390125d",
+  src: "/figures/hero.webp?v=8390125d",
   width: 1800,
   height: 1309,
   matrix: [0.009568176207, 0.006577649152, 0.002209243369, 0, 0, 0.01611188413, -0.001803839658, 0, 0.009568176207, -0.006577649152, -0.002209243369, 0, -1.64611217e-17, -0.2887206829, -0.1209298963, 1],

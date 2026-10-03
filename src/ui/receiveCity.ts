@@ -23,7 +23,7 @@ export class ReceiveError extends Error {
 }
 
 /** Keeps the received city for the tab's session: a reload does not lose it. */
-const SAVED_KEY = "domcity:nouveau";
+const SAVED_KEY = "domcity:new";
 /** If the bookmarklet does not answer within this delay, the original page was closed or has changed. */
 const WAIT_MS = 20_000;
 

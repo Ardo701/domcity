@@ -70,7 +70,7 @@ describe("the bookmarklet on a page", () => {
 
   it("opens DOMCity, then sends the city only to DOMCity once the tab is ready", () => {
     runBookmarklet();
-    expect(window.open).toHaveBeenCalledWith(`${ORIGIN}/nouveau`, "_blank");
+    expect(window.open).toHaveBeenCalledWith(`${ORIGIN}/new`, "_blank");
 
     send({ type: MESSAGES.ready }, "https://intrus.example");
     expect(tab.postMessage).not.toHaveBeenCalled();

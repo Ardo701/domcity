@@ -28,12 +28,12 @@ function reply(source: unknown, data: unknown, origin: string) {
   window.dispatchEvent(event);
 }
 
-describe("receiving a city in /nouveau", () => {
+describe("receiving a city in /new", () => {
   const blocklist = vi.fn<(url: string) => Promise<Response>>();
 
   beforeEach(() => {
     sessionStorage.clear();
-    window.history.replaceState(null, "", "/nouveau");
+    window.history.replaceState(null, "", "/new");
     // The list of refused sites, as /api/blocklist serves it.
     blocklist.mockReset().mockImplementation(async () => Response.json({ adult: ["pornhub.com"], bank: ["bnpparibas.com"] }));
     vi.stubGlobal("fetch", blocklist);
@@ -56,7 +56,7 @@ describe("receiving a city in /nouveau", () => {
 
     expect(received).toEqual({ doc: CITY, outdated: false });
     expect(opener.postMessage).toHaveBeenLastCalledWith({ type: MESSAGES.received }, "https://www.exemple.org");
-    expect(JSON.parse(sessionStorage.getItem("domcity:nouveau")!).doc.title).toBe("Les livres");
+    expect(JSON.parse(sessionStorage.getItem("domcity:new")!).doc.title).toBe("Les livres");
   });
 
   it("refuses a city that does not come from the site it describes", async () => {
@@ -79,7 +79,7 @@ describe("receiving a city in /nouveau", () => {
       const pending = (await freshReceive())();
       reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city }, origin);
       await expect(pending).rejects.toMatchObject({ title: "Site refusé", refused: true });
-      expect(sessionStorage.getItem("domcity:nouveau")).toBeNull();
+      expect(sessionStorage.getItem("domcity:new")).toBeNull();
     }
     // The browser downloaded the list: it sent nothing about the visited page.
     expect(blocklist).toHaveBeenCalledWith("/api/blocklist");
@@ -103,7 +103,7 @@ describe("receiving a city in /nouveau", () => {
   });
 
   it("reads plan B from the fragment, then erases it from the address", async () => {
-    window.history.replaceState(null, "", `/nouveau#ville=${await packCity(CITY)}`);
+    window.history.replaceState(null, "", `/new#ville=${await packCity(CITY)}`);
     const received = await (await freshReceive())();
     expect(received.doc).toEqual(CITY);
     expect(window.location.hash).toBe("");

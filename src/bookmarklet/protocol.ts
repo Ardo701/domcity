@@ -1,10 +1,10 @@
 /**
- * The exchange between the bookmarklet (on the captured page) and DOMCity (/nouveau).
+ * The exchange between the bookmarklet (on the captured page) and DOMCity (/new).
  *
- * 1. The bookmarklet opens /nouveau in a new tab, then captures the page.
- * 2. /nouveau sends "pret" to the page that opened it, until it receives the city.
+ * 1. The bookmarklet opens /new in a new tab, then captures the page.
+ * 2. /new sends "pret" to the page that opened it, until it receives the city.
  * 3. The bookmarklet answers with the city, addressed to the DOMCity origin and to it alone.
- * 4. /nouveau confirms "recu".
+ * 4. /new confirms "recu".
  *
  * Plan B, when the tab could not open or the site cuts the link between its windows:
  * the compressed city travels in the address fragment (#ville=...), which the browser
@@ -15,10 +15,12 @@
 
 import type { CityDoc } from "@/format/types";
 
-/** Increase when the bookmarklet changes: /nouveau then offers to reinstall it. */
+/** Increase when the bookmarklet changes: /new then offers to reinstall it. */
 export const BOOKMARKLET_VERSION = 4;
 
-export const NEW_CITY_PATH = "/nouveau";
+// Bookmarklets installed before October 4, 2026 open /nouveau, which redirects here (next.config.ts).
+// The fragment key and the message names below are compiled into every installed bookmarklet: they stay as they are.
+export const NEW_CITY_PATH = "/new";
 export const HASH_KEY = "ville=";
 
 export const MESSAGES = {

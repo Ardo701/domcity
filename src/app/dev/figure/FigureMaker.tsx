@@ -45,12 +45,12 @@ export function FigureMaker() {
       (window as unknown as { __figure?: unknown }).__figure = { layout, figure, view };
       setPreview(URL.createObjectURL(figure.blob));
       const form = new FormData();
-      form.set("image", figure.blob, "accueil.webp");
+      form.set("image", figure.blob, "hero.webp");
       form.set("meta", JSON.stringify({ width: figure.width, height: figure.height, matrix: figure.matrix, layout: figureKey(layout) }));
       const response = await fetch("/api/dev-figure", { method: "POST", body: form });
       setStatus(
         response.ok
-          ? `Saved: public/figures/accueil.webp (${figure.width} × ${figure.height}, ${Math.round(figure.blob.size / 1024)} KB)`
+          ? `Saved: public/figures/hero.webp (${figure.width} × ${figure.height}, ${Math.round(figure.blob.size / 1024)} KB)`
           : `Saving failed (${response.status})`,
       );
     })();

@@ -15,7 +15,7 @@ removed at once.
 
 The six categories are treated the same way:
 
-- **No city.** When the bookmarklet is clicked on a page of a refused site, `/nouveau` shows "Site refusé"
+- **No city.** When the bookmarklet is clicked on a page of a refused site, `/new` shows "Site refusé"
   and builds nothing; the capture is not kept.
 - **No publishing.** The server refuses the share (403), and the database itself refuses to create the city
   (`create_capture`), even if the site's code were bypassed.

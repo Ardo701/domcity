@@ -27,7 +27,7 @@ const page = (children: CityNode[], extra: { page?: CityPage } = {}): CityDoc =>
 const p = (text: number): CityNode => ({ tag: "p", text });
 const div = (text: number): CityNode => ({ tag: "div", text });
 const li = (text: number): CityNode => ({ tag: "li", text });
-const POSTER = { src: "/figures/exemple-affiche.svg", alt: "Paysage", w: 420, h: 280 };
+const POSTER = { src: "/figures/sample-poster.svg", alt: "Paysage", w: 420, h: 280 };
 
 /** A square centered on this rectangle, with a margin around it. */
 function around(rect: Rect, pad: number): Rect {
