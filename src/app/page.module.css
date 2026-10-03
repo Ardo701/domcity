@@ -74,7 +74,11 @@
   max-width: 54ch;
 }
 
-/* Le bouton principal : il mène aux instructions du favori. Au survol, l'orange se répand du centre vers les bords. */
+/*
+ * Le bouton principal : il mène aux instructions du favori. Au survol, l'orange tombe au centre comme une
+ * goutte et s'étale jusqu'aux bords : deux taches irrégulières qui grandissent en se déformant, dont un
+ * bruit (filtre SVG « cta-liquide ») fait onduler le bord.
+ */
 .cta {
   position: relative;
   isolation: isolate;
@@ -100,15 +104,40 @@
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.cta::before {
-  content: "";
+.ctaFilter {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.ctaInk {
   position: absolute;
   inset: 0;
   z-index: -1;
+  filter: url(#cta-liquide);
+  pointer-events: none;
+}
+
+/* Les taches débordent du bouton (ellipses de 130 % sur 340 %) : une fois étalées, elles le couvrent entier. */
+.ctaInk::before,
+.ctaInk::after {
+  content: "";
+  position: absolute;
+  inset: -120% -15%;
   background: var(--signal);
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.7s ease-in-out;
+}
+
+.ctaInk::before {
+  border-radius: 64% 36% 58% 42% / 42% 60% 40% 58%;
+  transform: translate(-4%, 6%) scale(0) rotate(-28deg);
+}
+
+.ctaInk::after {
+  border-radius: 38% 62% 44% 56% / 58% 40% 62% 42%;
+  transform: translate(5%, -5%) scale(0) rotate(22deg);
 }
 
 .ctaArrow {
@@ -123,9 +152,18 @@
   transform: translate(-1px, -1px);
 }
 
-.cta:hover::before,
-.cta:focus-visible::before {
-  transform: scaleX(1);
+.cta:hover .ctaInk::before,
+.cta:focus-visible .ctaInk::before {
+  border-radius: 46% 54% 50% 50% / 54% 48% 52% 46%;
+  transform: translate(0, 0) scale(1) rotate(0deg);
+}
+
+/* La seconde tache part un peu après la première : le bord reste inégal pendant qu'il s'étale. */
+.cta:hover .ctaInk::after,
+.cta:focus-visible .ctaInk::after {
+  border-radius: 52% 48% 46% 54% / 47% 53% 49% 51%;
+  transform: translate(0, 0) scale(1) rotate(0deg);
+  transition-delay: 0.08s;
 }
 
 .cta:hover .ctaArrow,
@@ -135,7 +173,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cta,
-  .cta::before,
+  .ctaInk::before,
+  .ctaInk::after,
   .ctaArrow {
     transition: none;
   }

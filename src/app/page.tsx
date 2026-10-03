@@ -83,6 +83,14 @@ export default async function Home() {
             </p>
 
             <Link href="/installer" className={styles.cta}>
+              {/* L'encre orange du survol, au bord ondulé par un bruit (voir .ctaInk). */}
+              <svg className={styles.ctaFilter} aria-hidden focusable="false">
+                <filter id="cta-liquide" x="-50%" y="-200%" width="200%" height="500%" colorInterpolationFilters="sRGB">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="bruit" />
+                  <feDisplacementMap in="SourceGraphic" in2="bruit" scale={18} xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </svg>
+              <span aria-hidden className={styles.ctaInk} />
               Créer une ville
               <span aria-hidden className={styles.ctaArrow}>
                 →
