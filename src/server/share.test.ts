@@ -215,7 +215,7 @@ describe("les sites refusés (base locale)", () => {
     const { slug } = await shareCity({ ...DOC, url: "https://plus-tard.fr/", title: "Plus tard" }, null);
     expect(await store.getCapture(slug)).not.toBeNull();
 
-    await sql("insert into public.blocked_domains (domain, category, note) values ('plus-tard.fr', 'danger', 'essai')");
+    await sql("insert into public.blocked_domains (domain, category, note) values ('plus-tard.fr', 'danger', 'test')");
     expect(await store.getCapture(slug)).toBeNull();
     expect(await store.getSite("plus-tard.fr")).toBeNull();
     expect(await store.sitePageList("plus-tard.fr", 60, 0)).toEqual([]);

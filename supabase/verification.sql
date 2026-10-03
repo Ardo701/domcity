@@ -178,7 +178,7 @@ begin
   return next;
 
   etape := 'Sites refusés : la base refuse de créer leur ville';
-  insert into public.blocked_domains (domain, category, note) values ('refus.domcity.invalid', 'danger', 'vérification');
+  insert into public.blocked_domains (domain, category, note) values ('refus.domcity.invalid', 'danger', 'verification');
   begin
     perform public.create_capture('sous.refus.domcity.invalid', '/', 'bookmarklet', 'Refusée', 1000,
                                   '{}'::jsonb, v_token, 1::smallint);
@@ -239,7 +239,7 @@ begin
   return next;
 
   etape := 'Sites refusés : un site ajouté à la liste disparaît des lectures, puis revient';
-  insert into public.blocked_domains (domain, category, note) values (v_domain, 'danger', 'vérification');
+  insert into public.blocked_domains (domain, category, note) values (v_domain, 'danger', 'verification');
   select count(*) into v_n from public.get_capture(v_slug);
   select v_n + count(*) into v_n from public.recent_sites(60) s where s.domain = v_domain;
   select v_n + count(*) into v_n from public.search_sites('verificaton') s where s.domain = v_domain;

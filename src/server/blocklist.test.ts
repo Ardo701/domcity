@@ -35,6 +35,20 @@ describe("la liste des sites refusés dans la base", () => {
     }
   });
 
+  it("range chaque entrée sous une note en anglais, comme sa catégorie", async () => {
+    const notes = (await db.query<{ note: string }>("select distinct note from public.blocked_domains order by note")).rows.map((row) => row.note);
+    // Les notes françaises de la liste de départ et leur traduction, lues dans la migration qui les traduit.
+    const translation = readFileSync(join(process.cwd(), "supabase", "migrations", "20261003210000_blocked_domains_notes_en.sql"), "utf8");
+    const pairs = [...translation.matchAll(/\('((?:[^']|'')*)', '((?:[^']|'')*)'\)/g)].map((m) => [m[1].replaceAll("''", "'"), m[2]]);
+    const english = new Set(pairs.map(([, en]) => en));
+    expect(english.size).toBe(pairs.length);
+    expect(notes.length).toBe(english.size);
+    for (const note of notes) {
+      expect(english.has(note), note).toBe(true);
+      expect(note, note).toMatch(/^[A-Za-z][A-Za-z ,'-]*$/);
+    }
+  });
+
   it("refuse les sites attendus, avec leur catégorie", () => {
     const expected: Array<[string, BlockCategory]> = [
       ["fr.pornhub.com", "adult"],
