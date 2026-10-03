@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran).
 
 ## 1. Le concept
 
@@ -278,6 +278,7 @@ Demandées par l'utilisateur avant l'étape 6.
 - **En-tête épuré** (accueil et page Installer) : plus de cadre autour de la page ni de lettres A à F, plus de surtitre au carré orange au-dessus du grand titre (« Planche 01 · Urbanisme du web », « Annexe A · Le favori DOMCity ») ; les sections de l'accueil sont renumérotées à partir de la planche 01. À droite de l'en-tête, à la place de « Relevé expérimental · v0.1 », un bouton **GitHub** (logo et libellé, le logo seul sur téléphone) qui mène au dépôt (`REPO_URL` dans `src/ui/GithubLink.tsx` ; le dépôt est encore privé, il sera public à la mise en ligne).
 - Le bouton de l'accueil qui mène à la page Installer s'intitule « Créer une ville » (sous « N'importe quel site ») au lieu de « Installer le favori DOMCity ».
 - L'image de la figure est préchargée (`preload` de React) : sans cela, le navigateur ne la découvre qu'en lisant le SVG, et les repères apparaissaient un instant sans la ville.
+- **Le héros tient dans le premier écran** (« tout le hero n'est pas visible sur l'écran de mon Mac », 1470 × 800) : il faisait 1 085 px de haut, le bouton « Créer une ville » tombait sous le pli. Le titre passe sur trois lignes voulues (« Chaque page / web est une / ville. », il en faisait quatre par retour à la ligne), sa taille, les marges et les écarts suivent aussi la hauteur de l'écran (`svh`) ; sur un écran bas (760 px ou moins, portable de 13 pouces), l'en-tête et le texte se resserrent encore. Vérifié de 1280 × 700 à 2560 × 1300 ; une fenêtre plus basse (1024 × 640) défile encore un peu.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).

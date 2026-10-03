@@ -72,9 +72,11 @@ export default async function Home() {
         <section className={styles.hero}>
           <div className={styles.heroText}>
             <h1 className={styles.title}>
-              Chaque page web
+              Chaque page
               <br />
-              est une <em>ville.</em>
+              web est une
+              <br />
+              <em>ville.</em>
             </h1>
             <p className={styles.lead}>
               Donnez un article, ou relevez n&apos;importe quel site avec le favori : DOMCity en relève le plan et
