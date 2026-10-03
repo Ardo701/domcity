@@ -285,6 +285,66 @@ describe("layoutCity", () => {
     expect(emblemOf({ tag: "img", img: { src: "", w: 800, h: 600 } })).toBeUndefined();
   });
 
+  it("garde à chaque bâtiment sa taille minimale, même sur une page piégeuse", () => {
+    const p = (text: number): CityNode => ({ tag: "p", text });
+    const li = (text: number): CityNode => ({ tag: "li", text });
+    // Trente niveaux en escalier (un paragraphe, puis le niveau suivant), une liste plate et longue,
+    // des boîtes de galerie, un tableau, des blocs mêlés à des éléments simples.
+    const stair = (n: number): CityNode => (n === 0 ? p(300) : { tag: "div", children: [p(120 + n * 9), stair(n - 1)] });
+    const pages: CityNode[] = [
+      { tag: "body", children: [stair(30)] },
+      { tag: "body", children: [{ tag: "ul", children: Array.from({ length: 90 }, (_, i) => li(20 + (i * 53) % 400)) }, p(2000)] },
+      {
+        tag: "body",
+        children: [
+          { tag: "div", children: Array.from({ length: 12 }, (_, i) => ({ tag: "div", label: ".boite", children: [{ tag: "div", text: 10 + i }] })) },
+          { tag: "section", children: [p(5000), { tag: "div", text: 40 }, { tag: "div", children: [p(80), p(90)] }, { tag: "div", text: 3 }] },
+          { tag: "table", children: [{ tag: "img", img: { src: "https://e.org/a.png", w: 20, h: 20 } }] },
+        ],
+      },
+    ];
+    const minimum: Record<string, number> = { house: 2.2, residence: 2.6, tower: 2.6 };
+    for (const root of pages) {
+      const city = layoutCity(doc(root));
+      for (const lot of city.lots) {
+        if (lot.container || lot.hung || !(lot.kind in minimum)) continue;
+        expect(Math.min(lot.w, lot.d)).toBeGreaterThanOrEqual(minimum[lot.kind] - 1e-6);
+      }
+    }
+  });
+
+  it("ne trace que des rues où deux voitures se croisent, toutes reliées au périphérique", () => {
+    const li = (text: number): CityNode => ({ tag: "li", text });
+    const city = layoutCity(
+      doc({
+        tag: "body",
+        children: [
+          { tag: "ol", children: Array.from({ length: 120 }, (_, i) => li(30 + (i * 37) % 260)) },
+          ...Array.from({ length: 6 }, (_, k) => ({ tag: "section", children: [{ tag: "p", text: 600 + k * 50 }, { tag: "div", children: [{ tag: "p", text: 300 }, { tag: "p", text: 200 }] }, { tag: "div", text: 80 }] })),
+        ],
+      }),
+    );
+    const drivable = city.roads.filter((road) => road.style !== "path");
+    expect(drivable.filter((road) => road.style === "lane").length).toBeGreaterThan(0);
+    for (const road of drivable) expect(road.axis === "x" ? road.d : road.w).toBeGreaterThanOrEqual(2.4 - 1e-6);
+    // De proche en proche, chaque rue rejoint le périphérique.
+    const ways = [...drivable, ...city.joints, ...city.bridges];
+    const touch = (a: Rect, b: Rect) => a.x <= b.x + b.w + 0.06 && b.x <= a.x + a.w + 0.06 && a.z <= b.z + b.d + 0.06 && b.z <= a.z + a.d + 0.06;
+    const reached = new Set(ways.filter((way) => way.style === "ring"));
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const way of ways) {
+        if (reached.has(way)) continue;
+        if ([...reached].some((other) => touch(way, other))) {
+          reached.add(way);
+          grew = true;
+        }
+      }
+    }
+    expect(reached.size).toBe(ways.length);
+  });
+
   it("cale la grille des rues transversales sur la ville, loin des bords", () => {
     expect(gridLines(-20, 100, 26)).toEqual([0, 26, 52]);
     // à moins de 0,4 pas du bord (10,4 m), pas de ligne : le bout de pâté serait trop court

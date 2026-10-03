@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (images accrochées aux bâtiments).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (tailles minimales, rues à double sens reliées au réseau).
 
 ## 1. Le concept
 
@@ -256,6 +256,15 @@ Demande de l'utilisateur : des dizaines de panneaux plantés chacun sur sa parce
 Vérifié : 75 tests (affiches contre la façade de leur porteur, dans aucun bâtiment, au-dessus de sa base ; image d'une figure sur sa légende ; galerie pour un bloc d'images ; plusieurs façades ; numéros dans l'ordre de la page ; les images ne grandissent pas la ville), TypeScript, ESLint, compilation de production. Dans le navigateur : Louvre (vue d'ensemble sans champ de panneaux, affiches sur façades, drapeau au toit), page d'essai à grille de 20 photos (galerie de 14 étages couverte d'affiches).
 **Non vérifié** : un site marchand réel (grilles de produits) ; le rendu de très nombreuses affiches sur un ordinateur modeste (autant d'appels de dessin qu'avant : les niveaux de détail des affiches restent à faire).
 
+### Tailles minimales et rues réalistes ✅
+Demande de l'utilisateur : des maisons minuscules (une d'un mètre de large sous un drapeau), des ruelles « seules » sans route au bout, des voitures au milieu de la chaussée.
+- **Taille minimale des bâtiments** (`MIN_SIDE` dans `layout.ts`) : maison 2,2 unités (6,6 m), immeuble et tour 2,6 (7,8 m), galerie 6. Une petite case ne partage plus la rangée d'un voisin qui l'écraserait, une rangée n'est jamais moins profonde que son plus petit bâtiment, une rue ne se trace pas si elle écrase ses voisins, et un bâtiment mord sur son trottoir plutôt que de rétrécir. Quand les rangées ne tiennent vraiment pas, elles se rangent comme un texte, ligne à ligne, chaque case à sa taille minimale (`denseRows`).
+- **Rues à double sens** : toute rue carrossable fait au moins 2,4 unités (7 m, `DRIVABLE_MIN`) et porte une file de voitures dans chaque sens. Une rue plus étroite n'est pas tracée. Les lotissements gardent entre leurs rangées la place d'une ruelle (jardins un peu plus profonds) ; sur une pelouse, la ruelle a un accotement plutôt qu'un trottoir.
+- **Réseau relié** : de proche en proche, chaque rue rejoint le périphérique ; celle que rien ne relie devient une allée piétonne, sans voitures (`connectRoads`). Les impasses (rattachées par un seul bout) restent permises.
+- Paris : 485 maisons sur 721 sous 2,2 unités avant, 0 après ; 200 rues trop étroites pour deux voitures avant, 0 après ; 0 rue coupée du réseau (6 allées piétonnes) ; ruelles des lotissements 212 ; la ville grandit de 1,4 %.
+Vérifié : 77 tests (tailles minimales sur des pages piégeuses : trente niveaux en escalier, longue liste, boîtes de galerie ; rues assez larges et toutes reliées au périphérique), TypeScript, ESLint, compilation de production ; Paris dans le navigateur (lotissement, ruelle à double sens).
+**Non vérifié** : un site très imbriqué relevé par le favori (les escaliers de `div` de l'essai sont synthétiques).
+
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
 1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
@@ -281,7 +290,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Port d'un `<footer>` peu profond (rangée pleine largeur) : bassin et chenal étroits (1,6 m sur GitHub).
 - Profondeur : quand la caméra passe sous le haut des toits (promenade, vue rasante), le plan proche revient à 30 cm ; des surfaces très lointaines pourraient encore scintiller un peu.
 - Rendu : immeubles en L ou à cour intérieure.
-- Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; sur les pages très imbriquées, il reste de rares bâtiments minuscules.
+- Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; les impasses (rues rattachées par un seul bout) n'ont pas encore de raquette de retournement.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
@@ -297,7 +306,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 75 tests
+npm test           # 77 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet

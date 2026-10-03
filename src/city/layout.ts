@@ -312,6 +312,10 @@ export const FLOOR = 1.15;
 export const RING = 6;
 export const BELT = 7;
 const SIDEWALK = 0.75;
+/** Une rue où passent les voitures laisse toujours une file dans chaque sens (2,4 unités : 7 m). */
+export const DRIVABLE_MIN = 2.4;
+/** Le plus petit côté d'un bâtiment : une maison fait au moins 6,6 m, un immeuble 7,8 m. */
+const MIN_SIDE: Partial<Record<Kind, number>> = { house: 2.2, residence: 2.6, tower: 2.6, gallery: 6, vacant: 2, counter: 1.4 };
 const ALLEY = 0.16;
 const RIVER_WIDTH = 3.4;
 const QUAY = 1.3;
@@ -446,6 +450,8 @@ interface Plot {
   orphans: number;
   climb: number;
   gallery?: number;
+  /** Le plus petit côté possible : celui de son bâtiment, ou du plus grand bâtiment qu'il contient. */
+  least: number;
 }
 
 /**
@@ -478,6 +484,7 @@ function blocksOf(items: Plot[], mode: StreetMode, depth: number): Plot[] {
       hosts: run.some((item) => item.hosts),
       orphans: 0,
       climb: 0,
+      least: Math.max(0, ...run.map((item) => item.least)),
     });
     run = [];
   };
@@ -512,7 +519,7 @@ function galleryPlot(node: CityNode, depth: number, images: number): Plot {
   const side = clamp(5 + 1.15 * Math.sqrt(images), 6, 16);
   return {
     node, kind: "gallery", container: false, ownText: false, depth, children: [], area: side * side, textTotal: 0,
-    order: -1, placed: true, unplaced: [], hosts: true, orphans: 0, climb: 0, gallery: images,
+    order: -1, placed: true, unplaced: [], hosts: true, orphans: 0, climb: 0, gallery: images, least: MIN_SIDE.gallery ?? 0,
   };
 }
 
@@ -527,7 +534,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
   if (kind === "billboard" && node.img?.broken) kind = "ruin";
   const plot: Plot = {
     node, kind, container, ownText, depth, children: [], area: 0, textTotal: text,
-    order: 0, placed: true, unplaced: [], hosts: false, orphans: 0, climb: 0,
+    order: 0, placed: true, unplaced: [], hosts: false, orphans: 0, climb: 0, least: MIN_SIDE[kind] ?? 0,
   };
 
   if (!container) {
@@ -573,6 +580,7 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
     plot.placed = false;
     return plot;
   }
+  plot.least = Math.max(0, ...plot.children.map((child) => child.least));
 
   const gap = unitGap(mode, depth);
   const road = mode === "none" ? 0 : roadWidth(mode, depth);
@@ -602,6 +610,8 @@ function buildPlot(node: CityNode, depth: number, streets: StreetMode, textOf?: 
 function unitGap(mode: StreetMode, depth: number): number {
   if (mode === "street" || mode === "avenue") return roadWidth(mode, depth) * 0.55;
   if (mode === "none") return softGap(mode);
+  // Un lotissement garde de quoi tracer entre deux rangées une ruelle à double sens (ses jardins).
+  if (mode === "lane") return roadWidth(mode, depth) * 0.8;
   return Math.max(roadWidth(mode, depth) * 0.6, softGap(mode));
 }
 
@@ -631,11 +641,12 @@ function worstRatio(areas: number[], width: number): number {
  * s'étalerait en une bande très fine : elle garde des cases presque carrées, centrées,
  * et laisse de la place libre de part et d'autre.
  */
-function rowShape(scaled: number[], width: number, rigid: boolean) {
+function rowShape(scaled: number[], width: number, rigid: boolean, least = 0) {
   const total = scaled.reduce((sum, a) => sum + a, 0);
   const natural = total / width;
   const side = Math.sqrt(Math.max(...scaled));
-  const depth = rigid && natural < side * 0.4 ? side * 0.8 : natural;
+  // Jamais moins profonde que son plus petit bâtiment possible : pas d'immeuble en lamelle.
+  const depth = Math.max(rigid && natural < side * 0.4 ? side * 0.8 : natural, least);
   return { depth, used: Math.min(width, total / depth) };
 }
 
@@ -643,11 +654,19 @@ function rowShape(scaled: number[], width: number, rigid: boolean) {
 export type Fit = "flexible" | "leaf" | "landmark";
 
 /** Range des surfaces dans un rectangle, par rangées, sans changer leur ordre. */
-export function stripRows(areas: number[], rect: Rect, fits: Fit[] = []): Row[] {
+export function stripRows(areas: number[], rect: Rect, fits: Fit[] = [], mins: number[] = []): Row[] {
   const total = areas.reduce((sum, a) => sum + a, 0);
   if (areas.length === 0 || total <= 0) return [];
   const scale = (rect.w * rect.d) / total;
   const scaled = areas.map((a) => Math.max(a * scale, 1e-6));
+  const rigid = (group: number[]) => group.some((j) => (fits[j] ?? "flexible") !== "flexible");
+  /** Chaque case garde au moins la largeur de son bâtiment le plus petit possible. */
+  const least = (group: number[]) => Math.max(0, ...group.map((j) => mins[j] ?? 0));
+  const shapeOf = (group: number[]) => rowShape(group.map((j) => scaled[j]), rect.w, rigid(group), least(group));
+  const wideEnough = (group: number[]) => {
+    const { depth } = shapeOf(group);
+    return group.every((j) => Math.min(scaled[j] / depth, rect.w) >= (mins[j] ?? 0) - 1e-6);
+  };
 
   const groups: number[][] = [];
   let current: number[] = [];
@@ -667,7 +686,7 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = []): Row[] 
     }
     const before = worstRatio(current.map((j) => scaled[j]), rect.w);
     const after = worstRatio([...current, i].map((j) => scaled[j]), rect.w);
-    if (!mismatch && after <= before) current.push(i);
+    if (!mismatch && after <= before && wideEnough([...current, i])) current.push(i);
     else {
       groups.push(current);
       current = [i];
@@ -676,11 +695,22 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = []): Row[] 
   groups.push(current);
 
   // Les rangées trop peu remplies prennent plus de profondeur : on resserre l'ensemble pour tenir dans le rectangle.
-  const shapes = groups.map((group) =>
-    rowShape(group.map((j) => scaled[j]), rect.w, group.some((j) => (fits[j] ?? "flexible") !== "flexible")),
-  );
+  const shapes = groups.map(shapeOf);
   const depthTotal = shapes.reduce((sum, shape) => sum + shape.depth, 0);
-  const fit = depthTotal > rect.d ? rect.d / depthTotal : 1;
+  // Trop de rangées pour le rectangle : on les tasse, d'abord sur ce qu'elles ont en plus de leur
+  // minimum ; seulement s'il n'y suffit pas, toutes ensemble.
+  const floors = groups.map(least);
+  const spare = shapes.reduce((sum, shape, k) => sum + Math.max(0, shape.depth - floors[k]), 0);
+  const excess = depthTotal - rect.d;
+  const depthOf = (k: number) => {
+    const { depth } = shapes[k];
+    if (excess <= 0) return depth;
+    if (excess <= spare) return depth - (Math.max(0, depth - floors[k]) * excess) / spare;
+    return depth * (rect.d / depthTotal);
+  };
+  // Même tassées au minimum, les rangées ne tiennent pas : on range les cases comme un texte, ligne
+  // à ligne, chacune au moins à sa taille minimale, sans laisser de place libre au bout des lignes.
+  if (excess > spare && floors.some((floor) => floor > 0)) return denseRows(scaled, rect, mins);
 
   const rows: Row[] = [];
   let z = rect.z;
@@ -694,8 +724,60 @@ export function stripRows(areas: number[], rect: Rect, fits: Fit[] = []): Row[] 
       x += w;
       return item;
     });
-    rows.push({ z, d: depth * fit, items });
-    z += depth * fit;
+    const d = depthOf(k);
+    rows.push({ z, d, items });
+    z += d;
+  });
+  return rows;
+}
+
+/**
+ * Rangement serré, ligne à ligne : les lignes se coupent sur les largeurs minimales des cases, puis
+ * la place qui reste se partage selon leurs surfaces. Chaque case garde ainsi sa largeur et sa
+ * profondeur minimales tant que le rectangle peut les contenir.
+ */
+function denseRows(scaled: number[], rect: Rect, mins: number[]): Row[] {
+  // Une case sans minimum (un conteneur vide de bâtiments, une statue) compte pour une petite largeur.
+  const narrow = (j: number) => Math.max(mins[j] ?? 0, Math.sqrt(scaled[j]) * 0.6);
+  const groups: number[][] = [];
+  let current: number[] = [];
+  let width = 0;
+  for (let i = 0; i < scaled.length; i += 1) {
+    if (current.length > 0 && width + narrow(i) > rect.w + 1e-6) {
+      groups.push(current);
+      current = [];
+      width = 0;
+    }
+    current.push(i);
+    width += narrow(i);
+  }
+  groups.push(current);
+
+  const floors = groups.map((group) => Math.max(0, ...group.map((j) => mins[j] ?? 0)));
+  const areas = groups.map((group) => group.reduce((sum, j) => sum + scaled[j], 0));
+  const floorTotal = floors.reduce((sum, f) => sum + f, 0);
+  const areaTotal = areas.reduce((sum, a) => sum + a, 0) || 1;
+  // La profondeur qui reste après les minimums se partage selon les surfaces ; en dernier recours
+  // (le rectangle est vraiment trop petit), tout se tasse ensemble.
+  const extra = rect.d - floorTotal;
+  const depths = floors.map((floor, k) => (extra >= 0 ? floor + (extra * areas[k]) / areaTotal : (floor * rect.d) / floorTotal));
+
+  const rows: Row[] = [];
+  let z = rect.z;
+  groups.forEach((group, k) => {
+    const base = group.map(narrow);
+    const used = base.reduce((sum, w) => sum + w, 0);
+    const spare = Math.max(0, rect.w - used);
+    const share = areas[k] || 1;
+    let x = rect.x;
+    const items = group.map((index, n) => {
+      const w = Math.min(base[n] + (spare * scaled[index]) / share, rect.w);
+      const item = { index, x, w };
+      x += w;
+      return item;
+    });
+    rows.push({ z, d: depths[k], items });
+    z += depths[k];
   });
   return rows;
 }
@@ -838,6 +920,7 @@ export function layoutCity(doc: CityDoc, options: LayoutOptions = {}): CityLayou
     ctx.airport = plan(ctx, site, externalLinks(doc.root), doc.linksTo?.sites ?? []);
   }
   openHarbors(ctx, ctx.airport ? { ...edge, w: ctx.airport.x + ctx.airport.w - edge.x } : edge);
+  connectRoads(ctx);
   const { lots } = ctx;
 
   // Le monument (h1) domine toujours la ville.
@@ -1330,6 +1413,54 @@ function newLot(plot: Plot, cell: Rect, y: number, parent: number, ctx: Ctx): Lo
   return lot;
 }
 
+/**
+ * Une rue où roulent des voitures mène toujours quelque part : de proche en proche, elle rejoint
+ * le périphérique. Celle que rien ne relie au réseau (entre deux rangées sans rue à leurs bouts)
+ * devient une allée piétonne, sans voitures.
+ */
+function connectRoads(ctx: Ctx) {
+  type Way = Rect & { style: RoadStyle };
+  const ways: Way[] = [...ctx.roads, ...ctx.joints, ...ctx.bridges].filter((way) => way.style !== "path");
+  const size = 10;
+  const cells = new Map<string, number[]>();
+  const keys = (r: Rect) => {
+    const out: string[] = [];
+    for (let i = Math.floor((r.x - 0.1) / size); i <= Math.floor((r.x + r.w + 0.1) / size); i += 1) {
+      for (let j = Math.floor((r.z - 0.1) / size); j <= Math.floor((r.z + r.d + 0.1) / size); j += 1) out.push(`${i},${j}`);
+    }
+    return out;
+  };
+  ways.forEach((way, i) => {
+    for (const key of keys(way)) {
+      const list = cells.get(key);
+      if (list) list.push(i);
+      else cells.set(key, [i]);
+    }
+  });
+  const touch = (a: Rect, b: Rect) => a.x <= b.x + b.w + 0.06 && b.x <= a.x + a.w + 0.06 && a.z <= b.z + b.d + 0.06 && b.z <= a.z + a.d + 0.06;
+  const reached = new Set<number>();
+  const queue: number[] = [];
+  ways.forEach((way, i) => {
+    if (way.style === "ring" || way.style === "highway") {
+      reached.add(i);
+      queue.push(i);
+    }
+  });
+  while (queue.length > 0) {
+    const i = queue.pop()!;
+    for (const key of keys(ways[i])) {
+      for (const j of cells.get(key) ?? []) {
+        if (reached.has(j) || !touch(ways[i], ways[j])) continue;
+        reached.add(j);
+        queue.push(j);
+      }
+    }
+  }
+  ways.forEach((way, i) => {
+    if (!reached.has(i)) way.style = "path";
+  });
+}
+
 /** Crée, dans l'ordre de la page, les lots des enfants sans case qui précèdent ce rang. */
 function hangBefore(parent: number, order: number, y: number, ctx: Ctx) {
   const queue = ctx.waiting.get(parent);
@@ -1799,15 +1930,41 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
         ? item.children.some((child) => LANDMARKS.has(child.kind)) ? "landmark" : "flexible"
         : item.container ? "flexible" : LANDMARKS.has(item.kind) ? "landmark" : "leaf",
     ),
+    // Largeur minimale de chaque case : son plus grand bâtiment et l'écart qui l'entoure.
+    items.map((item) => (item.least > 0 ? item.least + (alone ? 0 : gap) : 0)),
   );
   if (rows.length === 0) return;
 
   const quiet: Edge = urban ? { side: "attached", width: ALLEY } : { side: "soft", width: soft };
-  /** Une rue entre deux cases, jamais plus large que ce qu'elles peuvent céder. */
-  const street = (a: number, b: number): Edge | null => {
-    const width = Math.min(road, 0.42 * Math.min(a, b));
-    return width >= 1.2 ? { side: "road", width } : null;
+  const half = (edge: Edge) => edge.width / 2;
+  // Retrait d'un bâtiment : trottoir côté rue et côté bord, presque rien côté voisin.
+  // Sur une pelouse (lotissement, parc), pas de trottoir : un simple accotement.
+  const verge = env.ground ? 0.35 : SIDEWALK;
+  const inset = (edge: Edge) =>
+    edge.side === "road"
+      ? edge.width / 2 + verge
+      : edge.side === "edge"
+        ? env.ground ? soft / 2 : SIDEWALK
+        : edge.width / 2;
+  /** Ce que prendra au moins le bord encore inconnu d'une case (un simple écart, ou le bord du tronçon). */
+  const leastInset = (last: boolean) => (last ? inset(EDGE) : Math.min(inset(quiet), soft / 2));
+  // Une rue trop serrée pour une voiture dans chaque sens n'est pas tracée : les cases restent collées.
+  const narrowest = mode === "path" ? 1.2 : DRIVABLE_MIN;
+  /**
+   * Une rue entre deux cases : jamais plus large que ce qu'elles peuvent céder, ni au point de
+   * laisser à leurs bâtiments moins que leur taille minimale (`other` : le retrait de l'autre bord).
+   */
+  type Cell = { size: number; other: number; need: number };
+  const street = (a: Cell, b: Cell): Edge | null => {
+    // En ville, une rue ne prend pas plus de 42 % de la plus petite case ; sur une pelouse, seule
+    // compte la taille minimale des maisons qui la bordent.
+    let width = env.ground ? road : Math.min(road, 0.42 * Math.min(a.size, b.size));
+    for (const cell of [a, b]) {
+      if (cell.need > 0) width = Math.min(width, 2 * (cell.size - cell.other - verge - cell.need));
+    }
+    return width >= narrowest ? { side: "road", width } : null;
   };
+  const rowNeed = rows.map((row) => Math.max(0, ...row.items.map((it) => items[it.index].least)));
 
   // Entre les rangées : une rue dès qu'un conteneur est en jeu, ou quand le pâté devient trop profond.
   const between: Edge[] = [];
@@ -1816,7 +1973,13 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
     const here = rows[k].items.some((it) => big(items[it.index]));
     const next = rows[k + 1].items.some((it) => big(items[it.index]));
     const wanted = streets && (here || next || depthSinceRoad + rows[k + 1].d > blockDepth(mode));
-    const edge = wanted ? street(rows[k].d, rows[k + 1].d) : null;
+    const north = k === 0 ? EDGE : between[k - 1];
+    const edge = wanted
+      ? street(
+          { size: rows[k].d, other: inset(north), need: rowNeed[k] },
+          { size: rows[k + 1].d, other: leastInset(k + 1 === rows.length - 1), need: rowNeed[k + 1] },
+        )
+      : null;
     if (!streets) between.push({ side: "soft", width: soft });
     else if (edge) {
       between.push(edge);
@@ -1831,15 +1994,7 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
   const spacing = blockLength(mode);
   const lines = gridLines(rect.x, rect.w, spacing);
 
-  const half = (edge: Edge) => edge.width / 2;
   const groundTop = env.ground ? top : top + CURB;
-  // Retrait d'un bâtiment : trottoir côté rue et côté bord, presque rien côté voisin.
-  const inset = (edge: Edge) =>
-    edge.side === "road"
-      ? edge.width / 2 + SIDEWALK
-      : edge.side === "edge"
-        ? env.ground ? soft / 2 : SIDEWALK
-        : edge.width / 2;
 
   rows.forEach((row, k) => {
     const north = k === 0 ? EDGE : between[k - 1];
@@ -1874,7 +2029,13 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
       const b = items[row.items[j].index];
       const w = row.items[j].w;
       const wanted = streets && (aligned.has(j) || big(a) || big(b) || run + w > blockLength(mode) * 1.6);
-      const edge = wanted ? street(row.items[j - 1].w, w) : null;
+      const west = j === 1 ? EDGE : cross[j - 2];
+      const edge = wanted
+        ? street(
+            { size: row.items[j - 1].w, other: inset(west), need: a.least },
+            { size: w, other: leastInset(j === row.items.length - 1), need: b.least },
+          )
+        : null;
       if (!streets) cross.push({ side: "soft", width: soft });
       else if (edge) {
         cross.push(edge);
@@ -1927,6 +2088,21 @@ function placeRows(children: Plot[], rect: Rect, top: number, owner: number, ctx
         w: item.w - inset(west) - inset(east),
         d: row.d - inset(north) - inset(south),
       };
+      // Un bâtiment ne descend pas sous sa taille minimale pour garder ses trottoirs : il mord dessus,
+      // tant que la case (hors chaussée) le permet.
+      const need = plot.least;
+      if (footprint.w < need) {
+        const x0 = item.x + half(west);
+        const x1 = item.x + item.w - half(east);
+        const w = Math.min(need, x1 - x0);
+        footprint.x = clamp(footprint.x - (w - footprint.w) / 2, x0, x1 - w);
+        footprint.w = w;
+      }
+      if (footprint.d < need) {
+        const d = Math.min(need, z1 - z0);
+        footprint.z = clamp(footprint.z - (d - footprint.d) / 2, z0, z1 - d);
+        footprint.d = d;
+      }
       // Case trop étroite pour ses trottoirs : le bâtiment se recentre sur la partie hors chaussée.
       if (footprint.w < 0.3) {
         const x0 = item.x + half(west);

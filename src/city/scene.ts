@@ -1155,13 +1155,10 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     }
     if (!drivable) return;
 
-    // Voitures : deux files en sens opposés (quatre sur l'autoroute), loin des carrefours.
+    // Voitures : une file dans chaque sens (deux sur l'autoroute), loin des carrefours. Toute rue
+    // carrossable est assez large pour deux voitures (DRIVABLE_MIN dans layout.ts).
     const lanes =
-      road.style === "highway"
-        ? [0.14, 0.34, 0.66, 0.86].map((f) => width * f)
-        : width >= 2.6
-          ? [width * 0.28, width * 0.72]
-          : [width * 0.5];
+      road.style === "highway" ? [0.14, 0.34, 0.66, 0.86].map((f) => width * f) : [width * 0.28, width * 0.72];
     lanes.forEach((across, lane) => {
       const forward = lane < lanes.length / 2;
       const margin = Math.min(width * 0.9, length * 0.3);
