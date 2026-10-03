@@ -12,7 +12,7 @@ describe("compilation du favori", () => {
   }, 30_000);
 
   it("donne un lien javascript: assez court pour tous les navigateurs, vers ce site", () => {
-    const href = bookmarkletHref(`${ORIGIN}/installer`);
+    const href = bookmarkletHref(`${ORIGIN}/create`);
     expect(href.startsWith("javascript:")).toBe(true);
     expect(href.length).toBeLessThan(30_000);
     const code = decodeURIComponent(href.slice("javascript:".length));

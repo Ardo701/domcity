@@ -49,7 +49,7 @@ export function AccountCities() {
           Relevez une page avec le favori, puis cliquez sur « Publier » : la ville apparaîtra ici, avec le lien qui
           permet de la supprimer.
         </p>
-        <Link href="/installer" className={styles.start}>
+        <Link href="/create" className={styles.start}>
           Créer une ville <span aria-hidden>→</span>
         </Link>
       </div>

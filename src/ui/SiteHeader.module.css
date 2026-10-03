@@ -10,7 +10,8 @@
   display: flex;
   align-items: center;
   gap: 32px;
-  padding: 30px 0 18px;
+  /* Autant de marge au-dessus qu'en dessous des liens. */
+  padding: 20px 0;
 }
 
 .topbar::before,
@@ -49,7 +50,7 @@
 
 /* Une ancre de la page ne passe pas sous la barre. */
 :root:has(.topbar) {
-  scroll-padding-top: 100px;
+  scroll-padding-top: 90px;
 }
 
 .brand {
@@ -242,7 +243,7 @@
 /* Écrans bas (portable de 13 pouces) : la barre se resserre pour laisser le héros tenir dans le premier écran. */
 @media (min-width: 981px) and (max-height: 760px) {
   .topbar {
-    padding: 20px 0 14px;
+    padding: 16px 0;
   }
 }
 
@@ -259,7 +260,7 @@
 @media (max-width: 640px) {
   .topbar {
     gap: 16px;
-    padding: 16px 0 14px;
+    padding: 14px 0;
   }
 
   .nav,

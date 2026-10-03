@@ -55,7 +55,7 @@ export function NewCity({ canShare }: { canShare: boolean }) {
             <h2>{state.title}</h2>
             <p>{state.message}</p>
             <div className={styles.actionsRow}>
-              <Link href="/installer" className={styles.primary}>
+              <Link href="/create" className={styles.primary}>
                 Installer le favori
               </Link>
               <Link href="/" className={styles.secondary}>

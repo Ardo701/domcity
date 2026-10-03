@@ -70,7 +70,7 @@ export default async function Home() {
               Ensuite, on s&apos;y promène.
             </p>
 
-            <Link href="/installer" className={styles.cta}>
+            <Link href="/create" className={styles.cta}>
               {/* L'encre orange du survol, au bord ondulé par un bruit (voir .ctaInk). */}
               <svg className={styles.ctaFilter} aria-hidden focusable="false">
                 <filter id="cta-liquide" x="-50%" y="-200%" width="200%" height="500%" colorInterpolationFilters="sRGB">

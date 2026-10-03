@@ -361,7 +361,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
       {ready && capture?.outdated && (
         <p className={styles.notice} role="status">
-          Votre favori date d&apos;une version précédente. <Link href="/installer">Réinstallez-le</Link> pour
+          Votre favori date d&apos;une version précédente. <Link href="/create">Réinstallez-le</Link> pour
           profiter des derniers relevés.
         </p>
       )}

@@ -5,10 +5,10 @@ import { BookmarkletButton, CopyBookmarklet } from "@/ui/BookmarkletButton";
 import { InstallDemo } from "@/ui/InstallDemo";
 import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../page.module.css";
-import styles from "./installer.module.css";
+import styles from "./create.module.css";
 
 export const metadata: Metadata = {
-  title: "Installer le favori",
+  title: "Créer une ville",
   description:
     "Le favori DOMCity relève n'importe quelle page que vous regardez et la construit en ville 3D. Rien à installer : un simple favori.",
 };
@@ -49,7 +49,7 @@ const NEVER = [
   "Les éléments masqués de la page",
 ];
 
-export default function InstallerPage() {
+export default function CreatePage() {
   return (
     <div className={`${home.sheet} graph-paper`}>
       <SiteHeader current="create" />

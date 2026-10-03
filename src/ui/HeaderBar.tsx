@@ -25,7 +25,7 @@ export function HeaderBar({ sharing, current }: { sharing: boolean; current?: Si
 
   const links: Array<{ page: SitePage; href: string; label: string }> = [
     ...(sharing ? [{ page: "explore" as const, href: "/explore", label: "Découvrir" }] : []),
-    { page: "create", href: "/installer", label: "Créer une ville" },
+    { page: "create", href: "/create", label: "Créer une ville" },
     ...(sharing ? [{ page: "account" as const, href: "/account", label: "Votre compte" }] : []),
   ];
   const here = (page: SitePage) => (current === page ? "page" : undefined);

@@ -35,7 +35,7 @@ export function InstallDemo() {
           </div>
         </div>
 
-        <span className={styles.origin}>domcity.app/installer</span>
+        <span className={styles.origin}>domcity.app/create</span>
 
         <span className={styles.tag}>
           DOMCity
