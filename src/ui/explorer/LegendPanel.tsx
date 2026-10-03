@@ -19,7 +19,7 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
           <ul>
             {KIND_LIST.filter((k) => KINDS[k].group === group).map((k) => (
               <li key={k}>
-                <KindSwatch kind={k} size={22} />
+                <KindSwatch kind={k} size={32} />
                 <span className={styles.legendName}>{KINDS[k].name}</span>
                 <code>{KINDS[k].tags}</code>
               </li>

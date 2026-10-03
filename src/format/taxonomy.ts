@@ -123,8 +123,6 @@ export const KINDS: Record<Kind, KindInfo> = {
   weather:   { name: "Météo",              tags: "poids de la page",    group: "Ambiance",         color: "#8FA3B5", blurb: "Le poids de la page (octets chargés, éléments) : grand soleil pour une page légère, orage pour une page très lourde." },
 };
 
-/** Toits des maisons, dans le dessin et les vignettes de la légende. */
-export const ROOF_COLOR = "#A8503A";
 export const HIGHLIGHT_COLOR = "#FFD23F";
 
 export const LEGEND_GROUPS: KindInfo["group"][] = [

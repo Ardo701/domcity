@@ -267,7 +267,7 @@
 
 .legendGroup li {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 48px 1fr;
   gap: 12px;
   align-items: start;
 }

@@ -922,7 +922,7 @@
 
 .legendGroup li {
   display: grid;
-  grid-template-columns: 22px auto 1fr;
+  grid-template-columns: 32px auto 1fr;
   gap: 8px;
   align-items: center;
 }

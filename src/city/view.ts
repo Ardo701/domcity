@@ -490,8 +490,17 @@ export class CityView {
    */
   async figure(
     width: number,
-    { elevation = 30, from = "south-east" }: { elevation?: number; from?: "south-east" | "south-west" } = {},
-  ): Promise<{ blob: Blob; width: number; height: number; matrix: number[] } | null> {
+    {
+      elevation = 30,
+      from = "south-east",
+      shadows = true,
+    }: {
+      elevation?: number;
+      from?: "south-east" | "south-west";
+      /** Les ombres posées sur la page autour de la maquette (pas pour les vignettes de la légende). */
+      shadows?: boolean;
+    } = {},
+  ): Promise<{ blob: Blob; canvas: HTMLCanvasElement; width: number; height: number; matrix: number[] } | null> {
     const { bounds } = this.layout;
     const tilt = THREE.MathUtils.degToRad(elevation);
     const side = from === "south-east" ? 1 : -1;
@@ -538,6 +547,7 @@ export class CityView {
     this.scene.fog = null;
     if (paper) {
       paper.ground.material = shadow;
+      paper.ground.visible = shadows;
       for (const grid of paper.grids) grid.visible = false;
     }
     for (const { sprite } of this.sprites) sprite.visible = false;
@@ -601,6 +611,7 @@ export class CityView {
     this.scene.background = background;
     if (paper && paperMaterial) {
       paper.ground.material = paperMaterial;
+      paper.ground.visible = true;
       for (const grid of paper.grids) grid.visible = true;
     }
     shadow.dispose();
@@ -616,7 +627,7 @@ export class CityView {
     ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
     const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).elements.slice();
     const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, "image/webp", 0.9));
-    return blob ? { blob, width, height, matrix } : null;
+    return blob ? { blob, canvas: out, width, height, matrix } : null;
   }
 
   /** Place la caméra (vue aérienne), sans animation. */

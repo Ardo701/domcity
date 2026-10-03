@@ -159,7 +159,7 @@ export default async function Home() {
                 <ul>
                   {LEGEND_KINDS.filter((k) => KINDS[k].group === group).map((k) => (
                     <li key={k}>
-                      <KindSwatch kind={k} size={34} />
+                      <KindSwatch kind={k} size={48} />
                       <div>
                         <p className={styles.kindName}>{KINDS[k].name}</p>
                         <p className={styles.kindTags}>{KINDS[k].tags}</p>
