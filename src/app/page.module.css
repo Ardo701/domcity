@@ -191,10 +191,6 @@
   max-width: 760px;
 }
 
-.sectionHead > p:first-child {
-  color: var(--signal-deep);
-}
-
 .sectionHead h2 {
   font-size: clamp(40px, 5vw, 72px);
   text-transform: uppercase;

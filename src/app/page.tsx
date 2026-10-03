@@ -122,7 +122,6 @@ export default async function Home() {
         {sharing && files && (
           <section id="villes" className={styles.section}>
             <div className={styles.sectionHead}>
-              <p className="mono-caps">Planche 01</p>
               <h2>Les villes partagées</h2>
               <p className={styles.sectionLead}>
                 Les pages d&apos;un même site se rangent ensemble, et s&apos;assemblent en mégalopole. Cherchez un site
@@ -144,7 +143,6 @@ export default async function Home() {
 
         <section id="legende" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche {sharing ? "02" : "01"}</p>
             <h2>La légende du plan</h2>
             <p className={styles.sectionLead}>
               Chaque balise HTML a sa place dans la ville. Les couleurs suivent un plan de zonage : des tons calmes
@@ -175,7 +173,6 @@ export default async function Home() {
 
         <section id="methode" className={styles.section}>
           <div className={styles.sectionHead}>
-            <p className="mono-caps">Planche {sharing ? "03" : "02"}</p>
             <h2>La méthode</h2>
           </div>
           <ol className={styles.steps}>
