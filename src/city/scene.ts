@@ -12,7 +12,7 @@
 import * as THREE from "three";
 import * as shapes from "./geometries";
 import {
-  BASE, CURB, FLOOR, PLANE, WATER_DEPTH, cutRect, harborWater,
+  BASE, CURB, FLOOR, PLANE, WATER_DEPTH, cutRect, gateArch, harborWater,
   type Airport, type Bridge, type Camera, type CityLayout, type Cloud, type Decor, type Factory, type Joint, type Lot,
   type Panel, type Rect, type Road,
 } from "./layout";
@@ -890,8 +890,7 @@ export function buildCityScene(layout: CityLayout, materials: CityMaterials, bas
     const id = decor.owner;
     const cx = decor.x + decor.w / 2;
     const cz = decor.z + decor.d / 2;
-    const span = clamp(decor.w * 0.3, 4, 11);
-    const height = clamp(span * 0.85, 5, 9);
+    const { span, height } = gateArch(decor);
     const pillar = 1.3;
     for (const side of [-1, 1]) box(id, cx + side * (span / 2 + pillar / 2), decor.y, cz, pillar, height, 1.6, STONE);
     box(id, cx, decor.y + height, cz, span + 2 * pillar + 0.4, 1.3, 1.9, "#ddd3bf");

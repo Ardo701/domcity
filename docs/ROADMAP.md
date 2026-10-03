@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : la flèche du nord tourne avec la caméra).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D).
 
 ## 1. Le concept
 
@@ -64,7 +64,7 @@ Identité retenue : **« planche d'urbanisme »**.
 - Papier `#eeeae1`, encre `#15151a`, filets fins, papier millimétré en fond.
 - Orange chantier `#ff4b12` : actions principales et monuments. Jaune balise `#ffd23f` : surbrillance, survol, sélection.
 - Polices : **Big Shoulders** (titres, capitales), **Instrument Sans** (texte), **Martian Mono** (étiquettes techniques).
-- Motifs : cartouche d'architecte, flèche « Nord : haut de page » (elle tourne avec la caméra), dessins axonométriques cernés d'encre (générés par le vrai moteur), repères de planche A à F.
+- Motifs : cartouche d'architecte, flèche « Nord : haut de page » (elle tourne avec la caméra), figures axonométriques rendues par le vrai moteur 3D (la maquette posée sur la planche, ses repères reliés aux balises), vignettes de la légende cernées d'encre, repères de planche A à F.
 - La ville elle-même est une **maquette posée sur la planche** : matériaux réels (béton, brique, enduit, verre, gazon, asphalte), ciel reflété dans les vitres, ombres d'un soleil d'ouest. L'orange chantier reste réservé au monument (h1) et aux accents ; le jaune balise au survol et à la sélection.
 
 ## 4. Architecture du code
@@ -94,7 +94,7 @@ Flux d'une ville Wikipédia : `fetchWikipediaCity` → `captureDocument` (JSON) 
 
 Le rendu (`src/city/`) :
 - `layout.ts` : l'urbanisme. Ville plate sur un socle de maquette, périphérique (coins arrondis) et ceinture verte. Chaque conteneur range ses enfants en rangées dans l'ordre de la page ; des rues séparent les conteneurs et coupent les pâtés trop longs (~24 m) ou trop profonds ; les rues transversales suivent une grille calée sur toute la ville (un joint entre deux maisons est amené sur la ligne la plus proche), si bien qu'elles se prolongent d'une rangée à l'autre et d'une liste à la suivante ; les éléments simples qui se suivent forment un pâté de maisons collées sur un trottoir commun. Un petit élément isolé garde une case presque carrée, la place libre devient une place publique. Parcs, listes, formulaires, tableaux, menus, en-tête et pied de page ont leur sol (gazon, pelouse, pavés, champs, quai) et leurs allées.
-- `palette.ts` : couleurs partagées par la 3D et le dessin de l'accueil (`src/ui/IsoCity.tsx`).
+- `palette.ts` : couleurs partagées par la 3D et les vignettes de la légende (`src/ui/KindSwatch.tsx`).
 - `geometries.ts` : formes unitaires (boîte, toit à deux pans, pyramide, cylindre, cône, coupole, sphère, nœud, virage et son bas-côté, plaque, drapeau qui ondule, arbres, voiture, lampadaire).
 - `materials.ts` : shaders qui dessinent à l'échelle réelle de chaque instance les fenêtres, vitrines et auvents, toits gravillonnés, dalles, pelouses, labours, marquages routiers et passages piétons.
 - `scene.ts` : chaque bâtiment est composé de pièces tirées au sort de façon stable (gratte-ciel à retraits et antenne, immeubles béton, brique ou enduit avec équipements de toit et châteaux d'eau, combles en zinc, maisons à cheminée, tour Art déco du h1, beffroi à cadrans, kiosque à coupole, statues, ambassade à colonnes, sculptures, chantiers et grues, ponts, port avec grues et cargo), puis le mobilier : arbres d'alignement, lampadaires, voitures dans les deux sens.
@@ -273,6 +273,8 @@ Vérifié : 79 tests (tailles minimales sur des pages piégeuses : trente niveau
 ### Retouches avant la mise en ligne
 Demandées par l'utilisateur avant l'étape 6.
 - **Flèche du nord** (« quand on tourne la caméra il n'y a plus de haut ni de bas logique ») : elle tourne avec la caméra, comme une boussole, et montre toujours où est le haut de la page ; le « N » la suit en restant droit. Le cap se lit sur la droite de l'écran, toujours à l'horizontale (`heading` dans `view.ts`), en vue aérienne comme en promenade. Un clic sur la flèche remet le nord en haut de l'écran (`faceNorth`) : la caméra tourne autour de ce qu'elle regarde par le plus court arc, sans changer de hauteur ni de distance ; en promenade, le promeneur se tourne vers le nord. Ville seule et mégalopole.
+- **Figure de l'accueil** (« c'est encore l'ancien type de ville, tout cubique ») : la page de démonstration n'est plus dessinée en boîtes SVG mais rendue par le vrai moteur 3D, en axonométrie (caméra orthographique), vue du sud-ouest (le monument entier, la porte, l'affiche), sur fond transparent : la maquette pose ses ombres sur le papier millimétré de la page. C'est une image (`public/figures/accueil.webp`, 1800 px, ~220 Ko) : l'accueil reste léger, sans Three.js. Les repères (`<h1>` Monument, `<header>` Porte, `<div>` Tour de bureaux, `<h2>` Beffroi, `<img>` Affiche, `<hr>` Canal, `<ul>` Lotissement, `<iframe>` Ambassade, `<footer>` Port) sont placés par l'urbanisme de la page et projetés avec la caméra de l'image (`src/ui/CityFigure.tsx`, `figureMeta.ts`). Les images de l'exemple sont dans `public/figures`. La page Installer montre la même image. L'ancien dessin (`IsoCity`) est retiré.
+- **Régénérer la figure** : `npm run dev`, puis ouvrir `/dev/figure` (développement seulement) : la ville est bâtie, rendue deux fois (fond noir puis blanc, pour la transparence), cadrée au plus près, puis enregistrée avec sa caméra et l'empreinte de son urbanisme (`src/ui/heroFigure.generated.ts`). Un test échoue si l'urbanisme de l'exemple a changé depuis. Un changement du seul dessin (`scene.ts`) ne le fait pas échouer : régénérer à la main.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -315,13 +317,15 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 79 tests
+npm test           # 81 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
 ```
 
 Le favori compilé (`src/bookmarklet/generated.ts`) est versionné ; un test échoue s'il n'est pas à jour, et `npm run build` le recompile toujours avant de construire.
+
+La figure de l'accueil (`public/figures/accueil.webp` et `src/ui/heroFigure.generated.ts`) est versionnée aussi : `npm run dev` puis `/dev/figure` la régénère ; un test échoue si l'urbanisme de l'exemple a changé depuis.
 
 Essais de rendu (développement seulement) : la vue 3D est joignable dans la console (`window.__domcity`) ; `lookFrom([x, y, z], [cx, cy, cz])` place la caméra, `capture()` donne l'image, et `POST /api/dev-shot?name=…` l'enregistre dans `.data/shots/`. Utile quand l'onglet est en arrière-plan et ne se redessine plus.
 

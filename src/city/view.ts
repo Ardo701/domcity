@@ -139,6 +139,8 @@ export class CityView {
   private readonly velocity = new THREE.Vector3();
   private readonly reducedMotion: boolean;
   private environment: THREE.Texture | null = null;
+  /** Le papier de la planche et son quadrillage (la figure de l'accueil les remplace par la page). */
+  private paper: { ground: THREE.Mesh; grids: THREE.Object3D[] } | null = null;
   private sun: THREE.DirectionalLight | null = null;
   private skyLight: THREE.HemisphereLight | null = null;
   /** Vraies couleurs du site : les couleurs d'origine des instances repeintes, pour revenir en arrière. */
@@ -481,6 +483,142 @@ export class CityView {
     return new Promise((resolve) => copy.toBlob(resolve, "image/jpeg", 0.88));
   }
 
+  /**
+   * La ville entière en axonométrie (sans perspective), vue du sud-est ou du sud-ouest, sur fond transparent : la figure de l'accueil, régénérée en développement (/dev/figure).
+   * Ni brume, ni papier, ni étiquettes : seules les ombres restent, posées sur la page.
+   * Rend aussi la matrice qui projette un point de la ville sur l'image (pour les repères).
+   */
+  async figure(
+    width: number,
+    { elevation = 30, from = "south-east" }: { elevation?: number; from?: "south-east" | "south-west" } = {},
+  ): Promise<{ blob: Blob; width: number; height: number; matrix: number[] } | null> {
+    const { bounds } = this.layout;
+    const tilt = THREE.MathUtils.degToRad(elevation);
+    const side = from === "south-east" ? 1 : -1;
+    const target = new THREE.Vector3(this.center.x, 0, this.center.z);
+    const camera = new THREE.OrthographicCamera();
+    camera.position
+      .set(side * Math.cos(tilt) * Math.SQRT1_2, Math.sin(tilt), Math.cos(tilt) * Math.SQRT1_2)
+      .multiplyScalar(this.size * 4)
+      .add(target);
+    camera.lookAt(target);
+    camera.updateMatrixWorld();
+
+    // Premier cadre, large : la ville, ses nuages, et de quoi recevoir ses ombres.
+    const top = Math.max(bounds.maxY, ...(this.layout.ambiance?.clouds ?? []).map((c) => c.y + c.size));
+    const reach = this.size * 0.4;
+    const box = new THREE.Box3(
+      new THREE.Vector3(bounds.minX - reach, -1, bounds.minZ - reach),
+      new THREE.Vector3(bounds.maxX + reach, top + 1, bounds.maxZ + reach),
+    );
+    const seen = new THREE.Box3();
+    for (let i = 0; i < 8; i += 1) {
+      const corner = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
+      seen.expandByPoint(corner.applyMatrix4(camera.matrixWorldInverse));
+    }
+    camera.near = Math.max(0.1, -seen.max.z - this.size);
+    camera.far = -seen.min.z + this.size * 2;
+    const frame = (left: number, right: number, bottom: number, upper: number) => {
+      camera.left = left;
+      camera.right = right;
+      camera.bottom = bottom;
+      camera.top = upper;
+      camera.updateProjectionMatrix();
+      return Math.round((width * (upper - bottom)) / (right - left));
+    };
+
+    // Ni brume, ni papier, ni étiquettes : seules les ombres restent, posées sur la page.
+    const ratio = this.renderer.getPixelRatio();
+    const fog = this.scene.fog;
+    const background = this.scene.background;
+    const paper = this.paper;
+    const paperMaterial = paper?.ground.material;
+    const shadow = new THREE.ShadowMaterial({ opacity: 0.2 });
+    this.renderer.setPixelRatio(1);
+    this.scene.fog = null;
+    if (paper) {
+      paper.ground.material = shadow;
+      for (const grid of paper.grids) grid.visible = false;
+    }
+    for (const { sprite } of this.sprites) sprite.visible = false;
+
+    // On rend deux fois, sur fond noir puis blanc : l'écart donne la transparence de chaque pixel
+    // (bords adoucis, ombres sur la page), sans toucher au rendu lui-même.
+    const render = (w: number, h: number) => {
+      this.renderer.setSize(w, h, false);
+      const shot = (color: string) => {
+        this.scene.background = new THREE.Color(color);
+        this.renderer.render(this.scene, camera);
+        // Copie dans la même tâche que le rendu : le tampon WebGL est encore plein.
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(this.renderer.domElement, 0, 0);
+        return ctx.getImageData(0, 0, w, h).data;
+      };
+      const dark = shot("#000000");
+      const light = shot("#ffffff");
+      const pixels = new Uint8ClampedArray(dark.length);
+      for (let i = 0; i < dark.length; i += 4) {
+        const gap = (light[i] - dark[i] + light[i + 1] - dark[i + 1] + light[i + 2] - dark[i + 2]) / 3;
+        const alpha = THREE.MathUtils.clamp(255 - gap, 0, 255);
+        pixels[i + 3] = alpha;
+        if (alpha > 0) for (let c = 0; c < 3; c += 1) pixels[i + c] = (dark[i + c] * 255) / alpha;
+      }
+      return pixels;
+    };
+
+    // Une première image, petite, dit où la ville est vraiment dessinée ; la vraie la cadre au plus près.
+    const probe = 480;
+    const probeHeight = frame(seen.min.x, seen.max.x, seen.min.y, seen.max.y);
+    const scaled = Math.round((probeHeight * probe) / width);
+    const draft = render(probe, scaled);
+    let minX = probe;
+    let maxX = 0;
+    let minY = scaled;
+    let maxY = 0;
+    for (let y = 0; y < scaled; y += 1) {
+      for (let x = 0; x < probe; x += 1) {
+        if (draft[(y * probe + x) * 4 + 3] < 6) continue;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x + 1);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y + 1);
+      }
+    }
+    const unit = (seen.max.x - seen.min.x) / probe;
+    const margin = (maxX - minX) * unit * 0.02;
+    const height = frame(
+      seen.min.x + minX * unit - margin,
+      seen.min.x + maxX * unit + margin,
+      seen.max.y - maxY * unit - margin,
+      seen.max.y - minY * unit + margin,
+    );
+    const pixels = render(width, height);
+
+    this.scene.fog = fog;
+    this.scene.background = background;
+    if (paper && paperMaterial) {
+      paper.ground.material = paperMaterial;
+      for (const grid of paper.grids) grid.visible = true;
+    }
+    shadow.dispose();
+    this.renderer.setPixelRatio(ratio);
+    this.resize();
+    this.updateLabels();
+
+    const out = document.createElement("canvas");
+    out.width = width;
+    out.height = height;
+    const ctx = out.getContext("2d");
+    if (!ctx) return null;
+    ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
+    const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).elements.slice();
+    const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, "image/webp", 0.9));
+    return blob ? { blob, width, height, matrix } : null;
+  }
+
   /** Place la caméra (vue aérienne), sans animation. */
   lookFrom(position: [number, number, number], target: [number, number, number]) {
     this.flyTo(new THREE.Vector3(...position), new THREE.Vector3(...target), false);
@@ -639,6 +777,7 @@ export class CityView {
     grid.position.set(this.center.x, 0, this.center.z);
     this.scene.add(grid);
     this.extras.push(grid);
+    this.paper = { ground, grids: [grid] };
 
     const major = new THREE.GridHelper(divisions * 10, Math.round(divisions / 5), "#15151A", "#15151A");
     const majorMaterial = major.material as THREE.LineBasicMaterial;
@@ -648,6 +787,7 @@ export class CityView {
     major.position.set(this.center.x, 0.01, this.center.z);
     this.scene.add(major);
     this.extras.push(major);
+    this.paper.grids.push(major);
   }
 
   /**

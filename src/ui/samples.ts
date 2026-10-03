@@ -1,6 +1,9 @@
 import type { CityDoc } from "@/format/types";
 
-/** Page de démonstration dessinée sur l'accueil. Construite à la main, rendue par le vrai moteur. */
+/**
+ * Page de démonstration montrée sur l'accueil et la page Installer. Construite à la main, rendue par le vrai
+ * moteur 3D (/dev/figure). Ses images sont dans public/figures.
+ */
 export const HERO_SAMPLE: CityDoc = {
   format: 1,
   source: "wikipedia",
@@ -13,7 +16,7 @@ export const HERO_SAMPLE: CityDoc = {
       {
         tag: "header",
         children: [
-          { tag: "img", img: { src: "", w: 220, h: 80 } },
+          { tag: "img", img: { src: "/figures/exemple-logo.svg", alt: "Exemple", w: 220, h: 80 } },
           { tag: "nav", children: [{ tag: "li", text: 8 }, { tag: "li", text: 12 }, { tag: "li", text: 9 }] },
         ],
       },
@@ -26,7 +29,7 @@ export const HERO_SAMPLE: CityDoc = {
             children: [
               { tag: "h2", text: 8, heading: "Histoire" },
               { tag: "p", text: 1900 },
-              { tag: "img", img: { src: "", w: 420, h: 280 } },
+              { tag: "img", img: { src: "/figures/exemple-affiche.svg", alt: "Paysage", w: 420, h: 280 } },
               { tag: "p", text: 420 },
               { tag: "div", text: 5200 },
             ],

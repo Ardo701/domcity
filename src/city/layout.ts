@@ -168,6 +168,14 @@ export interface Decor extends Rect {
   y: number;
 }
 
+/** L'arc de la porte de l'en-tête, au milieu de sa place : largeur de l'ouverture et hauteur des piliers. */
+export function gateArch(decor: Decor): { span: number; height: number; top: number } {
+  const span = Math.min(11, Math.max(4, decor.w * 0.3));
+  const height = Math.min(9, Math.max(5, span * 0.85));
+  // Piliers, linteau (1,3) et attique (0,7).
+  return { span, height, top: decor.y + height + 2 };
+}
+
 /** Chenal d'un port : son eau, du bassin jusqu'au bord de la maquette. */
 export interface Channel extends Rect {
   /** Sens du chenal : le long de x (bassin prolongé vers l'ouest ou l'est), de z (vers le sud). */

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { wikiPath } from "@/capture/wikipedia";
+import { gateArch } from "@/city/layout";
 import type { CityCard } from "@/format/shared";
 import { KINDS, LEGEND_GROUPS, type Kind } from "@/format/taxonomy";
 import { sharingEnabled } from "@/server/config";
@@ -7,7 +8,8 @@ import { fileStore, thumbKey } from "@/server/files";
 import { recentCaptures } from "@/server/store";
 import { CityGallery } from "@/ui/CityGallery";
 import { CitySearch } from "@/ui/CitySearch";
-import { IsoCity } from "@/ui/IsoCity";
+import { CityFigure } from "@/ui/CityFigure";
+import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { Wordmark } from "@/ui/Logo";
 import { MyCities } from "@/ui/MyCities";
@@ -115,18 +117,28 @@ export default async function Home() {
           </div>
 
           <figure className={styles.figure}>
-            <IsoCity
+            <CityFigure
               className={styles.iso}
               doc={HERO_SAMPLE}
-              title="Une page de démonstration construite en ville : quartiers, immeubles, monument, rivière."
+              figure={HERO_FIGURE}
+              title="Une page de démonstration construite en ville : monument, beffrois, tours de bureaux, affiche, canal, lotissement, ambassade, port."
               annotations={[
                 { match: (l) => l.kind === "monument", tag: "h1", name: "Monument" },
+                {
+                  match: (l) => l.kind === "gate",
+                  tag: "header",
+                  name: "Porte",
+                  at: (lot, city) => {
+                    const arch = city.decor.find((d) => d.type === "gate" && d.owner === lot.id);
+                    return arch && [arch.x + arch.w / 2, gateArch(arch).top, arch.z + arch.d / 2];
+                  },
+                },
+                { match: (l) => l.kind === "tower" && l.node.text === 5200, tag: "div", name: "Tour de bureaux" },
                 { match: (l) => l.kind === "belfry", tag: "h2", name: "Beffroi" },
-                { match: (l) => l.kind === "tower" && l.node.text === 5200, tag: "div", name: "Immeuble" },
-                { match: (l) => l.kind === "billboard" && l.node.img?.w === 420, tag: "img", name: "Panneau" },
+                { match: (l) => l.kind === "billboard" && l.node.img?.w === 420, tag: "img", name: "Affiche" },
                 { match: (l) => l.kind === "river", tag: "hr", name: "Canal" },
                 { match: (l) => l.kind === "estate", tag: "ul", name: "Lotissement" },
-                { match: (l) => l.kind === "park", tag: "aside", name: "Parc" },
+                { match: (l) => l.kind === "embassy", tag: "iframe", name: "Ambassade" },
                 { match: (l) => l.kind === "port", tag: "footer", name: "Port" },
               ]}
             />

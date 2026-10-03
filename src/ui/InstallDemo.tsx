@@ -1,5 +1,4 @@
-import { IsoCity } from "@/ui/IsoCity";
-import { HERO_SAMPLE } from "@/ui/samples";
+import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import styles from "./InstallDemo.module.css";
 
 /**
@@ -30,7 +29,8 @@ export function InstallDemo() {
               <span className={styles.pageSide} />
             </div>
             <div className={styles.city}>
-              <IsoCity doc={HERO_SAMPLE} title="" className={styles.cityDrawing} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={HERO_FIGURE.src} alt="" width={HERO_FIGURE.width} height={HERO_FIGURE.height} className={styles.cityDrawing} />
             </div>
           </div>
         </div>
