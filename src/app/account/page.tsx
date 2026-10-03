@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { sharingEnabled } from "@/server/config";
+import { fileStore } from "@/server/files";
 import { AccountCities } from "@/ui/AccountCities";
 import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
@@ -27,7 +28,7 @@ export default function AccountPage() {
             que vous publiez, avec le lien secret qui permet de les supprimer.
           </p>
         </div>
-        <AccountCities />
+        <AccountCities filesBase={fileStore()!.publicUrl("")} />
       </main>
 
       <SiteFooter />

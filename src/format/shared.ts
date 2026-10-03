@@ -117,6 +117,9 @@ export const REPORT_REASONS = {
 export type ReportReason = keyof typeof REPORT_REASONS;
 
 export const sharedCityPath = (slug: string) => `/city/${slug}`;
+/** Les fichiers d'une ville dans le stockage (R2, ou le dossier local) : la ville et sa miniature. */
+export const cityKey = (slug: string) => `city/${slug}.json.gz`;
+export const thumbKey = (slug: string) => `city/${slug}.jpg`;
 /** Le lien secret : le jeton reste après le #, jamais envoyé au serveur dans l'adresse. */
 export const deleteCityPath = (slug: string, token: string) => `${sharedCityPath(slug)}/delete#${token}`;
 export const sitePath = (domain: string) => `/site/${encodeURIComponent(domain)}`;

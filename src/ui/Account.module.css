@@ -110,49 +110,40 @@
   color: var(--ink-3);
 }
 
-.list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1.5px solid var(--ink);
+/* Une ville en carte, comme dans la galerie ; les actions restent en bas, quelle que soit la longueur du titre. */
+.card {
+  grid-template-rows: auto 1fr;
 }
 
-.list li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px 24px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--rule);
+/* Deux classes : l'emporte sur la grille du corps de carte de la galerie, quel que soit l'ordre des feuilles. */
+.card .cardBody {
+  display: flex;
+  flex-direction: column;
 }
 
-.cityText {
-  min-width: 0;
-}
-
-.cityTitle {
-  font-size: 19px;
-  font-weight: 600;
+.cardTitle {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--ink);
   text-decoration: none;
-  border-bottom: 1.5px solid transparent;
   overflow-wrap: anywhere;
 }
 
-.cityTitle:hover {
-  border-bottom-color: var(--signal);
-}
-
-.cityMeta {
-  margin-top: 4px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--ink-3);
+.cardTitle:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--signal);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
 }
 
 .action {
@@ -189,12 +180,6 @@
   background: var(--paper-raised);
   color: var(--ink-2);
   font-size: 14px;
-}
-
-@media (max-width: 640px) {
-  .list li {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

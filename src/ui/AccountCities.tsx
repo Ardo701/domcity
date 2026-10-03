@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { deleteCityPath, sharedCityPath } from "@/format/shared";
+import { deleteCityPath, sharedCityPath, thumbKey } from "@/format/shared";
 import styles from "./Account.module.css";
+import { CardPending } from "./CardPending";
+import gallery from "./Gallery.module.css";
 import { useMyCities, type MyCity } from "./savedCities";
 
 const deletePath = (city: MyCity) => deleteCityPath(city.slug, city.token);
@@ -34,8 +36,47 @@ function CopySecret({ city }: { city: MyCity }) {
   );
 }
 
+/**
+ * Une ville publiée, en carte comme dans la galerie : sa miniature (qui mène à la ville), son titre, et les trois
+ * actions. Une ville sans miniature, ou supprimée depuis un autre navigateur, garde les hachures de la galerie.
+ */
+function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
+  const [broken, setBroken] = useState(false);
+  const date = sharedOn(city.sharedAt);
+  const href = sharedCityPath(city.slug);
+  return (
+    <li>
+      <article className={`${gallery.card} ${styles.card}`}>
+        <Link href={href} className={gallery.thumb} tabIndex={-1} aria-hidden>
+          {!broken && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`${filesBase}${thumbKey(city.slug)}`} alt="" loading="lazy" onError={() => setBroken(true)} />
+          )}
+          <CardPending />
+        </Link>
+        <div className={`${gallery.body} ${styles.cardBody}`}>
+          <Link href={href} className={`${gallery.title} ${styles.cardTitle}`}>
+            {city.title}
+          </Link>
+          <span className={gallery.where}>{href}</span>
+          {date && <span className={`${gallery.meta} mono-caps`}>Publiée le {date}</span>}
+          <div className={styles.actions}>
+            <Link href={href} className={styles.action}>
+              Voir
+            </Link>
+            <CopySecret city={city} />
+            <Link href={deletePath(city)} className={`${styles.action} ${styles.danger}`}>
+              Supprimer
+            </Link>
+          </div>
+        </div>
+      </article>
+    </li>
+  );
+}
+
 /** Les villes publiées depuis ce navigateur : les revoir, garder leur lien secret, les supprimer. */
-export function AccountCities() {
+export function AccountCities({ filesBase }: { filesBase: string }) {
   const cities = useMyCities();
 
   // Pas encore lues (rendu serveur, première image) : rien plutôt qu'un « aucune ville » trompeur.
@@ -64,32 +105,10 @@ export function AccountCities() {
           {cities.length} ville{cities.length > 1 ? "s" : ""}
         </span>
       </div>
-      <ul className={styles.list}>
-        {cities.map((city) => {
-          const date = sharedOn(city.sharedAt);
-          return (
-            <li key={city.slug}>
-              <div className={styles.cityText}>
-                <Link href={sharedCityPath(city.slug)} className={styles.cityTitle}>
-                  {city.title}
-                </Link>
-                <p className={styles.cityMeta}>
-                  {date && <>Publiée le {date} · </>}
-                  {sharedCityPath(city.slug)}
-                </p>
-              </div>
-              <div className={styles.actions}>
-                <Link href={sharedCityPath(city.slug)} className={styles.action}>
-                  Voir
-                </Link>
-                <CopySecret city={city} />
-                <Link href={deletePath(city)} className={`${styles.action} ${styles.danger}`}>
-                  Supprimer
-                </Link>
-              </div>
-            </li>
-          );
-        })}
+      <ul className={gallery.grid}>
+        {cities.map((city) => (
+          <CityCard key={city.slug} city={city} filesBase={filesBase} />
+        ))}
       </ul>
       <p className={styles.note}>
         Ces villes ne sont gardées que dans ce navigateur. Un autre navigateur, une navigation privée ou

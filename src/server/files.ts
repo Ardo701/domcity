@@ -1,5 +1,6 @@
 import "server-only";
 import { AwsClient } from "aws4fetch";
+import { cityKey, thumbKey } from "@/format/shared";
 import { storeConfig, type CloudConfig, type LocalConfig } from "./config";
 
 /**
@@ -14,8 +15,7 @@ export interface FileStore {
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
-export const cityKey = (slug: string) => `city/${slug}.json.gz`;
-export const thumbKey = (slug: string) => `city/${slug}.jpg`;
+export { cityKey, thumbKey };
 
 function r2Files(config: CloudConfig): FileStore {
   const client = new AwsClient({
