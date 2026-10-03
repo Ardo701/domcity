@@ -1,0 +1,107 @@
+/* La démonstration du favori : la scène (un SVG redessiné à chaque image), les étapes et le bouton pause. */
+
+.demo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stage {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Les textes de la scène, dans les polices du site. */
+.display {
+  font-family: var(--display);
+  font-weight: 900;
+}
+
+.sans {
+  font-family: var(--body);
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.steps {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.step:hover {
+  border-color: var(--ink);
+}
+
+.step b {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--signal-deep);
+}
+
+.step[aria-current="step"] {
+  background: var(--beacon);
+  border-color: var(--ink);
+}
+
+/* L'avancement de l'étape en cours, un trait d'encre qui court sous elle. */
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--ink);
+  transform-origin: left;
+}
+
+.pause {
+  flex: none;
+  width: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.pause:hover {
+  border-color: var(--ink);
+}

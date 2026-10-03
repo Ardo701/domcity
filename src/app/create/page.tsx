@@ -17,7 +17,7 @@ const GESTURES = [
   {
     n: "01",
     title: "Glisser",
-    text: "Glissez le bouton orange dans la barre de favoris de votre navigateur. Il y reste, prêt à servir.",
+    text: "Glissez le bouton DOMCity dans la barre de favoris de votre navigateur. Il y reste, prêt à servir.",
   },
   {
     n: "02",
