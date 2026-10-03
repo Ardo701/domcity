@@ -10,6 +10,7 @@
 
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
+import { THUMBNAIL } from "@/format/shared";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
 import type { Weather } from "./ambiance";
 import type { Airport, CityLayout, Lot, RoadStyle } from "./layout";
@@ -18,7 +19,6 @@ import { buildCityScene, type CityScene, type InstanceRef, type LabelSlot } from
 import {
   createQueue,
   ensureFonts,
-  fontFamily,
   loadCorsImage,
   loadImageTexture,
   plaqueTexture,
@@ -381,63 +381,51 @@ export class CityView {
   }
 
   /**
-   * Miniature 1200 × 630 de la vue actuelle, pour l'aperçu sur les réseaux et la galerie,
-   * avec un petit cartouche DOMCity dans le coin.
+   * La miniature d'une ville partagée (aperçu sur les réseaux, galerie). C'est toujours la même
+   * prise de vue, faite par le moteur et jamais choisie par la personne qui partage : toute la
+   * ville en axonométrie, vue du sud-ouest comme la figure de l'accueil, posée avec ses ombres sur
+   * le papier millimétré. Rien de ce qu'on a touché dans la vue : ni sélection, ni survol, ni
+   * vraies couleurs.
    */
-  async snapshot(title: string, place: string): Promise<Blob | null> {
-    const width = 1200;
-    const height = 630;
+  async thumbnail(): Promise<Blob | null> {
+    const { width, height } = THUMBNAIL;
+    const margin = 40;
+    const selected = this.selected;
+    const realColors = this.realColors;
+    this.setHover(null, null);
+    this.selected = null;
+    if (selected !== null) this.repaintRange(selected, this.layout.lots[selected].subtreeEnd);
+    this.setRealColors(false);
+    const shot = await this.figure(width - margin * 2, { from: "south-west" });
+    this.setRealColors(realColors);
+    if (selected !== null && this.selected === null) {
+      this.selected = selected;
+      this.repaintRange(selected, this.layout.lots[selected].subtreeEnd);
+    }
+    if (!shot) return null;
+
     const out = document.createElement("canvas");
     out.width = width;
     out.height = height;
     const ctx = out.getContext("2d");
     if (!ctx) return null;
-
-    // Rendu et copie dans la même tâche : le tampon WebGL est encore plein.
-    this.updateLabels();
-    this.fitDepth();
-    this.renderer.render(this.scene, this.camera);
-    const source = this.renderer.domElement;
-    const scale = Math.max(width / source.width, height / source.height);
-    const sw = width / scale;
-    const sh = height / scale;
-    ctx.drawImage(source, (source.width - sw) / 2, (source.height - sh) / 2, sw, sh, 0, 0, width, height);
-
-    const display = fontFamily("--font-display", "sans-serif");
-    const mono = fontFamily("--font-mono", "monospace");
-    const name = title.toUpperCase();
-    const kicker = "DOMCITY · CHAQUE PAGE WEB EST UNE VILLE";
-    ctx.font = `800 44px ${display}`;
-    const nameWidth = ctx.measureText(name).width + 40;
-    ctx.font = `600 15px ${mono}`;
-    const kickerWidth = ctx.measureText(kicker).width + 56;
-    ctx.font = `500 15px ${mono}`;
-    const placeWidth = ctx.measureText(place).width + 40;
-    const boxWidth = Math.min(width - 64, Math.max(nameWidth, kickerWidth, placeWidth));
-    const x = 32;
-    const y = height - 32 - 124;
-    ctx.fillStyle = "#F6F3EC";
-    ctx.fillRect(x, y, boxWidth, 124);
-    ctx.strokeStyle = "#15151A";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y, boxWidth, 124);
-    ctx.beginPath();
-    ctx.moveTo(x, y + 36);
-    ctx.lineTo(x + boxWidth, y + 36);
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.fillStyle = "#FF4B12";
-    ctx.fillRect(x + 16, y + 13, 10, 10);
-    ctx.fillStyle = "#15151A";
-    ctx.textBaseline = "middle";
-    ctx.font = `600 15px ${mono}`;
-    ctx.fillText(kicker, x + 36, y + 19);
-    ctx.font = `800 44px ${display}`;
-    ctx.fillText(name, x + 20, y + 70, boxWidth - 40);
-    ctx.font = `500 15px ${mono}`;
-    ctx.fillStyle = "#45454F";
-    ctx.fillText(place, x + 20, y + 104, boxWidth - 40);
-
+    // Le papier de la planche et son quadrillage, comme .graph-paper dans la page.
+    ctx.fillStyle = "#eeeae1";
+    ctx.fillRect(0, 0, width, height);
+    for (const [step, alpha] of [
+      [24, 0.05],
+      [120, 0.08],
+    ]) {
+      ctx.fillStyle = `rgba(21, 21, 26, ${alpha})`;
+      for (let x = 0; x < width; x += step) ctx.fillRect(x, 0, 1, height);
+      for (let y = 0; y < height; y += step) ctx.fillRect(0, y, width, 1);
+    }
+    // La maquette au milieu ; une ville tout en hauteur est réduite pour tenir.
+    const scale = Math.min(1, (height - margin * 2) / shot.height);
+    const w = shot.width * scale;
+    const h = shot.height * scale;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(shot.canvas, (width - w) / 2, (height - h) / 2, w, h);
     return new Promise((resolve) => out.toBlob(resolve, "image/jpeg", 0.86));
   }
 

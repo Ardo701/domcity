@@ -4,7 +4,7 @@ import { DOMParser } from "linkedom";
 import { fetchWikipediaCity, type WikiLang } from "@/capture/wikipedia";
 import { layoutCity } from "@/city/layout";
 import { validateCityDoc } from "@/format/schema";
-import type { CityStatsSummary } from "@/format/shared";
+import { THUMBNAIL, type CityStatsSummary } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, normalizePageUrl } from "@/format/url";
 import { cityKey, fileStore, thumbKey } from "./files";
@@ -57,11 +57,44 @@ export function readUploadedCity(gzipped: Uint8Array): CityDoc {
   return result.doc;
 }
 
-/** Miniature : un JPEG, et rien d'autre. */
+/** Largeur et hauteur d'un JPEG, lues dans son en-tête (marqueur SOF), ou null. */
+function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+  let i = 2;
+  while (i + 8 < bytes.length) {
+    if (bytes[i] !== 0xff) return null;
+    const marker = bytes[i + 1];
+    if (marker === 0xff) {
+      i += 1;
+      continue;
+    }
+    // Marqueurs sans longueur.
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
+      i += 2;
+      continue;
+    }
+    // Début de l'image (SOF0 à SOF15, sauf C4, C8 et CC qui sont d'autres marqueurs).
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      return { height: (bytes[i + 5] << 8) | bytes[i + 6], width: (bytes[i + 7] << 8) | bytes[i + 8] };
+    }
+    // Les données commencent sans que la taille ait été donnée.
+    if (marker === 0xda) return null;
+    i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
+  }
+  return null;
+}
+
+/**
+ * Miniature : un JPEG au format de celle que fait le moteur, et rien d'autre. Le serveur ne peut
+ * pas savoir ce qu'elle montre (il ne sait pas rendre la 3D) ; une image détournée se signale.
+ */
 export function readThumbnail(bytes: Uint8Array): Uint8Array {
   if (bytes.byteLength > MAX_THUMB_BYTES) throw new ShareError(413, "Miniature trop lourde.");
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (!isJpeg) throw new ShareError(400, "La miniature doit être un JPEG.");
+  const size = jpegSize(bytes);
+  if (size?.width !== THUMBNAIL.width || size.height !== THUMBNAIL.height) {
+    throw new ShareError(400, `La miniature doit faire ${THUMBNAIL.width} × ${THUMBNAIL.height} pixels.`);
+  }
   return bytes;
 }
 

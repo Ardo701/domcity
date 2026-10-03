@@ -2,6 +2,12 @@
 
 import type { CaptureSource } from "./types";
 
+/**
+ * La miniature d'une ville partagée : toujours la maquette entière, rendue par le moteur au
+ * moment du partage (`thumbnail` dans src/city/view.ts), au format des aperçus sur les réseaux.
+ */
+export const THUMBNAIL = { width: 1200, height: 630 } as const;
+
 export interface CityStatsSummary {
   buildings: number;
   districts: number;

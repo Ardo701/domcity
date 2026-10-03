@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales, les sites au premier plan avec la page d'un site, miniature automatique).
 
 ## 1. Le concept
 
@@ -33,7 +33,7 @@
 
 Une ville stockée est une **description** de la page (JSON), jamais un dessin. Tout l'affichage (genres, couleurs, hauteurs, placement, lumière) est calculé par le moteur à chaque ouverture. Changer le moteur change **toutes** les villes, anciennes comme nouvelles. Trois nuances :
 1. Le moteur ne peut afficher que ce qui a été relevé : une nouvelle information (traqueurs, couleurs réelles…) n'existera pas dans les anciennes villes. Le champ `format` du JSON permet de gérer les versions.
-2. La miniature (aperçu réseaux sociaux) est figée au moment du partage.
+2. La miniature (aperçu sur les réseaux, galerie) est figée au moment du partage. Elle est toujours rendue par le moteur, au même cadrage (toute la ville vue du sud-ouest), jamais choisie par la personne qui partage.
 3. Pour désigner un bâtiment dans un lien futur, viser sa place dans la page (chemin dans l'arbre), pas le numéro de lot calculé par le moteur.
 
 ### Vie privée
@@ -196,7 +196,7 @@ Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalemen
 Accueil, recherche Wikipédia (fr, en, de, es, it), relevé, urbanisme, rendu Three.js instancié (ombres, étages, toits, monuments, panneaux avec images), vue aérienne, promenade (souris capturée ou regard en glissant si le navigateur refuse), survol, inspecteur, cartouche, légende, version mobile.
 
 ### Étape 2 : partage ✅ (commit `473157e`)
-Bouton « Partager » (aperçu de ce qui sera publié + miniature 1200 × 630 marquée DOMCity), lien public `/c/[slug]` et lien secret `/c/[slug]/supprimer#jeton`, « Vos villes » mémorisées dans le navigateur, page de ville partagée (copier le lien, signaler, choix de version), page de site `/s/[domain]`, recherche et galerie sur l'accueil, aperçus Open Graph et Twitter, mode local complet.
+Bouton « Partager » (aperçu de ce qui sera publié + miniature 1200 × 630 marquée DOMCity, aujourd'hui une maquette rendue automatiquement : voir les retouches), lien public `/c/[slug]` et lien secret `/c/[slug]/supprimer#jeton`, « Vos villes » mémorisées dans le navigateur, page de ville partagée (copier le lien, signaler, choix de version), page de site `/s/[domain]`, recherche et galerie sur l'accueil, aperçus Open Graph et Twitter, mode local complet.
 
 Vérifié : 27 tests (capture, urbanisme, fichiers piégés, partage de bout en bout sur la base locale), TypeScript, ESLint, compilation de production, parcours complet dans le navigateur (partager, rouvrir, rechercher, versions, supprimer).
 **Non vérifié** : le mode cloud contre un vrai Supabase et un vrai R2 (aucun compte branché) ; la capture de la souris dans un navigateur normal ; un vrai téléphone ; un ordinateur peu puissant.
@@ -296,6 +296,7 @@ Demandées par l'utilisateur avant l'étape 6.
 - **Vignettes de la légende rendues par le moteur** (« les icônes représentent les éléments de l'ancienne DA, très simples ») : les petits blocs SVG de couleur laissent place à de vraies maquettes, comme la figure de l'accueil. Pour chaque genre (et les rues), une petite page d'exemple est bâtie, un morceau de sa ville est découpé autour de l'élément (sols et rues coupés net, bâtiments gardés entiers ou retirés), rendu en axonométrie du sud-ouest sans ombre portée, puis cerné d'un trait d'encre. Quelques retouches pour la lisibilité : la caméra de surveillance tournée vers nous, le tag sur un petit immeuble vu d'assez bas, le terrain sans ses bâtiments. Les 32 vignettes tiennent dans une image de 1024 × 512 (95 Ko). Elles servent dans la légende de l'accueil (48 px) et de la vue (32 px, au lieu de 22), l'inspecteur, les bulles, le bulletin d'ambiance, le tableau des départs et la page introuvable.
 - **Les sites au premier plan** (« une mégalopole peut avoir plusieurs villes ») : la recherche et la galerie montrent des sites, plus des villes une par une. Recherche : un résultat par site (« fr.wikipedia.org · 9 villes ») ; les pages dont le titre répond sont rangées dessous (3 au plus, puis « et 4 autres ») et mènent droit à leur ville ; un titre qui commence par le mot cherché passe devant. Galerie de l'accueil (9 sites) et de Découvrir (60) : un site par carte, la miniature de sa page d'accueil (ou de sa page la plus récente), son nombre de villes, ses visites, sa dernière mise à jour.
 - **Page d'un site** (`/site/apple.com`, ancienne `/s/…` redirigée ; « pourquoi /s/ ? ») : légère, sans 3D. Le domaine, ses chiffres (villes, versions, visites, mise à jour), « Visiter la mégalopole » (dès 2 pages, à `/site/…/megalopolis` ; sinon « Visiter la ville »), « Ouvrir apple.com ↗ », puis ses pages en cartes dans l'ordre des adresses (titre, chemin décodé, bâtiments, versions, date), par morceaux de 60. Elle existe dès qu'une page du site est partagée : si la page d'accueil ne l'est pas, une carte vide « Pas encore relevée » invite à l'ouvrir et à cliquer sur le favori (pas pour Wikipédia, qui n'a pas d'accueil à cette adresse). Dans la mégalopole, le surtitre « Mégalopole » y ramène. Nouvelle migration (la 4e).
+- **Miniature automatique** (« je ne veux pas qu'une personne puisse faire sa propre image ») : la miniature n'est plus une photo de la vue au moment du partage (cadrage, zoom et vraies couleurs au choix de chacun, cartouche imprimé dedans), mais une prise de vue du moteur, toujours la même : toute la ville en axonométrie, vue du sud-ouest comme la figure de l'accueil, posée avec ses ombres sur le papier millimétré, sans sélection, survol ni vraies couleurs (`thumbnail` dans `view.ts`). Une seule image, un JPEG de 1200 × 630 (le format des aperçus sur les réseaux), qui sert aussi à la galerie : environ 150 Ko et 0,4 s de rendu pour Lyon. Le serveur refuse un JPEG d'une autre taille (`readThumbnail`) ; il ne peut pas vérifier ce qu'il montre (il ne sait pas rendre la 3D) : une image forgée hors de l'interface reste possible, comme une ville forgée, et le signalement s'en charge.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -326,6 +327,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 - Urbanisme : un petit élément isolé entre deux gros blocs laisse une place publique ; les impasses (rues rattachées par un seul bout) n'ont pas encore de raquette de retournement.
 - Très grandes villes : niveaux de détail et `three-mesh-bvh` pour le survol si besoin.
 - Image Open Graph par défaut pour l'accueil.
+- Miniatures : figées au partage, elles vieillissent quand le dessin change. Les refaire toutes d'un coup (une page de développement comme `/dev/figure`, une route d'administration en production) ; noter la version du moteur avec chacune.
 - Avertissement de compilation sans conséquence sur la police Big Shoulders.
 - Favori : utiliser `rect` pour ranger la ville selon la mise en page réelle (ordre visuel plutôt qu'ordre du code) ; lire les cadres (`iframe`) du même site ; les shadow DOM fermés restent invisibles.
 - Favori : les adresses d'images peuvent contenir des paramètres signés (CDN privés) ; envisager de retirer les paramètres de signature connus avant publication.

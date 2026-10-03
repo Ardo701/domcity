@@ -157,11 +157,12 @@ export function SharePanel({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={thumb.url} alt="Miniature de la ville" />
               ) : (
-                <span className="mono-caps">Prise de vue…</span>
+                <span className="mono-caps">Rendu de la maquette…</span>
               )}
             </div>
             <p className={styles.thumbNote}>
-              La miniature reprend votre vue actuelle. Pour en changer, fermez, recadrez, puis revenez.
+              L&apos;image de la ville est faite par DOMCity : toute la maquette, toujours vue du même angle. Elle sert
+              d&apos;aperçu sur les réseaux et dans la galerie.
             </p>
 
             {bookmarklet && (

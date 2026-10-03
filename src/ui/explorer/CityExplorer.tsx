@@ -223,10 +223,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
     setAmbianceOpen(false);
     viewRef.current?.setMode(next);
   };
-  const takeSnapshot = useCallback(
-    () => viewRef.current?.snapshot(doc?.title ?? "", (doc?.url ?? "").replace(/^https:\/\//, "")) ?? Promise.resolve(null),
-    [doc],
-  );
+  const takeSnapshot = useCallback(() => viewRef.current?.thumbnail() ?? Promise.resolve(null), []);
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);

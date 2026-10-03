@@ -29,7 +29,15 @@ const DOC: CityDoc = {
   },
 };
 
-const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46]);
+/** Un en-tête de JPEG (JFIF puis SOF0) qui annonce cette taille. */
+const jpeg = (width: number, height: number) =>
+  new Uint8Array([
+    ...[0xff, 0xd8],
+    ...[0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0],
+    ...[0xff, 0xc0, 0, 17, 8, height >> 8, height & 0xff, width >> 8, width & 0xff, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1],
+    ...[0xff, 0xd9],
+  ]);
+const JPEG = jpeg(1200, 630);
 
 afterAll(() => rmSync(dataDir, { recursive: true, force: true }));
 
@@ -58,6 +66,9 @@ describe("fichiers envoyés", () => {
   it("n'accepte que des miniatures JPEG", () => {
     expect(readThumbnail(JPEG)).toBe(JPEG);
     expect(() => readThumbnail(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toThrow(/JPEG/);
+    // Une autre image que celle du moteur (une capture d'écran, une photo) n'a pas son format.
+    expect(() => readThumbnail(jpeg(800, 600))).toThrow(/1200 × 630/);
+    expect(() => readThumbnail(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))).toThrow(/1200 × 630/);
   });
 });
 
