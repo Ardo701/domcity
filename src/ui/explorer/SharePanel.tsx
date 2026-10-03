@@ -103,6 +103,7 @@ export function SharePanel({
       const data = (await response.json()) as {
         slug?: string;
         title?: string;
+        pageUrl?: string;
         url?: string;
         deleteUrl?: string;
         token?: string;
@@ -112,7 +113,13 @@ export function SharePanel({
         setState({ step: "error", message: data.error ?? "Le partage a échoué." });
         return;
       }
-      rememberCity({ slug: data.slug, title: data.title ?? publishedTitle, token: data.token, sharedAt: new Date().toISOString() });
+      rememberCity({
+        slug: data.slug,
+        title: data.title ?? publishedTitle,
+        token: data.token,
+        sharedAt: new Date().toISOString(),
+        pageUrl: data.pageUrl,
+      });
       setState({ step: "done", slug: data.slug, url: data.url, deleteUrl: data.deleteUrl });
     } catch {
       setState({ step: "error", message: "Connexion impossible. Réessayez dans un instant." });

@@ -11,6 +11,8 @@ export interface MyCity {
   title: string;
   token: string;
   sharedAt: string;
+  /** L'adresse de la page relevée. Absente des villes publiées avant le 3 octobre 2026 : retrouvée dans leur fichier. */
+  pageUrl?: string;
 }
 
 export const SAVED_CITIES_KEY = "domcity:mes-villes";
@@ -43,6 +45,15 @@ export function rememberCity(city: MyCity): void {
     localStorage.setItem(KEY, JSON.stringify([city, ...list].slice(0, 50)));
   } catch {
     // stockage indisponible : le lien secret reste affiché à l'écran
+  }
+}
+
+/** Complète une ville déjà gardée, sans changer sa place dans la liste. */
+export function updateCity(slug: string, patch: Partial<Omit<MyCity, "slug">>): void {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(listMyCities().map((c) => (c.slug === slug ? { ...c, ...patch } : c))));
+  } catch {
+    // stockage indisponible : on la retrouvera la prochaine fois
   }
 }
 

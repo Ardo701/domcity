@@ -42,12 +42,13 @@ export async function POST(request: Request) {
     const thumb = form.get("thumbnail");
     const thumbnail = thumb instanceof Blob && thumb.size > 0 ? readThumbnail(new Uint8Array(await thumb.arrayBuffer())) : null;
 
-    const { slug, token } = await shareCity(doc, thumbnail);
+    const { slug, token, pageUrl } = await shareCity(doc, thumbnail);
     const base = siteUrl(request);
     return Response.json(
       {
         slug,
         title: doc.title,
+        pageUrl,
         url: `${base}${sharedCityPath(slug)}`,
         deleteUrl: `${base}${deleteCityPath(slug, token)}`,
         token,

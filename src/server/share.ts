@@ -107,6 +107,8 @@ export function statsOf(doc: CityDoc): CityStatsSummary {
 export interface ShareResult {
   slug: string;
   token: string;
+  /** L'adresse publiée, nettoyée (sans www., ni paramètres, ni ancre). */
+  pageUrl: string;
 }
 
 /**
@@ -161,7 +163,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
     await files.remove([cityKey(slug), thumbKey(slug)]).catch(() => undefined);
     throw error;
   }
-  return { slug, token };
+  return { slug, token, pageUrl: address.url };
 }
 
 /** Supprime la ville si le jeton correspond, puis ses fichiers. */

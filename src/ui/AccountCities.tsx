@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { deleteCityPath, sharedCityPath, thumbKey } from "@/format/shared";
+import { useEffect, useState } from "react";
+import { cityKey, deleteCityPath, sharedCityPath, thumbKey } from "@/format/shared";
 import styles from "./Account.module.css";
 import { CardPending } from "./CardPending";
 import gallery from "./Gallery.module.css";
-import { useMyCities, type MyCity } from "./savedCities";
+import { loadSharedCity } from "./loadShared";
+import { updateCity, useMyCities, type MyCity } from "./savedCities";
 
 const deletePath = (city: MyCity) => deleteCityPath(city.slug, city.token);
 
@@ -15,6 +16,34 @@ function sharedOn(iso: string) {
   return Number.isNaN(date.getTime())
     ? null
     : date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** L'adresse lisible : sans « https:// », ni la barre finale d'une page d'accueil. */
+const readableUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+/**
+ * L'adresse de la page relevée. Les villes publiées avant qu'on la garde ne l'ont pas : on la lit une fois dans le
+ * fichier de la ville (sur R2, déjà nettoyée par le serveur), puis on la garde. Faute de mieux, l'adresse de la ville.
+ */
+function usePageUrl(city: MyCity, filesBase: string): string | null {
+  const [found, setFound] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (city.pageUrl) return;
+    const controller = new AbortController();
+    loadSharedCity(`${filesBase}${cityKey(city.slug)}`, controller.signal)
+      .then((doc) => {
+        setFound(doc.url);
+        updateCity(city.slug, { pageUrl: doc.url });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => controller.abort();
+  }, [city.pageUrl, city.slug, filesBase]);
+  const url = city.pageUrl ?? found;
+  if (url) return readableUrl(url);
+  return failed ? sharedCityPath(city.slug) : null;
 }
 
 /** Copie le lien secret complet : c'est la seule façon de supprimer la ville depuis un autre navigateur. */
@@ -44,6 +73,7 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
   const [broken, setBroken] = useState(false);
   const date = sharedOn(city.sharedAt);
   const href = sharedCityPath(city.slug);
+  const page = usePageUrl(city, filesBase);
   return (
     <li>
       <article className={`${gallery.card} ${styles.card}`}>
@@ -58,7 +88,9 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
           <Link href={href} className={`${gallery.title} ${styles.cardTitle}`}>
             {city.title}
           </Link>
-          <span className={gallery.where}>{href}</span>
+          <span className={gallery.where} title={page ?? undefined}>
+            {page ?? "\u00a0"}
+          </span>
           {date && <span className={`${gallery.meta} mono-caps`}>Publiée le {date}</span>}
           <div className={styles.actions}>
             <Link href={href} className={styles.action}>

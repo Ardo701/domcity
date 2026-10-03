@@ -89,14 +89,17 @@ describe("fichiers envoyés", () => {
 describe("partage de bout en bout (base locale)", () => {
   let slug = "";
   let token = "";
+  let pageUrl = "";
 
   beforeAll(async () => {
-    ({ slug, token } = await shareCity(DOC, JPEG));
+    ({ slug, token, pageUrl } = await shareCity(DOC, JPEG));
   }, 60_000);
 
   it("publie la ville avec une adresse nettoyée", async () => {
     const city = await store.getCapture(slug);
     expect(city).toMatchObject({ domain: "exemple.org", path: "/livres", title: "Les livres", source: "bookmarklet" });
+    // L'adresse que le navigateur garde dans « Votre compte » : la même, nettoyée.
+    expect(pageUrl).toBe("https://exemple.org/livres");
     expect(city?.stats.thumbnail).toBe(true);
     expect(city?.stats.monuments).toBe(1);
   });
