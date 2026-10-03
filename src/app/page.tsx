@@ -103,9 +103,6 @@ export default async function Home() {
                 { match: (l) => l.kind === "port", tag: "footer", name: "Port" },
               ]}
             />
-            <figcaption className="mono-caps">
-              Fig. 1 · Une page de démonstration, relevée et construite par le moteur de DOMCity
-            </figcaption>
           </figure>
         </section>
 
