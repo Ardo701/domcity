@@ -3,7 +3,7 @@ import { AwsClient } from "aws4fetch";
 import { storeConfig, type CloudConfig, type LocalConfig } from "./config";
 
 /**
- * Fichiers des villes : c/<slug>.json.gz (la ville) et c/<slug>.jpg (la miniature).
+ * Fichiers des villes : city/<slug>.json.gz (la ville) et city/<slug>.jpg (la miniature).
  * Ils ne changent jamais une fois écrits : cache d'un an partout.
  */
 export interface FileStore {
@@ -14,8 +14,8 @@ export interface FileStore {
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
-export const cityKey = (slug: string) => `c/${slug}.json.gz`;
-export const thumbKey = (slug: string) => `c/${slug}.jpg`;
+export const cityKey = (slug: string) => `city/${slug}.json.gz`;
+export const thumbKey = (slug: string) => `city/${slug}.jpg`;
 
 function r2Files(config: CloudConfig): FileStore {
   const client = new AwsClient({

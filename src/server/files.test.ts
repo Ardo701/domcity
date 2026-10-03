@@ -57,7 +57,7 @@ afterAll(() => {
 describe("fichiers sur R2", () => {
   it("annonce la longueur de l'envoi, même à travers le fetch de Next", async () => {
     const thumbnail = new Uint8Array(150_000).fill(7);
-    await fileStore()!.put("c/abc.jpg", thumbnail, "image/jpeg");
+    await fileStore()!.put("city/abc.jpg", thumbnail, "image/jpeg");
     expect(received.at(-1)).toEqual({ length: "150000", type: "image/jpeg", bytes: 150_000 });
   });
 });
