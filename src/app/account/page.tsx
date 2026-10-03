@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { sharingEnabled } from "@/server/config";
 import { AccountCities } from "@/ui/AccountCities";
+import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../page.module.css";
 import styles from "../subpage.module.css";
@@ -29,24 +30,7 @@ export default function AccountPage() {
         <AccountCities />
       </main>
 
-      <footer className={home.cartouche}>
-        <div>
-          <span className="mono-caps">Projet</span>
-          <strong>DOMCity</strong>
-        </div>
-        <div>
-          <span className="mono-caps">Compte</span>
-          <p>Sans inscription. Vos villes sont gardées dans ce navigateur, nulle part ailleurs.</p>
-        </div>
-        <div>
-          <span className="mono-caps">Suppression</span>
-          <p>Par le lien secret reçu au partage. Le serveur n&apos;en garde que l&apos;empreinte.</p>
-        </div>
-        <div>
-          <span className="mono-caps">Relevé</span>
-          <p>Seulement la forme de la page : jamais son texte, sauf les titres.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

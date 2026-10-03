@@ -6,6 +6,7 @@ import { fileStore, thumbKey } from "@/server/files";
 import { recentCaptures } from "@/server/store";
 import { CityGallery } from "@/ui/CityGallery";
 import { CitySearch } from "@/ui/CitySearch";
+import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../page.module.css";
 import styles from "../subpage.module.css";
@@ -51,24 +52,7 @@ export default async function ExplorePage() {
         </section>
       </main>
 
-      <footer className={home.cartouche}>
-        <div>
-          <span className="mono-caps">Projet</span>
-          <strong>DOMCity</strong>
-        </div>
-        <div>
-          <span className="mono-caps">Villes</span>
-          <p>Publiées par leurs visiteurs, chacune datée de son relevé.</p>
-        </div>
-        <div>
-          <span className="mono-caps">Recherche</span>
-          <p>Tolérante aux fautes : « amzon » trouve amazon.com.</p>
-        </div>
-        <div>
-          <span className="mono-caps">Relevé</span>
-          <p>Seulement la forme de la page : jamais son texte, sauf les titres.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

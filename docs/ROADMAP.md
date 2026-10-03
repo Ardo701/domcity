@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : flèche du nord, figure de l'accueil rendue par le moteur 3D, en-tête épuré avec un bouton GitHub, héros qui tient dans le premier écran, accueil centré sur le favori, barre de navigation commune, pages Découvrir et Votre compte, pied de page et pages légales).
 
 ## 1. Le concept
 
@@ -77,6 +77,7 @@ src/
 │   ├── create/                  page « Créer une ville » : installer le favori (bouton à glisser, animation, installation à la main ; ancienne `/installer`, redirigée)
 │   ├── explore/                 « Découvrir les villes » : recherche et les 60 dernières villes partagées
 │   ├── account/                 « Votre compte » : les villes publiées depuis ce navigateur, leur lien secret
+│   ├── legal/, terms/, privacy/ mentions légales, conditions d'utilisation, confidentialité (éditeur : `src/ui/publisher.ts`)
 │   ├── nouveau/                 reçoit la ville envoyée par le favori (non publiée tant qu'on ne clique pas)
 │   ├── w/[lang]/[title]/        visite d'un article Wikipédia
 │   ├── c/[slug]/                ville partagée (+ supprimer/ : lien secret)
@@ -287,6 +288,8 @@ Demandées par l'utilisateur avant l'étape 6.
 - **Votre compte** (`/account`, « les villes publiées sur ce navigateur ») : il n'y a ni inscription ni mot de passe, le compte est le navigateur (les villes partagées et leur lien secret, gardés dans son stockage). Chaque ville : titre, date de publication, « Voir », « Copier le lien secret » (pour la supprimer depuis un autre navigateur), « Supprimer ». Sans ville : un mot et le bouton « Créer une ville ». Sur l'accueil, la liste « Vos villes, sur ce navigateur » devient un bouton « Vos villes publiées » (avec leur nombre) vers cette page. Page non indexée.
 - **Découvrir les villes** (`/explore`) : la recherche et les 60 dernières villes partagées (le plus que `recent_captures` rende d'un coup ; au-delà, la recherche). L'accueil garde les 9 dernières et un lien « Découvrir toutes les villes ». Aucune nouvelle migration.
 - **La page du favori devient `/create`** (« pour créer en anglais ») : son onglet s'intitule « Créer une ville », comme son lien dans la barre. L'ancienne adresse `/installer` y redirige (`next.config.ts`). Le favori lui-même ne la connaît pas : rien à recompiler.
+- **Pied de page** (« un vrai footer » ; l'ancien cartouche Projet, Relevé, Sources, Échelle est retiré, sans mention de Wikipédia) : `src/ui/SiteFooter.tsx`, sur l'accueil, Créer une ville, Découvrir, Votre compte et les pages légales. La marque et une phrase, trois colonnes (Villes : Découvrir, Créer une ville, Votre compte ; Projet : le code sur GitHub ; Légal : Mentions légales, Conditions d'utilisation, Confidentialité), puis « © 2026 DOMCity » et « Haut de page ».
+- **Pages légales** (`/legal`, `/terms`, `/privacy`, en français, mises à jour le 3 octobre 2026) : éditeur et hébergeurs (Vercel pour le site, Cloudflare R2 pour les fichiers, Supabase pour la base), propriété des pages relevées, signalement, crédits (Three.js, polices, et la licence CC BY-SA des titres repris de Wikipédia, seul endroit où Wikipédia est nommé) ; règles de publication, interdits, suppression par le lien secret, signalements (masquée à trois), absence de garantie, droit français ; ce que le favori lit et ne lit jamais, ce qui reste dans le navigateur, ce qui est gardé à la publication, empreintes salées des adresses IP, ce que voient les autres sites (images chargées depuis leur site), prestataires et transferts, bases légales, aucun cookie, droits et CNIL. Écrites d'après le code (stockage, `security.ts`, migrations). **L'identité de l'éditeur est à compléter** dans `src/ui/publisher.ts` : tant qu'un champ est vide, la page affiche « À compléter » sur fond jaune.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
@@ -296,6 +299,7 @@ L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fo
    [{ "AllowedOrigins": ["https://domcity.app", "http://localhost:3000"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }]
    ```
 3. Renseigner les variables de `.env.example` dans Vercel.
+4. Compléter l'éditeur du site (nom, statut, adresse, contact, directeur de la publication) dans `src/ui/publisher.ts` : les pages légales l'affichent.
 
 ## 10. Étapes suivantes
 

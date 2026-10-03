@@ -178,6 +178,12 @@
   border-bottom: 1px solid var(--rule);
 }
 
+/* La dernière section touche le pied de page, qui a déjà son filet. */
+.section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
 .sectionHead {
   display: grid;
   gap: 14px;
@@ -327,38 +333,6 @@
 
 /* ---------- Cartouche de pied de page ---------- */
 
-.cartouche {
-  display: grid;
-  grid-template-columns: 0.7fr 1fr 1fr 1fr;
-  margin: 56px 0 40px;
-  border: 1.5px solid var(--ink);
-  background: var(--paper-raised);
-}
-
-.cartouche > div {
-  padding: 14px 16px;
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  font-size: 14px;
-}
-
-.cartouche > div + div {
-  border-left: 1px solid var(--ink);
-}
-
-.cartouche span {
-  color: var(--ink-3);
-}
-
-.cartouche strong {
-  font-family: var(--display);
-  font-size: 30px;
-  font-weight: 900;
-  text-transform: uppercase;
-  line-height: 1;
-}
-
 /* ---------- Petits écrans ---------- */
 
 /* Écrans bas (portable de 13 pouces) : le héros se resserre encore pour tenir dans le premier écran. */
@@ -395,27 +369,5 @@
     border-left: 0;
     border-bottom: 1px solid var(--rule);
   }
-
-  .cartouche {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .cartouche > div:nth-child(3) {
-    border-left: 0;
-  }
-
-  .cartouche > div:nth-child(n + 3) {
-    border-top: 1px solid var(--ink);
-  }
 }
 
-@media (max-width: 640px) {
-  .cartouche {
-    grid-template-columns: 1fr;
-  }
-
-  .cartouche > div + div {
-    border-left: 0;
-    border-top: 1px solid var(--ink);
-  }
-}

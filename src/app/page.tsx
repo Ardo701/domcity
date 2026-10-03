@@ -11,6 +11,7 @@ import { CitySearch } from "@/ui/CitySearch";
 import { CityFigure } from "@/ui/CityFigure";
 import { HERO_FIGURE } from "@/ui/heroFigure.generated";
 import { KindSwatch } from "@/ui/KindSwatch";
+import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
 import { HERO_SAMPLE } from "@/ui/samples";
 import styles from "./page.module.css";
@@ -189,30 +190,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className={styles.cartouche}>
-        <div>
-          <span className="mono-caps">Projet</span>
-          <strong>DOMCity</strong>
-        </div>
-        <div>
-          <span className="mono-caps">Relevé</span>
-          <p>Dans votre navigateur. Rien ne part sans votre clic sur « Publier ».</p>
-        </div>
-        <div>
-          <span className="mono-caps">Sources</span>
-          <p>
-            Articles de{" "}
-            <a href="https://fr.wikipedia.org" target="_blank" rel="noreferrer">
-              Wikipédia
-            </a>
-            , sous licence CC BY-SA.
-          </p>
-        </div>
-        <div>
-          <span className="mono-caps">Échelle</span>
-          <p>1 étage ≈ 3 m · hauteur logarithmique</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { LIMITS } from "@/format/limits";
 import { BookmarkletButton, CopyBookmarklet } from "@/ui/BookmarkletButton";
 import { InstallDemo } from "@/ui/InstallDemo";
+import { SiteFooter } from "@/ui/SiteFooter";
 import { SiteHeader } from "@/ui/SiteHeader";
 import home from "../page.module.css";
 import styles from "./create.module.css";
@@ -196,26 +196,7 @@ export default function CreatePage() {
         </section>
       </main>
 
-      <footer className={home.cartouche}>
-        <div>
-          <span className="mono-caps">Projet</span>
-          <strong>DOMCity</strong>
-        </div>
-        <div>
-          <span className="mono-caps">Outil</span>
-          <p>Le favori de relevé : 9 Ko de code, rien à télécharger ensuite.</p>
-        </div>
-        <div>
-          <span className="mono-caps">Relevé</span>
-          <p>Dans votre navigateur. Rien ne part sans votre clic sur « Publier ».</p>
-        </div>
-        <div>
-          <span className="mono-caps">Retour</span>
-          <p>
-            <Link href="/">L&apos;accueil de DOMCity</Link>
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
