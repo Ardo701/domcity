@@ -100,7 +100,7 @@ export default async function Home() {
 
             <Link href="/installer" className={styles.bookmarkletCta}>
               <span className="mono-caps">N&apos;importe quel site</span>
-              <strong>Installer le favori DOMCity</strong>
+              <strong>Créer une ville</strong>
               <span aria-hidden className={styles.ctaArrow}>
                 →
               </span>
