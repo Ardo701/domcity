@@ -63,6 +63,18 @@ type PGliteLike = {
   exec(sql: string): Promise<unknown>;
 };
 
+/** Ce que Supabase fournit d'office : rôles, schéma des extensions, droits par défaut. */
+export const SUPABASE_DEFAULTS = `
+  create role anon nologin;
+  create role authenticated nologin;
+  create role service_role nologin bypassrls;
+  create schema if not exists extensions;
+  grant usage on schema public, extensions to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+`;
+
 const globalForPg = globalThis as unknown as { __domcityPg?: Map<string, Promise<PGliteLike>> };
 
 async function openLocal(config: LocalConfig): Promise<PGliteLike> {
@@ -78,20 +90,8 @@ async function openLocal(config: LocalConfig): Promise<PGliteLike> {
   await fs.mkdir(dir, { recursive: true });
   const db = (await PGlite.create(dir, { extensions: { pg_trgm, pgcrypto } })) as unknown as PGliteLike;
 
-  // Ce que Supabase fournit d'office : rôles, schéma des extensions, droits par défaut.
   const roles = await db.query<{ n: number }>("select count(*)::int as n from pg_roles where rolname = 'anon'");
-  if (roles.rows[0].n === 0) {
-    await db.exec(`
-      create role anon nologin;
-      create role authenticated nologin;
-      create role service_role nologin bypassrls;
-      create schema if not exists extensions;
-      grant usage on schema public, extensions to anon, authenticated, service_role;
-      alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-      alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-      alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
-    `);
-  }
+  if (roles.rows[0].n === 0) await db.exec(SUPABASE_DEFAULTS);
 
   await db.exec("create table if not exists public._local_migrations (name text primary key)");
   const applied = new Set(

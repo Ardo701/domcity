@@ -176,6 +176,8 @@ Migrations dans `supabase/migrations/`, testées sur PGlite :
 3. `20261003120000_megalopolis.sql` : `known_sites(domaines[])`, parmi les sites liés, ceux qui ont des villes sur DOMCity (le tableau des départs propose d'aller les voir).
 4. `20261003180000_sites_first.sql` : `search_sites` (un résultat par site, ses 3 pages qui répondent le mieux avec leur dernière version), `recent_sites` (la galerie, avec la miniature de l'accueil ou à défaut de la page la plus récente), `site_page_list` (les pages d'un site par morceaux). Retire `search_cities` et `recent_captures`.
 
+Vérifier une base : `supabase/verification.sql` (SQL Editor, relançable). Il contrôle la structure (extensions, tables, RLS, fonctions, droits des visiteurs et de l'API), puis fait un partage d'essai de bout en bout sur `verification.domcity.invalid` (créer, publier, chercher, visiter, limite d'envois, signalements, suppression) et l'efface ; une ligne par contrôle, « ok » ou « ÉCHEC ». Un test le passe sur une base neuve.
+
 Règles : toutes les écritures passent par l'API (clé secrète) ; 3 signalements de personnes différentes masquent une version (la page retombe sur la précédente) ; une version est `pending` tant que ses fichiers ne sont pas dans R2. Ne jamais modifier une migration déjà appliquée : en ajouter une nouvelle.
 
 ## 8. API
@@ -300,7 +302,7 @@ Demandées par l'utilisateur avant l'étape 6.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
-1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor).
+1. Créer le projet Supabase, appliquer les migrations de `supabase/migrations/` dans l'ordre (SQL Editor), puis coller `supabase/verification.sql` : chaque ligne du résultat doit dire « ok ».
 2. Créer le bucket R2 `domcity-villes`, un jeton API « Object Read & Write », brancher le domaine `files.domcity.app` (nuage orange), et la règle CORS :
    ```json
    [{ "AllowedOrigins": ["https://domcity.app", "http://localhost:3000"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }]
@@ -341,7 +343,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 86 tests
+npm test           # 87 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
