@@ -74,8 +74,11 @@
   max-width: 54ch;
 }
 
-/* Le bouton principal : il mène aux instructions du favori. */
+/* Le bouton principal : il mène aux instructions du favori. Au survol, l'orange se répand du centre vers les bords. */
 .cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -83,7 +86,7 @@
   padding: 16px 26px;
   border: 1.5px solid var(--ink);
   border-radius: var(--radius);
-  background: var(--signal);
+  background: var(--paper-raised);
   color: var(--ink);
   box-shadow: 4px 4px 0 var(--ink);
   font-family: var(--display);
@@ -94,23 +97,48 @@
   text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .ctaArrow {
   font-family: var(--body);
   font-weight: 600;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease;
 }
 
-.cta:hover {
-  background: #ff6a37;
+.cta:hover,
+.cta:focus-visible {
   box-shadow: 6px 6px 0 var(--ink);
   transform: translate(-1px, -1px);
 }
 
-.cta:hover .ctaArrow {
+.cta:hover::before,
+.cta:focus-visible::before {
+  transform: scaleX(1);
+}
+
+.cta:hover .ctaArrow,
+.cta:focus-visible .ctaArrow {
   transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta,
+  .cta::before,
+  .ctaArrow {
+    transition: none;
+  }
 }
 
 .figure {
