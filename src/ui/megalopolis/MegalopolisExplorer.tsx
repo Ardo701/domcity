@@ -514,7 +514,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
         </section>
       )}
 
-      {ready && <NorthArrow />}
+      {ready && <NorthArrow viewRef={viewRef} />}
       {ready && measuring && <PerfMeter viewRef={viewRef} shifted={selectedInfo !== null || departures !== null} />}
 
       {ready && mode === "aerial" && (

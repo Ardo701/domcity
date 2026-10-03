@@ -386,7 +386,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         />
       )}
 
-      {ready && <NorthArrow />}
+      {ready && <NorthArrow viewRef={viewRef} />}
 
       {ready && measuring && <PerfMeter viewRef={viewRef} shifted={selectedInfo !== null} />}
 

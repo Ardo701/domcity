@@ -1033,17 +1033,33 @@
 
 .north {
   position: absolute;
-  right: 18px;
-  bottom: 16px;
+  right: 10px;
+  bottom: 10px;
   display: grid;
   justify-items: center;
-  gap: 4px;
-  pointer-events: none;
+  gap: 0;
+  padding: 2px 6px 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
 }
 
 .north span {
   font-size: 9px;
   color: var(--ink-2);
+}
+
+.northDial {
+  fill: rgba(246, 243, 236, 0.6);
+  stroke: rgba(21, 21, 26, 0.35);
+  stroke-width: 1;
+}
+
+.north:hover .northDial {
+  fill: var(--beacon);
+  stroke: var(--ink);
 }
 
 /* ---------- Promenade ---------- */

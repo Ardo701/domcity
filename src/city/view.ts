@@ -105,6 +105,8 @@ interface Flight {
   toTarget: THREE.Vector3;
   start: number;
   duration: number;
+  /** Tourner autour de la cible (le long d'un arc) plutôt que de filer en ligne droite. */
+  orbit?: boolean;
 }
 
 export class CityView {
@@ -161,6 +163,11 @@ export class CityView {
   private flight: Flight | null = null;
   private savedAerial: { position: THREE.Vector3; target: THREE.Vector3 } | null = null;
   private disposed = false;
+  /**
+   * Cap de la caméra en degrés : de combien tourner la flèche du nord pour qu'elle montre le haut
+   * de la page (0 : il est en haut de l'écran, 90 : à droite).
+   */
+  heading = 0;
 
   constructor(container: HTMLElement, world: World | CityLayout, events: ViewEvents = {}) {
     this.container = container;
@@ -297,6 +304,21 @@ export class CityView {
     } catch {
       this.setWalking("free");
     }
+  }
+
+  /** Remet le nord (le haut de la page) en haut de l'écran, sans changer de point de vue ni de distance. */
+  faceNorth() {
+    if (this.mode === "walk") {
+      const euler = new THREE.Euler(0, 0, 0, "YXZ").setFromQuaternion(this.camera.quaternion);
+      euler.y = 0;
+      this.camera.quaternion.setFromEuler(euler);
+      this.invalidate();
+      return;
+    }
+    const target = this.aerial.target.clone();
+    const offset = this.camera.position.clone().sub(target);
+    const position = target.clone().add(new THREE.Vector3(0, offset.y, Math.hypot(offset.x, offset.z)));
+    this.flyTo(position, target, true, true);
   }
 
   /** Vue d'ensemble depuis le sud, assez loin pour que toute la ville tienne à l'écran. */
@@ -940,6 +962,7 @@ export class CityView {
     this.dirty = false;
     this.updateParts();
     this.updateLabels();
+    this.updateHeading();
     if (this.walking === "locked") this.pick(new THREE.Vector2(0, 0), false);
     this.fitDepth();
     const start = performance.now();
@@ -955,18 +978,37 @@ export class CityView {
     this.lastInfo = { triangles: info.triangles, calls: info.calls };
   };
 
+  /** La droite de l'écran est toujours à l'horizontale (ni la vue aérienne ni la promenade ne penchent) : elle donne le cap. */
+  private updateHeading() {
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    this.heading = THREE.MathUtils.radToDeg(Math.atan2(-right.z, right.x));
+  }
+
   private stepFlight() {
     const flight = this.flight!;
     const t = Math.min(1, (performance.now() - flight.start) / flight.duration);
     const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-    this.camera.position.lerpVectors(flight.fromPosition, flight.toPosition, eased);
     this.aerial.target.lerpVectors(flight.fromTarget, flight.toTarget, eased);
+    if (flight.orbit) {
+      // Par le plus court des deux arcs, à hauteur et distance glissantes.
+      const from = flight.fromPosition.clone().sub(flight.fromTarget);
+      const to = flight.toPosition.clone().sub(flight.toTarget);
+      const start = Math.atan2(from.x, from.z);
+      const turn = THREE.MathUtils.euclideanModulo(Math.atan2(to.x, to.z) - start + Math.PI, 2 * Math.PI) - Math.PI;
+      const angle = start + turn * eased;
+      const flat = THREE.MathUtils.lerp(Math.hypot(from.x, from.z), Math.hypot(to.x, to.z), eased);
+      this.camera.position
+        .set(Math.sin(angle) * flat, THREE.MathUtils.lerp(from.y, to.y, eased), Math.cos(angle) * flat)
+        .add(this.aerial.target);
+    } else {
+      this.camera.position.lerpVectors(flight.fromPosition, flight.toPosition, eased);
+    }
     this.camera.lookAt(this.aerial.target);
     if (t >= 1) this.flight = null;
     this.dirty = true;
   }
 
-  private flyTo(position: THREE.Vector3, target: THREE.Vector3, animate: boolean) {
+  private flyTo(position: THREE.Vector3, target: THREE.Vector3, animate: boolean, orbit = false) {
     if (!animate || this.reducedMotion) {
       this.flight = null;
       this.camera.position.copy(position);
@@ -983,6 +1025,7 @@ export class CityView {
       toTarget: target,
       start: performance.now(),
       duration: 750,
+      orbit,
     };
   }
 

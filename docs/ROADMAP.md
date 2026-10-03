@@ -1,7 +1,7 @@
 # DOMCity : feuille de route et décisions
 
 > Document de référence du projet. Il rassemble tout ce qui a été décidé, construit et prévu.
-> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (tailles minimales, rues à double sens reliées au réseau).
+> À lire avant de reprendre le travail. Dernière mise à jour : 3 octobre 2026 (retouches avant la mise en ligne : la flèche du nord tourne avec la caméra).
 
 ## 1. Le concept
 
@@ -64,7 +64,7 @@ Identité retenue : **« planche d'urbanisme »**.
 - Papier `#eeeae1`, encre `#15151a`, filets fins, papier millimétré en fond.
 - Orange chantier `#ff4b12` : actions principales et monuments. Jaune balise `#ffd23f` : surbrillance, survol, sélection.
 - Polices : **Big Shoulders** (titres, capitales), **Instrument Sans** (texte), **Martian Mono** (étiquettes techniques).
-- Motifs : cartouche d'architecte, flèche « Nord : haut de page », dessins axonométriques cernés d'encre (générés par le vrai moteur), repères de planche A à F.
+- Motifs : cartouche d'architecte, flèche « Nord : haut de page » (elle tourne avec la caméra), dessins axonométriques cernés d'encre (générés par le vrai moteur), repères de planche A à F.
 - La ville elle-même est une **maquette posée sur la planche** : matériaux réels (béton, brique, enduit, verre, gazon, asphalte), ciel reflété dans les vitres, ombres d'un soleil d'ouest. L'orange chantier reste réservé au monument (h1) et aux accents ; le jaune balise au survol et à la sélection.
 
 ## 4. Architecture du code
@@ -269,6 +269,10 @@ Demande de l'utilisateur : des maisons minuscules (une d'un mètre de large sous
 - Paris : 485 maisons sur 721 sous 2,2 unités avant, 0 après ; 200 rues trop étroites pour deux voitures avant, 0 après ; 0 rue coupée du réseau (6 allées piétonnes) ; ruelles des lotissements 212 ; la ville grandit de 1,4 %.
 Vérifié : 79 tests (tailles minimales sur des pages piégeuses : trente niveaux en escalier, longue liste, boîtes de galerie ; rues assez larges et toutes reliées au périphérique ; chaque maison d'un lotissement enclavé à moins de 9 m d'une rue ; drapeaux sur un toit plat, jamais sur une maison), TypeScript, ESLint, compilation de production ; Paris dans le navigateur (lotissements, ruelles à double sens, drapeaux).
 **Non vérifié** : un site très imbriqué relevé par le favori (les escaliers de `div` de l'essai sont synthétiques).
+
+### Retouches avant la mise en ligne
+Demandées par l'utilisateur avant l'étape 6.
+- **Flèche du nord** (« quand on tourne la caméra il n'y a plus de haut ni de bas logique ») : elle tourne avec la caméra, comme une boussole, et montre toujours où est le haut de la page ; le « N » la suit en restant droit. Le cap se lit sur la droite de l'écran, toujours à l'horizontale (`heading` dans `view.ts`), en vue aérienne comme en promenade. Un clic sur la flèche remet le nord en haut de l'écran (`faceNorth`) : la caméra tourne autour de ce qu'elle regarde par le plus court arc, sans changer de hauteur ni de distance ; en promenade, le promeneur se tourne vers le nord. Ville seule et mégalopole.
 
 ### Pour activer le partage en production (à faire par l'utilisateur à la toute fin, guidé à l'étape 6)
 L'utilisateur appliquera **toutes les migrations Supabase à la fin**, en une fois (décision du 2 octobre 2026).
