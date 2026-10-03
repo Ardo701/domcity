@@ -46,12 +46,12 @@ function usePageUrl(city: MyCity, filesBase: string): string | null {
   return failed ? sharedCityPath(city.slug) : null;
 }
 
-/** Copie le lien secret complet : c'est la seule façon de supprimer la ville depuis un autre navigateur. */
-function CopySecret({ city }: { city: MyCity }) {
+/** Copie le lien public de la ville, celui qu'on partage. */
+function CopyLink({ city }: { city: MyCity }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${deletePath(city)}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${sharedCityPath(city.slug)}`);
       setState("copied");
     } catch {
       setState("failed");
@@ -60,14 +60,14 @@ function CopySecret({ city }: { city: MyCity }) {
   };
   return (
     <button type="button" className={styles.action} onClick={copy} aria-live="polite">
-      {state === "copied" ? "Lien copié" : state === "failed" ? "Copie impossible" : "Copier le lien secret"}
+      {state === "copied" ? "Lien copié" : state === "failed" ? "Copie impossible" : "Copier le lien"}
     </button>
   );
 }
 
 /**
- * Une ville publiée, en carte comme dans la galerie : sa miniature (qui mène à la ville), son titre, et les trois
- * actions. Une ville sans miniature, ou supprimée depuis un autre navigateur, garde les hachures de la galerie.
+ * Une ville publiée, en carte comme dans la galerie : sa miniature et son titre (qui mènent à la ville), copier son
+ * lien, la supprimer. Une ville sans miniature, ou supprimée depuis un autre navigateur, garde les hachures de la galerie.
  */
 function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
   const [broken, setBroken] = useState(false);
@@ -93,10 +93,7 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
           </span>
           {date && <span className={`${gallery.meta} mono-caps`}>Publiée le {date}</span>}
           <div className={styles.actions}>
-            <Link href={href} className={styles.action}>
-              Voir
-            </Link>
-            <CopySecret city={city} />
+            <CopyLink city={city} />
             <Link href={deletePath(city)} className={`${styles.action} ${styles.danger}`}>
               Supprimer
             </Link>
@@ -144,8 +141,9 @@ export function AccountCities({ filesBase }: { filesBase: string }) {
       </ul>
       <p className={styles.note}>
         Ces villes ne sont gardées que dans ce navigateur. Un autre navigateur, une navigation privée ou
-        l&apos;effacement des données du site ne les connaissent pas, et leur lien secret serait perdu : copiez-le pour
-        celles que vous voudrez peut-être supprimer un jour.
+        l&apos;effacement des données du site ne les connaissent pas, et leur lien secret serait perdu. Pour une ville
+        que vous voudrez peut-être supprimer un jour, ouvrez «&nbsp;Supprimer&nbsp;» et gardez l&apos;adresse de cette page :
+        c&apos;est son lien secret.
       </p>
     </section>
   );
