@@ -42,15 +42,31 @@ function supabase(config: CloudConfig, access: Access): SupabaseClient {
   return client;
 }
 
+/**
+ * L'API de Supabase ne rend jamais plus de lignes que son réglage « Max rows » (1 000 par défaut),
+ * sans le dire : au-delà, on lit page par page (la liste des sites refusés en a plus de 1 500).
+ */
+export const SUPABASE_PAGE = 1000;
+
 function supabaseRpc(config: CloudConfig, access: Access): Rpc {
-  const call = async (fn: string, args: Record<string, unknown>) => {
-    const { data, error } = await supabase(config, access).rpc(fn, supabaseArgs(args));
-    if (error) throw new Error(`${fn} : ${error.message}`);
-    return data;
-  };
   return {
-    rows: async <T>(fn: string, args: Record<string, unknown>) => ((await call(fn, args)) ?? []) as T[],
-    scalar: async <T>(fn: string, args: Record<string, unknown>) => (await call(fn, args)) as T,
+    rows: async <T>(fn: string, args: Record<string, unknown>) => {
+      const all: T[] = [];
+      for (let from = 0; ; from += SUPABASE_PAGE) {
+        const { data, error } = await supabase(config, access)
+          .rpc(fn, supabaseArgs(args))
+          .range(from, from + SUPABASE_PAGE - 1);
+        if (error) throw new Error(`${fn} : ${error.message}`);
+        const page = (data ?? []) as T[];
+        all.push(...page);
+        if (page.length < SUPABASE_PAGE) return all;
+      }
+    },
+    scalar: async <T>(fn: string, args: Record<string, unknown>) => {
+      const { data, error } = await supabase(config, access).rpc(fn, supabaseArgs(args));
+      if (error) throw new Error(`${fn} : ${error.message}`);
+      return data as T;
+    },
   };
 }
 
