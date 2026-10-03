@@ -116,6 +116,8 @@ export const REPORT_REASONS = {
 
 export type ReportReason = keyof typeof REPORT_REASONS;
 
-export const sharedCityPath = (slug: string) => `/c/${slug}`;
+export const sharedCityPath = (slug: string) => `/city/${slug}`;
+/** Le lien secret : le jeton reste après le #, jamais envoyé au serveur dans l'adresse. */
+export const deleteCityPath = (slug: string, token: string) => `${sharedCityPath(slug)}/delete#${token}`;
 export const sitePath = (domain: string) => `/site/${encodeURIComponent(domain)}`;
 export const megalopolisPath = (domain: string) => `${sitePath(domain)}/megalopolis`;

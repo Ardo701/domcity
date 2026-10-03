@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { sharedCityPath } from "@/format/shared";
+import { deleteCityPath, sharedCityPath } from "@/format/shared";
 import styles from "./Account.module.css";
 import { useMyCities, type MyCity } from "./savedCities";
 
-const deletePath = (city: MyCity) => `/c/${city.slug}/supprimer#${city.token}`;
+const deletePath = (city: MyCity) => deleteCityPath(city.slug, city.token);
 
 function sharedOn(iso: string) {
   const date = new Date(iso);

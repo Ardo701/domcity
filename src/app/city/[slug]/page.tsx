@@ -12,7 +12,7 @@ const load = cache(async (slug: string) => {
   return getCapture(slug);
 });
 
-export async function generateMetadata(props: PageProps<"/c/[slug]">): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<"/city/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
   const city = await load(slug);
   if (!city) return { title: "Ville introuvable" };
@@ -39,7 +39,7 @@ export async function generateMetadata(props: PageProps<"/c/[slug]">): Promise<M
   };
 }
 
-export default async function SharedCityPage(props: PageProps<"/c/[slug]">) {
+export default async function SharedCityPage(props: PageProps<"/city/[slug]">) {
   const { slug } = await props.params;
   const city = await load(slug);
   if (!city) notFound();

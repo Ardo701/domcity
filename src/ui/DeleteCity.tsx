@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
+import { sharedCityPath } from "@/format/shared";
 import { forgetCity } from "./savedCities";
 import styles from "./Sheet.module.css";
 
@@ -78,7 +79,7 @@ export function DeleteCity({ slug, title }: { slug: string; title: string | null
         <button type="button" className={styles.button} onClick={remove} disabled={state === "sending"}>
           {state === "sending" ? "Suppression…" : "Supprimer définitivement"}
         </button>
-        <Link href={`/c/${slug}`} className={styles.ghost}>
+        <Link href={sharedCityPath(slug)} className={styles.ghost}>
           Annuler
         </Link>
       </div>

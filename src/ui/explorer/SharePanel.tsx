@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { WikiLang } from "@/capture/wikipedia";
+import { sharedCityPath } from "@/format/shared";
 import type { CityDoc, CityNode } from "@/format/types";
 import { normalizePageUrl } from "@/format/url";
 import { gzipCity } from "@/ui/loadShared";
@@ -142,7 +143,7 @@ export function SharePanel({
               fois. Ce navigateur s&apos;en souvient aussi, dans « Vos villes » sur l&apos;accueil.
             </p>
             <div className={styles.actionsRow}>
-              <Link href={`/c/${state.slug}`} className={styles.primary}>
+              <Link href={sharedCityPath(state.slug)} className={styles.primary}>
                 Voir la ville partagée
               </Link>
               <button type="button" className={styles.secondary} onClick={onClose}>

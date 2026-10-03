@@ -10,7 +10,7 @@ import { isSpecial } from "@/city/world";
 import type { ImageStatus } from "@/city/textures";
 import type { CityView, HoverPart, ViewMode, WalkState } from "@/city/view";
 import { cityRefusal, withoutBlocked } from "@/format/blocklist";
-import { sitePath, type CityVersion, type SharedCity } from "@/format/shared";
+import { sharedCityPath, sitePath, type CityVersion, type SharedCity } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, siteHost } from "@/format/url";
 import { loadBlocklist } from "@/ui/blocklist";
@@ -392,7 +392,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           shared={shared ? { views: shared.city.views } : undefined}
           versions={shared && shared.versions.length > 1 ? shared.versions : undefined}
           currentSlug={shared?.city.slug}
-          onPickVersion={(slug) => router.push(`/c/${slug}`)}
+          onPickVersion={(slug) => router.push(sharedCityPath(slug))}
         />
       )}
 

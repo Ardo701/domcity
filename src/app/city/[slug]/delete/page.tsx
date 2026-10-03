@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function DeleteCityPage(props: PageProps<"/c/[slug]/supprimer">) {
+export default async function DeleteCityPage(props: PageProps<"/city/[slug]/delete">) {
   const { slug } = await props.params;
   if (!sharingEnabled() || !SLUG_PATTERN.test(slug)) notFound();
   // Une ville masquée par les signalements n'est plus lisible, mais son auteur peut toujours la supprimer.

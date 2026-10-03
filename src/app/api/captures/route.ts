@@ -1,4 +1,5 @@
 import { isWikiLang } from "@/capture/wikipedia";
+import { deleteCityPath, sharedCityPath } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { sharingEnabled, siteUrl } from "@/server/config";
 import { clientActor, jsonError, sameOrigin } from "@/server/security";
@@ -47,8 +48,8 @@ export async function POST(request: Request) {
       {
         slug,
         title: doc.title,
-        url: `${base}/c/${slug}`,
-        deleteUrl: `${base}/c/${slug}/supprimer#${token}`,
+        url: `${base}${sharedCityPath(slug)}`,
+        deleteUrl: `${base}${deleteCityPath(slug, token)}`,
         token,
       },
       { status: 201 },
