@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BLOCK_CATEGORIES, BLOCK_LABELS } from "@/format/blocklist";
 import { LIMITS } from "@/format/limits";
 import { BookmarkletButton, CopyBookmarklet } from "@/ui/BookmarkletButton";
 import { InstallDemo } from "@/ui/InstallDemo";
@@ -39,7 +40,6 @@ const READ = [
   "La position et la couleur de fond des éléments affichés",
   "Le nombre de scripts et les sites tiers contactés par la page",
   "Le nombre de commentaires laissés dans le HTML (jamais leur texte) et les images cassées",
-  "Si la page se déclare réservée aux adultes : DOMCity n'en fait pas de ville",
 ];
 
 const NEVER = [
@@ -126,6 +126,17 @@ export default function CreatePage() {
                 {NEVER.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
+                <li>
+                  <div>
+                    Les sites refusés : DOMCity n&apos;en garde rien et n&apos;en fait pas de ville
+                    <ul className={styles.categories}>
+                      {BLOCK_CATEGORIES.map((category) => (
+                        <li key={category}>{BLOCK_LABELS[category]}</li>
+                      ))}
+                      <li>Toute page qui se déclare réservée aux adultes</li>
+                    </ul>
+                  </div>
+                </li>
               </ul>
             </div>
           </div>

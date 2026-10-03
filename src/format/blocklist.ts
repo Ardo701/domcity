@@ -17,6 +17,16 @@ import type { CityDoc, CityNode } from "./types";
 export const BLOCK_CATEGORIES = ["adult", "violence", "bank", "private", "gambling", "danger"] as const;
 export type BlockCategory = (typeof BLOCK_CATEGORIES)[number];
 
+/** Le nom de chaque catégorie, pour les montrer au visiteur (page Créer une ville). */
+export const BLOCK_LABELS: Record<BlockCategory, string> = {
+  adult: "Sites pour adultes",
+  violence: "Violence et images choquantes",
+  bank: "Banques et services financiers",
+  private: "Données personnelles : messageries, comptes, impôts, santé",
+  gambling: "Jeux d'argent",
+  danger: "Sites dangereux : pistage, logiciels espions, téléchargements piratés",
+};
+
 /** Ce que dit DOMCity d'un site refusé, selon sa catégorie. */
 const REASONS: Record<BlockCategory, string> = {
   adult: "Ce site est sur la liste des sites refusés par DOMCity : sites pour adultes.",

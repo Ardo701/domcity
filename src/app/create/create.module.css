@@ -158,6 +158,28 @@
   );
 }
 
+/* Les catégories de sites refusés, sous leur ligne. */
+.ledger .categories {
+  margin-top: 8px;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.ledger .categories li {
+  display: flex;
+  gap: 10px;
+}
+
+.ledger .categories li::before {
+  flex: none;
+  width: 8px;
+  height: 1.5px;
+  margin-top: 11px;
+  border: 0;
+  outline: 0;
+  background: var(--signal-deep);
+}
+
 /* ---------- Téléphone et limites ---------- */
 
 .columns {
