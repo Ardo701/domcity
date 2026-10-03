@@ -30,11 +30,14 @@ function r2Files(config: CloudConfig): FileStore {
 
   return {
     async put(key, body, contentType) {
-      const response = await client.fetch(endpoint(key), {
+      // On signe, puis on envoie le corps lui-même. Le fetch de Next refait un objet Request à partir de son
+      // flux (request.body) : la longueur se perd, l'envoi part en morceaux et R2 le refuse (411).
+      const signed = await client.sign(endpoint(key), {
         method: "PUT",
         body: body as BodyInit,
         headers: { "content-type": contentType, "cache-control": IMMUTABLE },
       });
+      const response = await fetch(signed.url, { method: "PUT", headers: signed.headers, body: body as BodyInit });
       if (!response.ok) throw new Error(`R2 ${response.status} en écrivant ${key}`);
     },
     async remove(keys) {

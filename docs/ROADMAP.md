@@ -387,7 +387,7 @@ En attendant : signalement (masquée à 3), suppression à la main dans Supabase
 
 
 ### Étape 6 : mise en ligne
-Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. `www.domcity.app` redirige vers `domcity.app` (308 permanente, chemin et paramètres gardés ; CNAME vers Vercel en nuage gris). Supabase (les 4 migrations), R2 (bucket `domcity-villes` sur `files.domcity.app`, règle CORS) et les variables de Vercel sont en place : le partage est allumé, la galerie répond (vide). Vérifié de l'extérieur : `files.domcity.app` passe par Cloudflare, la règle CORS accepte `domcity.app` et `localhost:3000` et refuse les autres sites. Reste : un premier vrai partage, l'éditeur (`src/ui/publisher.ts`), le dépôt GitHub à rendre public, la règle du pare-feu Vercel.
+Fait par l'utilisateur le 3 octobre 2026 : domaine acheté, `domcity.app` relié au projet Vercel (vérifié : DNS chez Cloudflare, adresses de Vercel, pas de proxy Cloudflare, HTTPS, dernière version servie). Sans variables d'environnement, le partage y est éteint (Découvrir, Votre compte et les pages de site répondent 404, leurs liens sont masqués) : c'est normal. `www.domcity.app` redirige vers `domcity.app` (308 permanente, chemin et paramètres gardés ; CNAME vers Vercel en nuage gris). Supabase (les 4 migrations), R2 (bucket `domcity-villes` sur `files.domcity.app`, règle CORS) et les variables de Vercel sont en place : le partage est allumé, la galerie répond (vide). Vérifié de l'extérieur : `files.domcity.app` passe par Cloudflare, la règle CORS accepte `domcity.app` et `localhost:3000` et refuse les autres sites. Premier vrai partage essayé le 3 octobre 2026 : « Le partage a échoué ». Les journaux de Vercel disaient « R2 411 en écrivant c/….jpg » : le fetch de Next refait un objet Request à partir de son flux, la longueur se perd, l'envoi part en morceaux et R2 refuse un envoi sans `Content-Length` (la ville, plus petite, passait). Corrigé dans `files.ts` : la requête est signée, puis envoyée avec le corps lui-même ; un test le vérifie avec un faux R2 qui refuse comme le vrai. Reste : réussir ce premier partage, l'éditeur (`src/ui/publisher.ts`), le dépôt GitHub à rendre public, la règle du pare-feu Vercel.
 
 Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** pour `domcity.app` vers Vercel, **nuage orange** pour `files.domcity.app` vers R2), projet Vercel relié au dépôt, variables d'environnement, règles du pare-feu Vercel (limite sur `/api/captures`), Attack Mode en cas d'attaque, purge du cache Cloudflare à la suppression (jeton facultatif).
 
@@ -420,7 +420,7 @@ Guide pas à pas : domaine sur Cloudflare (DNS chez Cloudflare, **nuage gris** p
 ```bash
 npm install
 npm run dev        # http://localhost:3000, partage en mode local
-npm test           # 111 tests
+npm test           # 112 tests
 npm run lint
 npm run typecheck
 npm run bookmarklet  # recompile le favori après une modification de src/capture ou src/bookmarklet
