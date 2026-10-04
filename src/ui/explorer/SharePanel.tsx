@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { WikiLang } from "@/capture/wikipedia";
-import { sharedCityPath } from "@/format/shared";
+import { sharedCityPath, type DuplicateAnswer, type ExistingVersion } from "@/format/shared";
 import type { CityDoc, CityNode } from "@/format/types";
 import { normalizePageUrl } from "@/format/url";
 import { useMessages } from "@/i18n/client";
@@ -17,7 +17,11 @@ type State =
   | { step: "preview" }
   | { step: "sending" }
   | { step: "done"; slug: string; url: string; deleteUrl: string }
-  | { step: "error"; message: string };
+  | { step: "error"; message: string }
+  // The page already has the same city: nothing is published.
+  | { step: "unchanged"; existing: ExistingVersion; similarity: number }
+  // The page has a different city, published less than 7 days ago: publishing again needs a confirmation.
+  | { step: "recent"; existing: ExistingVersion; difference: number | null };
 
 function headingsOf(root: CityNode): string[] {
   const out: string[] = [];
@@ -84,7 +88,8 @@ export function SharePanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, state.step]);
 
-  const publish = async () => {
+  /** `newVersionOf`: the recent version the visitor confirmed over. */
+  const publish = async (newVersionOf?: string) => {
     setState({ step: "sending" });
     const publishedTitle = title.replace(/\s+/g, " ").trim() || doc.title;
     const form = new FormData();
@@ -98,8 +103,9 @@ export function SharePanel({
         form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "city.json.gz");
       }
       if (thumb) form.set("thumbnail", thumb.blob, "thumbnail.jpg");
+      if (newVersionOf) form.set("newVersionOf", newVersionOf);
       const response = await fetch("/api/captures", { method: "POST", body: form });
-      const data = (await response.json()) as {
+      const data = (await response.json()) as Partial<DuplicateAnswer> & {
         slug?: string;
         title?: string;
         pageUrl?: string;
@@ -108,6 +114,15 @@ export function SharePanel({
         token?: string;
         error?: string;
       };
+      if (response.status === 409 && data.existing) {
+        const { existing, difference = null } = data;
+        setState(
+          data.duplicate === "unchanged"
+            ? { step: "unchanged", existing, similarity: 1 - (difference ?? 0) }
+            : { step: "recent", existing, difference },
+        );
+        return;
+      }
       if (!response.ok || !data.slug || !data.url || !data.deleteUrl || !data.token) {
         setState({ step: "error", message: data.error ?? m.failed });
         return;
@@ -212,14 +227,62 @@ export function SharePanel({
                 {state.message}
               </p>
             )}
+            {state.step === "unchanged" && (
+              <p className={styles.duplicate} role="status">
+                {m.unchanged(state.existing.capturedAt, state.similarity)}
+              </p>
+            )}
+            {state.step === "recent" && (
+              <p className={styles.duplicate} role="status">
+                {m.recent(state.existing.capturedAt)}
+                {state.difference !== null && ` ${m.difference(state.difference)}`}
+              </p>
+            )}
 
             <div className={styles.actionsRow}>
-              <button type="button" className={styles.primary} onClick={publish} disabled={state.step === "sending"}>
-                {state.step === "sending" ? m.publishing : m.publish}
-              </button>
-              <button type="button" className={styles.secondary} onClick={onClose} disabled={state.step === "sending"}>
-                {m.cancel}
-              </button>
+              {state.step === "unchanged" ? (
+                <>
+                  <Link href={sharedCityPath(state.existing.slug)} className={styles.primary}>
+                    {m.seeIt}
+                  </Link>
+                  <button type="button" className={styles.secondary} onClick={onClose}>
+                    {m.close}
+                  </button>
+                </>
+              ) : state.step === "recent" ? (
+                <>
+                  <button type="button" className={styles.primary} onClick={() => publish(state.existing.slug)}>
+                    {m.publishNew}
+                  </button>
+                  {/* In a new tab: this city stays here, ready to be published after comparing. */}
+                  <Link
+                    href={sharedCityPath(state.existing.slug)}
+                    target="_blank"
+                    rel="noopener"
+                    prefetch={false}
+                    className={styles.secondary}
+                  >
+                    {m.seeExisting}
+                  </Link>
+                  <button type="button" className={styles.secondary} onClick={onClose}>
+                    {m.cancel}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    onClick={() => publish()}
+                    disabled={state.step === "sending"}
+                  >
+                    {state.step === "sending" ? m.publishing : m.publish}
+                  </button>
+                  <button type="button" className={styles.secondary} onClick={onClose} disabled={state.step === "sending"}>
+                    {m.cancel}
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

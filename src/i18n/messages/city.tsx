@@ -4,7 +4,17 @@ import type { ReactNode } from "react";
 import type { Weather } from "@/city/ambiance";
 import type { ImageStatus } from "@/city/textures";
 import type { ReportReason } from "@/format/shared";
-import { formatBytes, formatCount, formatDecimal, formatMegabytes, dateTime, plural } from "../format";
+import {
+  dateTime,
+  formatBytes,
+  formatCount,
+  formatDecimal,
+  formatMegabytes,
+  formatPercent,
+  longDate,
+  plural,
+  timeAgo,
+} from "../format";
 import { defineMessages, type Locale } from "../locale";
 
 /** Oct 4, 2026 / 04.10.2026: the capture date, in the cartouche. */
@@ -186,6 +196,14 @@ interface CityMessages {
     publish: string;
     publishing: string;
     cancel: string;
+    /** The page already has the same city: nothing new to publish. */
+    unchanged: (date: string, similarity: number) => string;
+    seeIt: string;
+    /** The page has a different city, published less than 7 days ago: the visitor confirms. */
+    recent: (date: string) => string;
+    difference: (difference: number) => string;
+    seeExisting: string;
+    publishNew: string;
   };
   ambiance: {
     title: string;
@@ -485,6 +503,19 @@ export const CITY = defineMessages<CityMessages>({
       publish: "Publish the city",
       publishing: "Publishing…",
       cancel: "Cancel",
+      unchanged: (date, similarity) =>
+        `This page has not changed since its city of ${longDate(date, "en")}: same engraved headings, ${formatPercent(
+          Math.floor(similarity * 100) / 100,
+          "en",
+        )} of the elements alike. Nothing new to publish.`,
+      seeIt: "See this city",
+      recent: (date) => `This page already has a city, published ${timeAgo(date, "en")} (${longDate(date, "en")}).`,
+      difference: (difference) =>
+        difference < 0.01
+          ? `Your capture barely differs from it (less than ${formatPercent(0.01, "en")} of the elements).`
+          : `Your capture differs from it by ${formatPercent(difference, "en")}.`,
+      seeExisting: "See the existing city ↗",
+      publishNew: "Publish a new version",
     },
     ambiance: {
       title: "Ambiance",
@@ -795,6 +826,19 @@ export const CITY = defineMessages<CityMessages>({
       publish: "Publier la ville",
       publishing: "Publication…",
       cancel: "Annuler",
+      unchanged: (date, similarity) =>
+        `Cette page n'a pas changé depuis sa ville du ${longDate(date, "fr")} : mêmes titres gravés, ${formatPercent(
+          Math.floor(similarity * 100) / 100,
+          "fr",
+        )} des éléments identiques. Rien de nouveau à publier.`,
+      seeIt: "Voir cette ville",
+      recent: (date) => `Cette page a déjà une ville, publiée ${timeAgo(date, "fr")} (le ${longDate(date, "fr")}).`,
+      difference: (difference) =>
+        difference < 0.01
+          ? `Votre relevé en diffère à peine (moins de ${formatPercent(0.01, "fr")} des éléments).`
+          : `Votre relevé en diffère de ${formatPercent(difference, "fr")}.`,
+      seeExisting: "Voir la ville existante ↗",
+      publishNew: "Publier une nouvelle version",
     },
     ambiance: {
       title: "Ambiance",

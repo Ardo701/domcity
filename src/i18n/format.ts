@@ -59,3 +59,17 @@ export function dottedDate(iso: string | Date, locale: Locale): string {
 export function dateTime(iso: string | Date, locale: Locale): string {
   return new Date(iso).toLocaleString(locale, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+
+/** 14% in English, 14 % in French. */
+export function formatPercent(value: number, locale: Locale): string {
+  return value.toLocaleString(locale, { style: "percent", maximumFractionDigits: 0 });
+}
+
+/** 3 days ago / il y a 3 jours, yesterday / hier; a minute ago at the least. */
+export function timeAgo(iso: string | Date, locale: Locale, now = Date.now()): string {
+  const seconds = Math.max(0, (now - new Date(iso).getTime()) / 1000);
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (seconds < 3600) return relative.format(-Math.max(1, Math.floor(seconds / 60)), "minute");
+  if (seconds < 86_400) return relative.format(-Math.floor(seconds / 3600), "hour");
+  return relative.format(-Math.floor(seconds / 86_400), "day");
+}

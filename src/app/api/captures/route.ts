@@ -1,16 +1,26 @@
 import { isWikiLang } from "@/capture/wikipedia";
 import type { Refusal } from "@/format/blocklist";
-import { deleteCityPath, sharedCityPath } from "@/format/shared";
+import { deleteCityPath, sharedCityPath, type DuplicateAnswer } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { API } from "@/i18n/messages/api";
 import { REFUSAL } from "@/i18n/messages/refusal";
 import { sharingEnabled, siteUrl } from "@/server/config";
 import { refreshGalleries } from "@/server/galleries";
 import { clientActor, jsonError, requestLanguage, sameOrigin } from "@/server/security";
-import { captureWikipediaOnServer, readThumbnail, readUploadedCity, shareCity, ShareError } from "@/server/share";
+import {
+  captureWikipediaOnServer,
+  DuplicateCity,
+  readThumbnail,
+  readUploadedCity,
+  shareCity,
+  ShareError,
+} from "@/server/share";
 import { hitRateLimit } from "@/server/store";
 
-/** Shares a city. Multipart body: source, (lang + title) or city (gzip), thumbnail (jpeg). */
+/**
+ * Shares a city. Multipart body: source, (lang + title) or city (gzip), thumbnail (jpeg), and newVersionOf
+ * (the slug of the recent version the visitor confirmed over, after a 409 "recent").
+ */
 export async function POST(request: Request) {
   const locale = requestLanguage(request);
   const m = API[locale];
@@ -48,7 +58,8 @@ export async function POST(request: Request) {
     const thumb = form.get("thumbnail");
     const thumbnail = thumb instanceof Blob && thumb.size > 0 ? readThumbnail(new Uint8Array(await thumb.arrayBuffer())) : null;
 
-    const { slug, token, pageUrl } = await shareCity(doc, thumbnail);
+    const newVersionOf = String(form.get("newVersionOf") ?? "") || null;
+    const { slug, token, pageUrl } = await shareCity(doc, thumbnail, { newVersionOf });
     refreshGalleries();
     const base = siteUrl(request);
     return Response.json(
@@ -63,6 +74,15 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof DuplicateCity) {
+      const answer: DuplicateAnswer = {
+        error: m.duplicate[error.duplicate](error.existing.capturedAt),
+        duplicate: error.duplicate,
+        existing: error.existing,
+        difference: error.difference,
+      };
+      return Response.json(answer, { status: 409 });
+    }
     if (error instanceof ShareError) {
       const message =
         error.code === "refused" ? REFUSAL[locale].reasons[error.detail as Refusal] : m.share[error.code](error.detail);

@@ -4,7 +4,7 @@ import { proxy } from "@/proxy";
 import { API } from "./messages/api";
 import { CITY } from "./messages/city";
 import { negotiateLocale, requestLocale } from "./locale";
-import { formatBytes, formatCount, plural } from "./format";
+import { formatBytes, formatCount, formatPercent, plural, timeAgo } from "./format";
 
 const visit = (path: string, headers: Record<string, string> = {}) => proxy(new NextRequest(`http://localhost:3000${path}`, { headers }));
 
@@ -64,6 +64,16 @@ describe("languages", () => {
     expect(plural("en", 0, "city", "cities")).toBe("0 cities");
     expect(plural("fr", 0, "ville", "villes")).toBe("0 ville");
     expect(plural("fr", 2, "ville", "villes")).toBe("2 villes");
+    expect(formatPercent(0.14, "en")).toBe("14%");
+    expect(formatPercent(0.14, "fr")).toMatch(/^14\s%$/u); // a no-break space, narrow or not depending on the engine
+  });
+
+  it("says how long ago a version was published", () => {
+    const now = Date.parse("2026-10-04T12:00:00Z");
+    expect(timeAgo("2026-10-04T11:59:40Z", "fr", now)).toBe("il y a 1 minute");
+    expect(timeAgo("2026-10-04T07:00:00Z", "en", now)).toBe("5 hours ago");
+    expect(timeAgo("2026-10-03T10:00:00Z", "fr", now)).toBe("hier");
+    expect(timeAgo("2026-10-01T12:00:00Z", "en", now)).toBe("3 days ago");
   });
 
   it("has every message in both languages", () => {

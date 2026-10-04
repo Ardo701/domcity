@@ -38,6 +38,23 @@ export interface SharedCity {
   pageVersions: number;
 }
 
+/** The latest version of a page, met when publishing it again. */
+export interface ExistingVersion {
+  slug: string;
+  /** ISO date of its publication. */
+  capturedAt: string;
+}
+
+/** The answer (409) to a publication that meets a version of the page already published. */
+export interface DuplicateAnswer {
+  error: string;
+  /** unchanged: refused, the city would be the same. recent: published less than 7 days ago, the visitor confirms. */
+  duplicate: "unchanged" | "recent";
+  existing: ExistingVersion;
+  /** Share of elements that differ, from 0 to 1; null when the existing version could not be read. */
+  difference: number | null;
+}
+
 export interface CityVersion {
   slug: string;
   title: string | null;

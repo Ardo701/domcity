@@ -1321,6 +1321,14 @@
   font-size: 14px;
 }
 
+.duplicate {
+  padding: 9px 12px;
+  border-left: 4px solid var(--beacon);
+  background: var(--paper);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .actionsRow {
   display: flex;
   flex-wrap: wrap;

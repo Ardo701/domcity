@@ -4,11 +4,12 @@ import { DOMParser } from "linkedom";
 import { fetchWikipediaCity, type WikiLang } from "@/capture/wikipedia";
 import { layoutCity } from "@/city/layout";
 import { cityRefusal, withoutBlocked } from "@/format/blocklist";
+import { compareCities, isUnchanged, RECENT_VERSION_DAYS } from "@/format/compare";
 import { validateCityDoc } from "@/format/schema";
-import { THUMBNAIL, type CityStatsSummary } from "@/format/shared";
+import { THUMBNAIL, type CityStatsSummary, type ExistingVersion } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, normalizePageUrl } from "@/format/url";
-import { cityKey, fileStore, thumbKey } from "./files";
+import { cityKey, fileStore, thumbKey, type FileStore } from "./files";
 import { hashToken, newDeleteToken } from "./security";
 import * as store from "./store";
 
@@ -40,6 +41,21 @@ export class ShareError extends Error {
     readonly detail?: string,
   ) {
     super(detail ? `${code}: ${detail}` : code);
+  }
+}
+
+/**
+ * The page already has a version: the same city (refused, nothing new to publish), or a different one
+ * published less than 7 days ago (the visitor confirms by sending its slug back).
+ */
+export class DuplicateCity extends Error {
+  constructor(
+    readonly duplicate: "unchanged" | "recent",
+    readonly existing: ExistingVersion,
+    /** Share of elements that differ, from 0 to 1; null when the existing version could not be read. */
+    readonly difference: number | null,
+  ) {
+    super(duplicate);
   }
 }
 
@@ -121,6 +137,40 @@ export function statsOf(doc: CityDoc): CityStatsSummary {
   return { ...layout.stats, elements: layout.lots.length };
 }
 
+/** A stored city, or null if its file is missing or unreadable. */
+async function readStoredCity(files: FileStore, slug: string): Promise<CityDoc | null> {
+  try {
+    const bytes = await files.get(cityKey(slug));
+    return bytes ? readUploadedCity(bytes) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compares the city with the latest visible version of its page. A hidden version (reports) does not
+ * count: a botched or forged city cannot hold the page.
+ */
+async function checkDuplicate(
+  files: FileStore,
+  domain: string,
+  path: string,
+  doc: CityDoc,
+  newVersionOf: string | null,
+): Promise<void> {
+  const [latest] = await store.pageVersions(domain, path);
+  if (!latest) return;
+  const existing = { slug: latest.slug, capturedAt: new Date(latest.capturedAt).toISOString() };
+  const previous = await readStoredCity(files, latest.slug);
+  const comparison = previous ? compareCities(previous, doc) : null;
+  const difference = comparison ? 1 - comparison.similarity : null;
+  if (comparison && isUnchanged(comparison)) throw new DuplicateCity("unchanged", existing, difference);
+  const age = Date.now() - Date.parse(existing.capturedAt);
+  if (age < RECENT_VERSION_DAYS * 86_400_000 && newVersionOf !== latest.slug) {
+    throw new DuplicateCity("recent", existing, difference);
+  }
+}
+
 export interface ShareResult {
   slug: string;
   token: string;
@@ -131,8 +181,13 @@ export interface ShareResult {
 /**
  * Publishes a city: pending row → files in storage → visible row.
  * If uploading the files fails, the row is deleted: nothing stays half published.
+ * `newVersionOf`: the slug of the recent version the visitor saw before confirming (DuplicateCity "recent").
  */
-export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Promise<ShareResult> {
+export async function shareCity(
+  doc: CityDoc,
+  thumbnail: Uint8Array | null,
+  { newVersionOf = null }: { newVersionOf?: string | null } = {},
+): Promise<ShareResult> {
   const files = fileStore();
   if (!files) throw new ShareError(503, "notConfigured");
 
@@ -146,6 +201,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   if (address.path.length > 1024) throw new ShareError(400, "addressTooLong");
 
   const canonical: CityDoc = { ...withoutBlocked(doc, blocked), url: address.url };
+  await checkDuplicate(files, address.domain, address.path, canonical, newVersionOf);
   const body = new Uint8Array(gzipSync(JSON.stringify(canonical), { level: 9 }));
   if (body.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "cityTooHeavy");
 

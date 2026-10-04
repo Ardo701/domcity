@@ -9,6 +9,8 @@ import { storeConfig, type CloudConfig, type LocalConfig } from "./config";
  */
 export interface FileStore {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
+  /** The file, or null if it does not exist. */
+  get(key: string): Promise<Uint8Array | null>;
   remove(keys: string[]): Promise<void>;
   publicUrl(key: string): string;
 }
@@ -39,6 +41,12 @@ function r2Files(config: CloudConfig): FileStore {
       });
       const response = await fetch(signed.url, { method: "PUT", headers: signed.headers, body: body as BodyInit });
       if (!response.ok) throw new Error(`R2 ${response.status} writing ${key}`);
+    },
+    async get(key) {
+      const response = await client.fetch(endpoint(key));
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error(`R2 ${response.status} reading ${key}`);
+      return new Uint8Array(await response.arrayBuffer());
     },
     async remove(keys) {
       await Promise.all(
@@ -75,6 +83,14 @@ function localFiles(config: LocalConfig): FileStore {
       const full = await resolve(key);
       await fs.mkdir(path.dirname(full), { recursive: true });
       await fs.writeFile(full, body);
+    },
+    async get(key) {
+      const fs = await import("node:fs/promises");
+      try {
+        return new Uint8Array(await fs.readFile(await resolve(key)));
+      } catch {
+        return null;
+      }
     },
     async remove(keys) {
       const fs = await import("node:fs/promises");
