@@ -21,7 +21,7 @@ export interface CityImage {
   broken?: true;
   /**
    * Image from a site refused by DOMCity: its address and text were removed (empty `src`),
-   * the poster says "Image masquée". Set at publishing and when a city is opened.
+   * the poster says "Hidden image". Set at publishing and when a city is opened.
    */
   refused?: true;
 }

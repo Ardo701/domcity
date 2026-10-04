@@ -9,14 +9,14 @@ import { LogoMark } from "@/ui/Logo";
  * (domcity.app, a preview, or localhost in development).
  * React refuses javascript: links in its attributes: we set the address ourselves.
  */
-export function BookmarkletButton({ className }: { className?: string }) {
+export function BookmarkletButton({ className, title }: { className?: string; title: string }) {
   const ref = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     ref.current?.setAttribute("href", bookmarkletHref(window.location.origin));
   }, []);
 
   return (
-    <a ref={ref} className={className} title="Glissez-moi dans votre barre de favoris">
+    <a ref={ref} className={className} title={title}>
       <LogoMark size={30} />
       DOMCity
     </a>
@@ -24,22 +24,22 @@ export function BookmarkletButton({ className }: { className?: string }) {
 }
 
 /** To install the bookmarklet by hand (phone, or a browser that refuses dragging). */
-export function CopyBookmarklet({ className }: { className?: string }) {
-  const [copied, setCopied] = useState<"oui" | "non" | null>(null);
+export function CopyBookmarklet({ className, labels }: { className?: string; labels: { idle: string; done: string; refused: string } }) {
+  const [copied, setCopied] = useState<"done" | "refused" | null>(null);
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(bookmarkletHref(window.location.origin));
-      setCopied("oui");
+      setCopied("done");
     } catch {
-      setCopied("non");
+      setCopied("refused");
     }
     setTimeout(() => setCopied(null), 2400);
   };
 
   return (
     <button type="button" className={className} onClick={copy}>
-      {copied === "oui" ? "Code copié" : copied === "non" ? "Copie refusée par le navigateur" : "Copier le code du favori"}
+      {labels[copied ?? "idle"]}
     </button>
   );
 }

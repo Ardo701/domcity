@@ -1,26 +1,31 @@
 import { isWikiLang } from "@/capture/wikipedia";
+import type { Refusal } from "@/format/blocklist";
 import { deleteCityPath, sharedCityPath } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
+import { API } from "@/i18n/messages/api";
+import { REFUSAL } from "@/i18n/messages/refusal";
 import { sharingEnabled, siteUrl } from "@/server/config";
-import { clientActor, jsonError, sameOrigin } from "@/server/security";
+import { clientActor, jsonError, requestLanguage, sameOrigin } from "@/server/security";
 import { captureWikipediaOnServer, readThumbnail, readUploadedCity, shareCity, ShareError } from "@/server/share";
 import { hitRateLimit } from "@/server/store";
 
 /** Shares a city. Multipart body: source, (lang + title) or city (gzip), thumbnail (jpeg). */
 export async function POST(request: Request) {
-  if (!sharingEnabled()) return jsonError(503, "Le partage n'est pas encore configuré.");
-  if (!sameOrigin(request)) return jsonError(403, "Requête refusée.");
+  const locale = requestLanguage(request);
+  const m = API[locale];
+  if (!sharingEnabled()) return jsonError(503, m.notConfigured);
+  if (!sameOrigin(request)) return jsonError(403, m.forbidden);
 
   try {
     if (await hitRateLimit(clientActor(request), "share", 10, "1 hour")) {
-      return jsonError(429, "Trop de partages d'un coup. Réessayez dans une heure.");
+      return jsonError(429, m.share.tooMany);
     }
 
     let form: FormData;
     try {
       form = await request.formData();
     } catch {
-      return jsonError(400, "Requête illisible.");
+      return jsonError(400, m.unreadable);
     }
 
     let doc: CityDoc;
@@ -28,15 +33,15 @@ export async function POST(request: Request) {
     if (source === "wikipedia") {
       const lang = String(form.get("lang") ?? "");
       const title = String(form.get("title") ?? "").trim();
-      if (!isWikiLang(lang) || !title || title.length > 300) return jsonError(400, "Article invalide.");
+      if (!isWikiLang(lang) || !title || title.length > 300) return jsonError(400, m.share.badArticle);
       doc = await captureWikipediaOnServer(lang, title);
     } else if (source === "bookmarklet") {
       const city = form.get("city");
-      if (!(city instanceof Blob)) return jsonError(400, "Ville manquante.");
+      if (!(city instanceof Blob)) return jsonError(400, m.share.missingCity);
       doc = readUploadedCity(new Uint8Array(await city.arrayBuffer()));
-      if (doc.source !== "bookmarklet") return jsonError(400, "Source incohérente.");
+      if (doc.source !== "bookmarklet") return jsonError(400, m.share.badSource);
     } else {
-      return jsonError(400, "Source inconnue.");
+      return jsonError(400, m.share.unknownSource);
     }
 
     const thumb = form.get("thumbnail");
@@ -56,8 +61,12 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    if (error instanceof ShareError) return jsonError(error.status, error.message);
-    console.error("partage", error);
-    return jsonError(500, "Le partage a échoué. Réessayez dans un instant.");
+    if (error instanceof ShareError) {
+      const message =
+        error.code === "refused" ? REFUSAL[locale].reasons[error.detail as Refusal] : m.share[error.code](error.detail);
+      return jsonError(error.status, message);
+    }
+    console.error("share", error);
+    return jsonError(500, m.share.failed);
   }
 }

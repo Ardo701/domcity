@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useMessages } from "@/i18n/client";
+import { DEMO } from "@/i18n/messages/demo";
 import { LogoMark } from "@/ui/Logo";
 import styles from "./Demo.module.css";
 import {
@@ -13,7 +15,7 @@ import {
   type DemoLot,
   type PageRect,
 } from "./scene";
-import { DURATION, KEYSTROKES, T, TYPED, along, clamp01, ease, fade, lerp, prog } from "./timeline";
+import { DURATION, KEYSTROKES, T, along, clamp01, ease, fade, lerp, prog } from "./timeline";
 
 /**
  * The bookmarklet demo, frame by frame: everything visible is computed from the instant t.
@@ -119,6 +121,7 @@ const SiteIcon = () => (
 );
 
 function Tabs({ t }: { t: number }) {
+  const m = useMessages(DEMO);
   const second = t >= T.newTab && t < T.reset[1];
   const loading = t >= T.enter && t < T.swap;
   const onSite = t >= T.swap && t < T.back[0];
@@ -132,7 +135,7 @@ function Tabs({ t }: { t: number }) {
       <Tab
         x={56}
         active={!second}
-        title={onSite ? "Exemple" : "Créer une ville · DOMCity"}
+        title={onSite ? m.sample.example : m.tab}
         icon={
           loading ? (
             <circle cx={5.5} cy={5.5} r={4} fill="none" stroke={INK} strokeWidth={1.4} strokeDasharray="14 12" transform={`rotate(${t * 720} 5.5 5.5)`} />
@@ -153,12 +156,13 @@ function Tabs({ t }: { t: number }) {
 }
 
 function AddressBar({ t }: { t: number }) {
+  const typedAddress = useMessages(DEMO).typed;
   const top = BARS.tabs;
   const focused = t >= T.focus && t < T.enter;
   const typed = KEYSTROKES.filter((at) => t >= at).length;
   let text = "domcity.app/create";
-  if (t >= T.typing && t < T.enter) text = TYPED.slice(0, typed);
-  else if (t >= T.enter && t < T.newTab) text = TYPED;
+  if (t >= T.typing && t < T.enter) text = typedAddress.slice(0, typed);
+  else if (t >= T.enter && t < T.newTab) text = typedAddress;
   else if (t >= T.newTab && t < T.back[0]) text = "domcity.app/new";
   const selected = t >= T.focus && t < T.typing;
   const caret = focused && (t >= T.typing || Math.floor((t - T.focus) * 5) % 2 === 0);
@@ -203,6 +207,7 @@ function Chip({ x, w, label, icon }: { x: number; w: number; label: string; icon
 }
 
 function Bookmarks({ t }: { t: number }) {
+  const [weather, recipes] = useMessages(DEMO).bookmarks;
   const top = BARS.tabs + BARS.toolbar;
   const shown = prog(t, T.drop, T.drop + 0.12) * (1 - prog(t, T.reset[0], T.reset[0] + 0.4));
   const pop = lerp(0.6, 1, prog(t, T.drop, T.drop + 0.32, ease.back));
@@ -211,8 +216,8 @@ function Bookmarks({ t }: { t: number }) {
   return (
     <g>
       <rect y={top} width={SCENE.width} height={BARS.bookmarks} fill={RAISED} />
-      <Chip x={10} w={58} label="Météo" icon={<circle cx={4.5} cy={4.5} r={4} fill="#7f9bab" />} />
-      <Chip x={74} w={70} label="Recettes" icon={<circle cx={4.5} cy={4.5} r={4} fill="#b0654b" />} />
+      <Chip x={10} w={58} label={weather} icon={<circle cx={4.5} cy={4.5} r={4} fill="#7f9bab" />} />
+      <Chip x={74} w={70} label={recipes} icon={<circle cx={4.5} cy={4.5} r={4} fill="#b0654b" />} />
       {t >= T.dropHint && t < T.drop && Math.floor(t * 8) % 2 === 0 && (
         <rect x={149} y={71} width={2} height={17} fill={INK} />
       )}
@@ -234,7 +239,7 @@ function Bookmarks({ t }: { t: number }) {
 
 // ---------- The pages ----------
 
-/** The button to drag, as it is on the Créer une ville page. */
+/** The button to drag, as it is on the Create a city page. */
 function Stamp({ x, y, scale = 1, pressed = 0 }: { x: number; y: number; scale?: number; pressed?: number }) {
   const shift = pressed * 2;
   return (
@@ -254,6 +259,7 @@ function Stamp({ x, y, scale = 1, pressed = 0 }: { x: number; y: number; scale?:
 }
 
 function DomcityPage({ t }: { t: number }) {
+  const m = useMessages(DEMO);
   const opacity = t < T.back[0] ? 1 - prog(t, T.enter + 0.1, T.swap) : prog(t, T.back[0], T.back[1] - 0.05);
   if (opacity <= 0) return null;
   const pressed = fade(t, T.press, T.drag[0] + 0.05, 0.05, 0.1);
@@ -266,11 +272,12 @@ function DomcityPage({ t }: { t: number }) {
         DOM<tspan fill={SIGNAL}>CITY</tspan>
       </text>
       <text y={23} className={styles.sans} fontSize={8.5} fontWeight={600} fill={INK}>
-        <tspan x={128}>Découvrir</tspan>
-        <tspan x={184}>Créer une ville</tspan>
-        <tspan x={262}>Votre compte</tspan>
+        <tspan x={128}>{m.nav[0]}</tspan>
+        <tspan x={184}>{m.nav[1]}</tspan>
+        <tspan x={262}>{m.nav[2]}</tspan>
       </text>
-      <line x1={184} y1={27} x2={246} y2={27} stroke={SIGNAL} strokeWidth={1.4} />
+      {/* Under the current page, as wide as its name (about 4.1 units per letter at this size). */}
+      <line x1={184} y1={27} x2={184 + m.nav[1].length * 4.13} y2={27} stroke={SIGNAL} strokeWidth={1.4} />
       <rect x={574} y={12} width={42} height={16} rx={2} fill="none" stroke={INK} strokeWidth={1} />
       <text x={583} y={23} className={styles.sans} fontSize={7.5} fontWeight={700}>
         GitHub
@@ -278,10 +285,10 @@ function DomcityPage({ t }: { t: number }) {
       <line x1={24} y1={36} x2={616} y2={36} stroke={INK} strokeWidth={1} />
 
       <text x={24} y={86} className={styles.display} fontSize={40}>
-        TOUT LE WEB EST
+        {m.hero[0]}
       </text>
       <text x={24} y={126} className={styles.display} fontSize={40} fill={SIGNAL}>
-        CONSTRUCTIBLE.
+        {m.hero[1]}
       </text>
       {[300, 330, 190].map((w, i) => (
         <rect key={i} x={24} y={140 + i * 9} width={w} height={3} rx={1} fill={RULE} />
@@ -293,17 +300,17 @@ function DomcityPage({ t }: { t: number }) {
         <tspan fill={SIGNAL_DEEP} fontSize={11}>
           ↖
         </tspan>{" "}
-        Glissez ce bouton dans votre barre de favoris
+        {m.drop}
       </text>
       <rect x={182} y={219} width={200} height={3} rx={1} fill={RULE} />
       <rect x={182} y={228} width={150} height={3} rx={1} fill={RULE} />
 
       <line x1={24} y1={278} x2={616} y2={278} stroke={RULE} strokeWidth={1} />
       <text x={24} y={298} className={styles.mono} fontSize={7} fill={INK_3} letterSpacing={0.6}>
-        MODE D&apos;EMPLOI
+        {m.howTo}
       </text>
       <text x={24} y={326} className={styles.display} fontSize={26}>
-        TROIS GESTES
+        {m.gestures}
       </text>
       {[0, 1, 2].map((i) => (
         <g key={i}>
@@ -320,18 +327,19 @@ function DomcityPage({ t }: { t: number }) {
 
 /** The content of an element of the sample page: words, headings, lines of text, list... */
 function Content({ lot }: { lot: DemoLot }) {
+  const sample = useMessages(DEMO).sample;
   const { page: r, look } = lot;
   switch (look.type) {
     case "words":
       return (
         <text x={r.x + 2} y={r.y + r.h / 2 + 3} className={styles.sans} fontSize={8.5} fontWeight={600} fill="#3f3f48">
-          {look.text}
+          {sample[look.word]}
         </text>
       );
     case "title":
       return (
         <text x={r.x} y={r.y + r.h - (look.size > 20 ? 7 : 3)} className={styles.display} fontSize={look.size} fill={INK}>
-          {look.text.toUpperCase()}
+          {sample[look.word].toUpperCase()}
         </text>
       );
     case "lines": {
@@ -564,8 +572,9 @@ function Scan({ t, city }: { t: number; city: DemoCity }) {
   );
 }
 
-/** The city rendered by the engine, then what DOMCity displays around it: the title, Partager, the hover tooltip. */
+/** The city rendered by the engine, then what DOMCity displays around it: the title, Share, the hover tooltip. */
 function Rendered({ t, city }: { t: number; city: DemoCity }) {
+  const m = useMessages(DEMO);
   const shown = prog(t, T.reveal[0], T.reveal[1]) * (1 - prog(t, T.reset[0], T.reset[1]));
   if (shown <= 0) return null;
   const [hx, hy] = city.hover;
@@ -583,15 +592,15 @@ function Rendered({ t, city }: { t: number; city: DemoCity }) {
       {chrome > 0 && (
         <g opacity={chrome}>
           <text x={16} y={34} className={styles.display} fontSize={20}>
-            EXEMPLE
+            {m.sample.example.toUpperCase()}
           </text>
           <text x={16} y={46} className={styles.mono} fontSize={6.5} fill={INK_3} letterSpacing={0.5}>
-            EXEMPLE.ORG · VOTRE RELEVÉ · NON PUBLIÉ
+            {m.capture}
           </text>
           <rect x={550} y={19} width={74} height={22} rx={2} fill={INK} />
           <rect x={548} y={17} width={74} height={22} rx={2} fill={RAISED} stroke={INK} strokeWidth={1.2} />
           <text x={585} y={32} textAnchor="middle" className={styles.display} fontSize={11}>
-            PARTAGER
+            {m.share}
           </text>
         </g>
       )}
@@ -600,13 +609,13 @@ function Rendered({ t, city }: { t: number; city: DemoCity }) {
           <rect x={bx} y={by} width={136} height={58} rx={3} fill={RAISED} stroke={INK} strokeWidth={1} />
           <rect x={bx} y={by} width={3.5} height={58} fill={SIGNAL} />
           <text x={bx + 12} y={by + 21} className={styles.display} fontSize={16}>
-            MONUMENT
+            {m.monument}
           </text>
           <text x={bx + 12} y={by + 33} className={styles.mono} fontSize={7.5} fill={SIGNAL_DEEP}>
             &lt;h1&gt;
           </text>
           <text x={bx + 12} y={by + 48} className={styles.sans} fontSize={9} fontWeight={600}>
-            « Exemple »
+            {m.quoted(m.sample.example)}
           </text>
         </g>
       )}
@@ -615,6 +624,7 @@ function Rendered({ t, city }: { t: number; city: DemoCity }) {
 }
 
 function Loading({ t, elements }: { t: number; elements: number }) {
+  const receiving = useMessages(DEMO).receiving;
   const bars = [
     [T.load[0], T.load[1]],
     [T.newTab, T.newTab + 0.5],
@@ -628,7 +638,7 @@ function Loading({ t, elements }: { t: number; elements: number }) {
       )}
       {t >= T.newTab && t < T.flatten[0] + 0.4 && (
         <text x={116} y={25} className={styles.mono} fontSize={7} fill={INK_3} letterSpacing={0.5} opacity={fade(t, T.newTab + 0.2, T.flatten[0] + 0.4, 0.2, 0.3)}>
-          RÉCEPTION DU RELEVÉ · {elements} ÉLÉMENTS
+          {receiving(elements)}
         </text>
       )}
     </g>

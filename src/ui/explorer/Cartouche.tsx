@@ -1,28 +1,21 @@
 import type { CityStats } from "@/city/layout";
-import { formatBytes, formatCount } from "@/city/describe";
 import type { CityVersion } from "@/format/shared";
 import type { CityPage } from "@/format/types";
 import { LIMITS } from "@/format/limits";
+import { useLocale } from "@/i18n/client";
+import { formatCount } from "@/i18n/format";
+import { CITY } from "@/i18n/messages/city";
+import type { Locale } from "@/i18n/locale";
 import styles from "./explorer.module.css";
 
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).replaceAll("/", ".");
-
-const longDate = (iso: string) =>
-  new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
-const plural = (n: number, word: string) => `${formatCount(n)} ${word}${n > 1 ? "s" : ""}`;
-
 /** What the bookmarklet learned about the whole page: scripts, third-party sites, weight. */
-function pageFacts(page: CityPage | undefined): string[] {
+function pageFacts(page: CityPage | undefined, locale: Locale): string[] {
   if (!page) return [];
+  const m = CITY[locale].cartouche;
   const facts: string[] = [];
-  if (page.scripts !== undefined) facts.push(plural(page.scripts, "script"));
-  if (page.thirdParty?.length) {
-    const more = page.thirdParty.length >= LIMITS.maxThirdParty ? "+" : "";
-    facts.push(`${formatCount(page.thirdParty.length)}${more} site${page.thirdParty.length > 1 ? "s" : ""} tiers`);
-  }
-  if (page.bytes) facts.push(`${formatBytes(page.bytes)} chargés`);
+  if (page.scripts !== undefined) facts.push(m.scripts(page.scripts));
+  if (page.thirdParty?.length) facts.push(m.thirdParty(page.thirdParty.length, page.thirdParty.length >= LIMITS.maxThirdParty));
+  if (page.bytes) facts.push(m.loaded(page.bytes));
   return facts;
 }
 
@@ -53,23 +46,25 @@ export function Cartouche({
   currentSlug?: string;
   onPickVersion?: (slug: string) => void;
 }) {
+  const locale = useLocale();
+  const m = CITY[locale].cartouche;
   const figures: Array<[string, number]> = [
-    ["Bâtiments", stats.buildings],
-    ["Quartiers", stats.districts],
-    ["Monuments", stats.monuments],
-    ["Panneaux", stats.billboards],
+    [m.buildings, stats.buildings],
+    [m.districts, stats.districts],
+    [m.monuments, stats.monuments],
+    [m.posters, stats.billboards],
   ];
-  if (stats.rivers > 0) figures.push(["Canaux", stats.rivers]);
-  if (stats.vacant > 0) figures.push(["Chantiers", stats.vacant]);
-  const facts = pageFacts(page);
+  if (stats.rivers > 0) figures.push([m.canals, stats.rivers]);
+  if (stats.vacant > 0) figures.push([m.sites, stats.vacant]);
+  const facts = pageFacts(page, locale);
 
   return (
-    <section className={styles.cartouche} aria-label="Cartouche">
+    <section className={styles.cartouche} aria-label={m.label}>
       <div className={styles.cartoucheRow}>
         <span className={`mono-caps ${kickerNote ? styles.kickerNote : ""}`} title={kickerNote}>
           {kicker}
         </span>
-        <span className="mono-caps">Relevé du {shortDate(capturedAt)}</span>
+        <span className="mono-caps">{m.captured(capturedAt)}</span>
       </div>
       <h2 className={styles.cartoucheTitle}>{title}</h2>
       <a className={styles.cartoucheUrl} href={url} target="_blank" rel="noreferrer">
@@ -77,12 +72,12 @@ export function Cartouche({
       </a>
       {versions && onPickVersion && (
         <label className={styles.versions}>
-          <span className="mono-caps">Version</span>
+          <span className="mono-caps">{m.version}</span>
           <select value={currentSlug} onChange={(e) => onPickVersion(e.target.value)}>
             {versions.map((v, i) => (
               <option key={v.slug} value={v.slug}>
-                {longDate(v.capturedAt)}
-                {i === 0 ? " (la plus récente)" : ""}
+                {m.versionDate(v.capturedAt)}
+                {i === 0 ? m.latest : ""}
               </option>
             ))}
           </select>
@@ -91,23 +86,23 @@ export function Cartouche({
       <dl className={styles.cartoucheStats}>
         {figures.map(([label, value]) => (
           <div key={label}>
-            <dd>{formatCount(value)}</dd>
+            <dd>{formatCount(value, locale)}</dd>
             <dt className="mono-caps">{label}</dt>
           </div>
         ))}
         <div>
           <dd>{stats.maxDepth}</dd>
-          <dt className="mono-caps">Niveaux</dt>
+          <dt className="mono-caps">{m.levels}</dt>
         </div>
         {shared && (
           <div>
-            <dd>{formatCount(shared.views)}</dd>
-            <dt className="mono-caps">Visites</dt>
+            <dd>{formatCount(shared.views, locale)}</dd>
+            <dt className="mono-caps">{m.visits}</dt>
           </div>
         )}
       </dl>
       {facts.length > 0 && (
-        <p className={`${styles.cartoucheFacts} mono-caps`} title="Mesuré sur la page affichée, au moment du relevé">
+        <p className={`${styles.cartoucheFacts} mono-caps`} title={m.measured}>
           {facts.join(" · ")}
         </p>
       )}

@@ -1500,12 +1500,12 @@
   color: var(--ink-3);
 }
 
-.perfFps[data-grade="moyen"] strong {
+.perfFps[data-grade="fair"] strong {
   background: var(--beacon);
   padding: 0 4px;
 }
 
-.perfFps[data-grade="lent"] strong {
+.perfFps[data-grade="slow"] strong {
   background: var(--signal);
   padding: 0 4px;
 }

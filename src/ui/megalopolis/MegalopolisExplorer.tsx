@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { describeLot, formatCount } from "@/city/describe";
+import { describeLot } from "@/city/describe";
 import { citySide, externalLinks, hasAerodrome, layoutCity, type Airport } from "@/city/layout";
 import { buildMegalopolis, comparePaths, placePages, type MegaCity, type Megalopolis, type Placement } from "@/city/megalopolis";
 import type { ImageStatus } from "@/city/textures";
@@ -12,6 +12,10 @@ import { withoutBlocked } from "@/format/blocklist";
 import { sharedCityPath, sitePath, type MegaPageInfo } from "@/format/shared";
 import { linkPath } from "@/format/links";
 import type { CityDoc } from "@/format/types";
+import { useLocale } from "@/i18n/client";
+import { formatCount } from "@/i18n/format";
+import { CITY } from "@/i18n/messages/city";
+import { COMMON } from "@/i18n/messages/common";
 import { loadBlocklist } from "@/ui/blocklist";
 import { loadSharedCity } from "@/ui/loadShared";
 import { LogoMark } from "@/ui/Logo";
@@ -69,9 +73,6 @@ function readPerf(): boolean {
   }
 }
 
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).replaceAll("/", ".");
-
 /** The shown cities, placed where they belong, and the network that links them. */
 function build(entries: Entry[], placement: Placement, checked: number[]): Built {
   const cities: MegaCity[] = checked.map((i) => ({
@@ -128,6 +129,9 @@ async function loadAll(pages: MegaPageInfo[], signal: AbortSignal, onProgress: (
 }
 
 export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: string; pages: MegaPageInfo[]; totalPages: number }) {
+  const locale = useLocale();
+  const m = CITY[locale];
+  const count = (n: number) => formatCount(n, locale);
   const stageRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
   useBarBottom(barRef);
@@ -177,7 +181,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           else lost.push(info);
         });
         if (list.length === 0) {
-          setStatus({ phase: "error", message: "Aucune ville de ce site n'a pu être chargée. Réessayez dans un instant." });
+          setStatus({ phase: "error", message: m.mega.loadFailed });
           return;
         }
         list.sort((a, b) => comparePaths(a.info.path, b.info.path));
@@ -220,7 +224,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           onModeChange: setMode,
           onWalkChange: setWalking,
           onImageStatus: (id, s) => setImageStatus((prev) => ({ ...prev, [id]: s })),
-        });
+        }, locale);
         viewRef.current = view;
         view.setMeasuring(readPerf());
         if (process.env.NODE_ENV !== "production") (window as unknown as { __domcity?: CityView }).__domcity = view;
@@ -229,7 +233,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
         if (!cancelled) setStatus({ phase: "ready" });
       } catch {
         if (!cancelled && !controller.signal.aborted) {
-          setStatus({ phase: "error", message: "La mégalopole n'a pas pu être bâtie. Réessayez dans un instant." });
+          setStatus({ phase: "error", message: m.mega.buildFailed });
         }
       }
     })();
@@ -293,15 +297,15 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   const pageOfAirport = useCallback((airport: Airport) => pageOfSpecial(airport.id), [pageOfSpecial]);
 
   const hoverInfo = useMemo(
-    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id) : null),
-    [layout, hover],
+    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id, locale) : null),
+    [layout, hover, locale],
   );
   const hoverPage =
     hover && isSpecial(hover.part) ? pageOfSpecial(hover.id) : hover ? (pageOfLot(hover.id)?.entry ?? null) : null;
   const departuresPage = departures ? pageOfAirport(departures) : null;
   const selectedInfo = useMemo(
-    () => (layout && selected !== null && layout.lots[selected] ? describeLot(layout, selected) : null),
-    [layout, selected],
+    () => (layout && selected !== null && layout.lots[selected] ? describeLot(layout, selected, locale) : null),
+    [layout, selected, locale],
   );
   const selectedPage = selected !== null ? pageOfLot(selected) : null;
 
@@ -336,27 +340,22 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
   }, null);
   const airport = layout?.airport;
   const aerodromes = built?.world.specials.filter((entry) => entry.special.kind === "airport" && entry.special.airport.kind === "aerodrome").length ?? 0;
-  const steps = [
-    `Ouverture des villes (${formatCount(loaded)} / ${formatCount(pages.length)})`,
-    "Placement selon les adresses",
-    "Tracé des autoroutes et construction",
-    "Mise en lumière",
-  ];
+  const steps = m.mega.steps(loaded, pages.length);
 
   return (
     <div className={styles.shell}>
       <div ref={stageRef} className={styles.stage} />
 
       <header ref={barRef} className={styles.bar}>
-        <Link href="/" className={styles.home} aria-label="DOMCity, accueil">
+        <Link href="/" className={styles.home} aria-label={COMMON[locale].homeLabel}>
           <LogoMark size={26} />
           <span>
             DOM<b>City</b>
           </span>
         </Link>
         <div className={styles.place}>
-          <Link href={sitePath(domain)} className="mono-caps" title="La page du site, avec la liste de ses pages">
-            Mégalopole
+          <Link href={sitePath(domain)} className="mono-caps" title={m.mega.siteLink}>
+            {m.mega.kicker}
           </Link>
           <h1 title={domain}>{domain}</h1>
         </div>
@@ -364,18 +363,18 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
         {ready && (
           <div className={styles.tools}>
             {canWalk && (
-              <div className={styles.segmented} role="group" aria-label="Façon de visiter">
+              <div className={styles.segmented} role="group" aria-label={m.tools.modes}>
                 <button type="button" aria-pressed={mode === "aerial"} onClick={() => switchMode("aerial")}>
-                  Vue aérienne
+                  {m.tools.aerial}
                 </button>
                 <button type="button" aria-pressed={mode === "walk"} onClick={() => switchMode("walk")}>
-                  Promenade
+                  {m.tools.walk}
                 </button>
               </div>
             )}
             {mode === "aerial" && (
               <button type="button" className={styles.tool} onClick={() => viewRef.current?.resetView()}>
-                Recadrer
+                {m.tools.reset}
               </button>
             )}
             <button
@@ -387,7 +386,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
                 setLegendOpen((o) => !o);
               }}
             >
-              Légende
+              {m.tools.legend}
             </button>
             <button
               type="button"
@@ -398,9 +397,9 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
                 setAmbianceOpen((o) => !o);
               }}
             >
-              Ambiance
+              {m.tools.ambiance}
             </button>
-            <button type="button" className={styles.tool} aria-pressed={measuring} onClick={toggleMeasuring} title="Afficher les images par seconde">
+            <button type="button" className={styles.tool} aria-pressed={measuring} onClick={toggleMeasuring} title={m.tools.fpsTitle}>
               FPS
             </button>
           </div>
@@ -421,17 +420,17 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       )}
 
       {ready && mode === "aerial" && (
-        <section className={styles.pagesPanel} aria-label="Pages du site">
+        <section className={styles.pagesPanel} aria-label={m.mega.pagesTitle}>
           <button
             type="button"
             className={styles.pagesHead}
             aria-expanded={listOpen}
             onClick={() => setListOpen((open) => !open)}
           >
-            <span className="mono-caps">Pages du site</span>
+            <span className="mono-caps">{m.mega.pagesTitle}</span>
             <span className="mono-caps">
-              {formatCount(checked.length)} / {formatCount(entries.length)} affichée{checked.length > 1 ? "s" : ""}
-              {rebuilding ? " · chantier…" : ""}
+              {m.mega.shown(checked.length, entries.length)}
+              {rebuilding ? m.mega.rebuilding : ""}
             </span>
           </button>
           {listOpen && (
@@ -449,13 +448,13 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
                         </span>
                       </label>
                       <span className={styles.pagesMeta}>
-                        {formatCount(entry.info.elements)} él.
+                        {m.mega.elements(entry.info.elements)}
                         {on && (
-                          <button type="button" onClick={() => showPage(i)} title="Montrer cette ville">
-                            Voir
+                          <button type="button" onClick={() => showPage(i)} title={m.mega.showTitle}>
+                            {m.mega.show}
                           </button>
                         )}
-                        <Link href={sharedCityPath(entry.info.slug)} title="Sa ville seule, avec ses versions">
+                        <Link href={sharedCityPath(entry.info.slug)} title={m.mega.ownCity}>
                           ↗
                         </Link>
                       </span>
@@ -465,19 +464,15 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
                 {missing.map((info) => (
                   <li key={info.path} className={styles.pagesMissing}>
                     <span className={styles.pagesPath}>{linkPath(info.path)}</span>
-                    <span className={styles.pagesMeta}>indisponible</span>
+                    <span className={styles.pagesMeta}>{m.mega.unavailable}</span>
                   </li>
                 ))}
               </ul>
               {shownElements > HEAVY_ELEMENTS && (
-                <p className={styles.pagesNote}>
-                  {formatCount(shownElements)} éléments affichés : la vue peut ralentir sur un ordinateur modeste.
-                </p>
+                <p className={styles.pagesNote}>{m.mega.heavy(shownElements)}</p>
               )}
               {totalPages > pages.length && (
-                <p className={styles.pagesNote}>
-                  Les {formatCount(pages.length)} pages relevées le plus récemment, sur {formatCount(totalPages)}.
-                </p>
+                <p className={styles.pagesNote}>{m.mega.latestPages(pages.length, totalPages)}</p>
               )}
             </>
           )}
@@ -485,10 +480,10 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       )}
 
       {ready && layout && built && mode === "aerial" && (
-        <section className={styles.cartouche} aria-label="Cartouche">
+        <section className={styles.cartouche} aria-label={m.cartouche.label}>
           <div className={styles.cartoucheRow}>
-            <span className="mono-caps">Mégalopole</span>
-            {latest && <span className="mono-caps">Relevé du {shortDate(latest)}</span>}
+            <span className="mono-caps">{m.mega.kicker}</span>
+            {latest && <span className="mono-caps">{m.cartouche.captured(latest)}</span>}
           </div>
           <h2 className={styles.cartoucheTitle}>{domain}</h2>
           <a className={styles.cartoucheUrl} href={`https://${domain}`} target="_blank" rel="noreferrer">
@@ -496,26 +491,26 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
           </a>
           <dl className={styles.cartoucheStats}>
             <div>
-              <dd>{formatCount(checked.length)}</dd>
-              <dt className="mono-caps">Villes</dt>
+              <dd>{count(checked.length)}</dd>
+              <dt className="mono-caps">{m.mega.cities}</dt>
             </div>
             <div>
-              <dd>{formatCount(layout.stats.buildings)}</dd>
-              <dt className="mono-caps">Bâtiments</dt>
+              <dd>{count(layout.stats.buildings)}</dd>
+              <dt className="mono-caps">{m.cartouche.buildings}</dt>
             </div>
             <div>
-              <dd>{formatCount(layout.stats.monuments)}</dd>
-              <dt className="mono-caps">Monuments</dt>
+              <dd>{count(layout.stats.monuments)}</dd>
+              <dt className="mono-caps">{m.cartouche.monuments}</dt>
             </div>
             <div>
-              <dd>{formatCount(built.mega.links.length)}</dd>
-              <dt className="mono-caps">Liaisons</dt>
+              <dd>{count(built.mega.links.length)}</dd>
+              <dt className="mono-caps">{m.mega.connections}</dt>
             </div>
           </dl>
           <p className={`${styles.cartoucheFacts} mono-caps`}>
-            {built.mega.links.length > 0 ? "Autoroute : un lien entre deux pages" : "Aucun lien entre les pages affichées"}
-            {airport ? ` · aéroport : ${formatCount(airport.destinations.length)} destination${airport.destinations.length > 1 ? "s" : ""}` : ""}
-            {aerodromes > 0 ? ` · ${formatCount(aerodromes)} aérodrome${aerodromes > 1 ? "s" : ""}` : ""}
+            {built.mega.links.length > 0 ? m.mega.highway : m.mega.noLinks}
+            {airport ? m.mega.destinations(airport.destinations.length) : ""}
+            {aerodromes > 0 ? m.mega.airfields(aerodromes) : ""}
           </p>
         </section>
       )}
@@ -524,9 +519,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       {ready && measuring && <PerfMeter viewRef={viewRef} shifted={selectedInfo !== null || departures !== null} />}
 
       {ready && mode === "aerial" && (
-        <p className={`${styles.hint} mono-caps`}>
-          Glisser : se déplacer · Clic droit : tourner · Molette : zoomer · Clic : inspecter · Double-clic : approcher
-        </p>
+        <p className={`${styles.hint} mono-caps`}>{m.hint}</p>
       )}
 
       {ready && mode === "walk" && (
@@ -537,7 +530,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
         <Tooltip
           info={hoverInfo}
           part={hover.part}
-          scope="tout le site"
+          scope={m.scope.site}
           page={hoverPage ? linkPath(hoverPage.info.path) : undefined}
           x={hover.x}
           y={hover.y}
@@ -548,7 +541,7 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       {ready && departures && !selectedInfo && (
         <Departures
           airport={departures}
-          scope={departuresPage ? linkPath(departuresPage.info.path) : "tout le site"}
+          scope={departuresPage ? linkPath(departuresPage.info.path) : m.scope.site}
           onClose={() => setDepartures(null)}
         />
       )}
@@ -578,11 +571,11 @@ export function MegalopolisExplorer({ domain, pages, totalPages }: { domain: str
       {status.phase === "error" && (
         <div className={styles.errorWrap}>
           <section className={styles.error} role="alert">
-            <p className="mono-caps">Erreur de chantier</p>
-            <h2>Mégalopole inaccessible</h2>
+            <p className="mono-caps">{m.mega.errorKicker}</p>
+            <h2>{m.mega.errorTitle}</h2>
             <p>{status.message}</p>
             <Link href="/" className={styles.back}>
-              ← Retour à l&apos;accueil
+              {m.backHome}
             </Link>
           </section>
         </div>

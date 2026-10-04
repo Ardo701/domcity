@@ -119,7 +119,7 @@ if (abs(dcN.y) < 0.5) {
   float inY = smoothstep(sill - aa.y, sill + aa.y, f.y) * (1.0 - smoothstep(sill + winH - aa.y, sill + winH + aa.y, f.y));
   float zone = step(shopH + 0.05, y) * step(y, parapet - 0.12);
   float win = inX * inY * zone;
-  // De loin, le motif fourmillerait : on passe à sa teinte moyenne.
+  // From afar, the pattern would shimmer: we switch to its average tint.
   float far = clamp(max(aa.x, aa.y) * 2.2 - 0.35, 0.0, 1.0);
   win = mix(win, winW * winH * zone, far);
 
@@ -128,16 +128,16 @@ if (abs(dcN.y) < 0.5) {
   if (dcStyle < 0.5) glass = mix(dcWall * 0.55 + vec3(0.02, 0.05, 0.08), dcWall * 0.85, h * 0.7);
   glass = mix(glass, vec3(0.93, 0.8, 0.55), step(0.965, h) * (1.0 - far) * 0.7);
 
-  // Pierre : pilastres entre les baies. Enduit : nez de dalle à chaque étage.
+  // Stone: pilasters between the bays. Render: a slab edge at every floor.
   if (dcStyle > 4.5) dcWall *= 1.0 + 0.07 * step(0.5, abs(f.x - 0.5) * 2.0) * (1.0 - far);
   if (dcStyle > 2.5 && dcStyle < 3.5) dcWall *= 1.0 - 0.1 * dcBand(f.y, 0.03, 0.03) * (1.0 - far) * zone;
-  // Acrotère et corniche un peu plus clairs.
+  // Parapet and cornice a little lighter.
   dcWall *= 1.0 + 0.07 * step(parapet, y);
 
   vec3 color = mix(dcWall, glass, win);
   dcGlass = win;
 
-  // Rez-de-chaussée : vitrines et auvents de couleur.
+  // Ground floor: shop windows and colored awnings.
   if (dcShop > 0.5 && y < shopH) {
     float bays = max(1.0, floor(width / 2.6 + 0.5));
     float bx = fract(u / (width / bays));
@@ -150,17 +150,17 @@ if (abs(dcN.y) < 0.5) {
     dcGlass = shopWin;
   }
 
-  // Porte d'entrée des maisons, côté rue (sud).
+  // Front door of the houses, on the street side (south).
   if (dcStyle > 3.5 && dcStyle < 4.5 && dcN.z > 0.5) {
     float door = dcBand(u, width * 0.5, 0.32) * step(y, 1.6) * step(0.05, y);
     color = mix(color, vec3(0.32, 0.22, 0.16), door);
   }
 
-  // Le pied des murs reçoit moins de lumière.
+  // The foot of the walls gets less light.
   color *= 0.76 + 0.24 * smoothstep(0.0, 1.8, y);
   diffuseColor.rgb = color;
 } else if (dcN.y > 0.5) {
-  // Toit : gravillons dans la teinte du bâtiment, acrotère plus clair.
+  // Roof: gravel in the building's tint, lighter parapet.
   float edge = min(min(vDcBox.x, vDcSize.x - vDcBox.x), min(vDcBox.z, vDcSize.z - vDcBox.z));
   float grain = dcNoise(vDcWorld.xz * 2.5 + dcSeed * 9.0);
   vec3 roof = dcWall * mix(0.56, 0.68, grain);
@@ -215,7 +215,7 @@ if (vDcNormal.y > 0.5) {
     c *= (0.92 + 0.08 * fine) * (1.0 - 0.16 * joint);
   }
 } else {
-  // Bordures et tranches : un peu plus sombres.
+  // Curbs and edges: a little darker.
   c *= 0.82;
 }
 diffuseColor.rgb = c;
@@ -253,7 +253,7 @@ if (vDcNormal.y > 0.5) {
       float dash = step(0.42, fract(along / 3.2));
       paint = max(paint, dcBand(across, wid * 0.5, 0.07) * dash);
     }
-    // Passages piétons aux carrefours, aux deux bouts.
+    // Pedestrian crossings at the intersections, at both ends.
     if (dcStyle > 0.5 && dcStyle < 3.5 && len > wid * 2.2) {
       float d0 = along;
       float d1 = len - along;
@@ -266,7 +266,7 @@ if (vDcNormal.y > 0.5) {
   } else if (dcStyle < 4.5) {
     c *= 0.9 + 0.22 * dcNoise(vDcWorld.xz * 5.0);
   } else if (dcStyle < 5.5) {
-    // Piste : lignes de bord, axe en longs tirets, et aux deux seuils les « touches de piano ».
+    // Runway: edge lines, a centerline in long dashes, and the "piano keys" at both thresholds.
     float paint = max(dcBand(across, 0.35, 0.08), dcBand(across, wid - 0.35, 0.08));
     paint = max(paint, dcBand(across, wid * 0.5, 0.09) * step(0.45, fract(along / 5.0)));
     float d0 = along;
@@ -276,10 +276,10 @@ if (vDcNormal.y > 0.5) {
     paint = mix(paint, max(keys, max(dcBand(across, 0.35, 0.08), dcBand(across, wid - 0.35, 0.08))), threshold);
     c = mix(c, vec3(0.93, 0.92, 0.87), clamp(paint, 0.0, 1.0) * 0.92);
   } else if (dcStyle < 6.5) {
-    // Voie de circulation des avions : un axe jaune continu.
+    // Taxiway: a continuous yellow centerline.
     c = mix(c, vec3(0.93, 0.74, 0.18), dcBand(across, wid * 0.5, 0.07) * 0.9);
   } else if (!dcCross) {
-    // Autoroute : deux chaussées de part et d'autre du terre-plein, deux voies chacune.
+    // Highway: two carriageways on either side of the median, two lanes each.
     float side = abs(across - wid * 0.5);
     float paint = max(dcBand(across, 0.35, 0.08), dcBand(across, wid - 0.35, 0.08));
     paint = max(paint, dcBand(side, 0.75, 0.07));

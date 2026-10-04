@@ -1,11 +1,13 @@
-import { formatCount } from "@/city/describe";
 import { sitePath, type SiteCard } from "@/format/shared";
-import { Gallery, GalleryCard, GalleryEmpty, shortDate } from "./Gallery";
+import { COMMON } from "@/i18n/messages/common";
+import { getMessages } from "@/i18n/server";
+import { Gallery, GalleryCard, GalleryEmpty } from "./Gallery";
 
 /** The most recently updated sites, each with the thumbnail of one of its pages. */
-export function SiteGallery({ sites, thumbUrl }: { sites: SiteCard[]; thumbUrl: (slug: string) => string }) {
+export async function SiteGallery({ sites, thumbUrl }: { sites: SiteCard[]; thumbUrl: (slug: string) => string }) {
+  const m = (await getMessages(COMMON)).gallery;
   if (sites.length === 0) {
-    return <GalleryEmpty>Aucune ville partagée pour l&apos;instant. Construisez-en une, puis cliquez sur « Partager ».</GalleryEmpty>;
+    return <GalleryEmpty>{m.empty}</GalleryEmpty>;
   }
   return (
     <Gallery>
@@ -15,11 +17,8 @@ export function SiteGallery({ sites, thumbUrl }: { sites: SiteCard[]; thumbUrl: 
           href={sitePath(site.domain)}
           thumb={site.cover.thumbnail ? thumbUrl(site.cover.slug) : null}
           title={site.domain}
-          where={`${formatCount(site.pagesCount)} ville${site.pagesCount > 1 ? "s" : ""}`}
-          meta={[
-            `${formatCount(site.views)} visite${site.views > 1 ? "s" : ""}`,
-            site.lastCaptureAt && `mis à jour le ${shortDate(site.lastCaptureAt)}`,
-          ]
+          where={m.cities(site.pagesCount)}
+          meta={[m.visits(site.views), site.lastCaptureAt && m.updated(site.lastCaptureAt)]
             .filter(Boolean)
             .join(" · ")}
         />

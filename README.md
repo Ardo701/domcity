@@ -12,15 +12,15 @@ building to see what it was in the page, and walk its streets.
 
 **Try it:** [domcity.app](https://domcity.app) · **Make your own city:** [domcity.app/create](https://domcity.app/create)
 
-> The interface is in French for now. An English version is planned; the code, its comments and its documentation are
-> already in English.
+The site speaks English and French: French when your browser asks for it, English otherwise, and a switcher in the
+header remembers your choice.
 
 ## How it works
 
 1. On [domcity.app/create](https://domcity.app/create), drag the DOMCity button into your bookmarks bar.
 2. Open any web page and click the bookmark.
 3. DOMCity opens in a new tab and the page rises from the ground as a city. Nothing leaves your browser until you
-   click "Publier" (publish).
+   click "Publish".
 
 The bookmarklet is self-contained: about 10 KB of code live in the bookmark itself, nothing is loaded or injected
 into the page, so it also works on sites with strict security policies. It only reads. On github.com/vercel/next.js
@@ -49,10 +49,10 @@ the page: they separate the blocks and cut long rows into city blocks.
 | `video`, `canvas` | A giant screen on a facade |
 | `iframe` | An embassy with columns, under its flag |
 | `svg` | An abstract sculpture |
-| `form` / `button`, `input` | A town hall square with a fountain / A kiosk with an awning |
+| `form` / `button`, `input` | A town hall square with a fountain / A booth with an awning |
 | `table` | Farm fields |
 | `hr` | A canal between two quays, with its bridges |
-| `nav`, `header`, `footer`, `aside` | A tree-lined alley, the city gate, a harbor open to the sea, a park |
+| `nav`, `header`, `footer`, `aside` | A tree-lined promenade, the city gate, a harbor open to the sea, a park |
 | Links to other sites | An airport outside the walls: up to 3 runways and 12 planes at the gates. The six most linked sites each have a plane in flight, and a click opens the departures board |
 
 The full dictionary lives in [`src/format/taxonomy.ts`](src/format/taxonomy.ts) and the urban planning in
@@ -89,7 +89,7 @@ airfield.
 - The text of the page is never stored, only how much there is. The one exception is the `h1` to `h3` headings
   (shortened to 120 characters), engraved on the monuments. The list is shown before publishing.
 - Addresses are cleaned: no `?query`, no `#anchor`, no `www.`.
-- Nothing leaves the browser until "Publier" is clicked. The bookmarklet never reads paragraphs, form fields or
+- Nothing leaves the browser until "Publish" is clicked. The bookmarklet never reads paragraphs, form fields or
   cookies.
 - Links to other pages of the same site are only kept as fingerprints (FNV-1a hashes of their paths): a private path
   cannot be read in a shared city.
@@ -111,6 +111,9 @@ itself refuses to publish a city for a site on it. See [`docs/refused-sites.md`]
 ## Under the hood
 
 - **Next.js 16** (App Router) and **React 19**, in a single repository: the site, the API and the bookmarklet.
+- **Two languages, one address**: every page exists in English and French (`app/[locale]/`, prerendered in both), and
+  the proxy picks one from the switcher's cookie or the browser's languages without changing the address, so a shared
+  link opens in the language of whoever opens it.
 - **Three.js** for the city: instanced meshes (a few dozen draw calls for thousands of buildings, trees and cars),
   shaders that draw windows, road markings and lawns at the real scale of each instance, an atlas for all the small
   icons. The view only renders when something moves.
@@ -128,20 +131,22 @@ engine every time a city opens, so improving the engine improves every city, old
 bookmarklet ──► /new ──► validation (zod) ──► layoutCity ──► buildCityScene ──► CityView
  (any page)    (new tab,                          (urban plan)   (Three.js)
                postMessage)                            │
-                                                       └──► Publier ──► API ──► Supabase + R2
+                                                       └──► Publish ──► API ──► Supabase + R2
 ```
 
 ### Project structure
 
 ```
 src/
-├── app/            Next.js routes: home, /create, /explore, /account, /city/…, /site/…, /w/… (Wikipedia), API
+├── app/            Next.js routes under [locale]: home, /create, /explore, /account, /city/…, /site/…, /w/… (Wikipedia); API
+├── i18n/           languages: detection, formatting, and the messages of the interface in English and French
 ├── format/         the city format: types, zod schema, limits, addresses, the HTML → city dictionary, blocklist
 ├── capture/        web page → city JSON (no dependencies, compiled into the bookmarklet); Wikipedia mode
 ├── bookmarklet/    the bookmarklet: entry point, exchange with /new, compiled version
 ├── city/           urban planning (layout), megalopolis, ambiance, Three.js scene, view and controls
 ├── server/         storage modes, database (Supabase or local), files (R2 or local), security, sharing
-└── ui/             interface components: explorer, inspector, legend, share panel, bookmarklet demo…
+├── ui/             interface components: explorer, inspector, legend, share panel, bookmarklet demo…
+└── proxy.ts        serves each page in the visitor's language, without changing its address
 scripts/            bookmarklet build (esbuild)
 supabase/           SQL migrations and the database check script
 docs/               refused sites list, roadmap (in French), README images
@@ -168,7 +173,7 @@ search, the gallery and the megalopolis all work without an account.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server, sharing in local mode |
-| `npm test` | 117 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database |
+| `npm test` | 123 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
 | `npm run bookmarklet` | Recompiles the bookmarklet (`src/bookmarklet/generated.ts`) after a change in `src/capture` or `src/bookmarklet` |
@@ -197,8 +202,8 @@ production, sharing is simply hidden).
 
 ## Contributing
 
-- Code, comments, tests and documentation are in English. The interface texts stay in French until the app is
-  translated.
+- Code, comments, tests and documentation are in English. The interface texts live in `src/i18n/messages`, English
+  and French side by side: TypeScript refuses a message that exists in one language and not in the other.
 - Run `npm test`, `npm run lint` and `npm run typecheck` before sending a change.
 - Never edit a SQL migration that may already be applied: add a new one.
 - The design follows a few rules: no em dashes in texts, barely rounded corners, calm colors with vivid accents that

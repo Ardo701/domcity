@@ -57,10 +57,10 @@ describe("refused sites", () => {
 
   it("says why a city is not built, according to the category", () => {
     expect(cityRefusal(DOC, LIST)).toBeNull();
-    expect(cityRefusal({ ...DOC, url: "https://www.pornhub.com/x" }, LIST)).toMatch(/sites pour adultes/);
-    expect(cityRefusal({ ...DOC, url: "https://mabanque.bnpparibas.com/" }, LIST)).toMatch(/banques/);
-    expect(cityRefusal({ ...DOC, url: "https://mail.google.com/mail/u/0" }, LIST)).toMatch(/messageries/);
-    expect(cityRefusal({ ...DOC, page: { adult: true } }, new Map())).toMatch(/réservée aux adultes/);
+    expect(cityRefusal({ ...DOC, url: "https://www.pornhub.com/x" }, LIST)).toBe("adult");
+    expect(cityRefusal({ ...DOC, url: "https://mabanque.bnpparibas.com/" }, LIST)).toBe("bank");
+    expect(cityRefusal({ ...DOC, url: "https://mail.google.com/mail/u/0" }, LIST)).toBe("private");
+    expect(cityRefusal({ ...DOC, page: { adult: true } }, new Map())).toBe("adult-page");
   });
 
   it("removes images and departures from refused sites from a city, without touching the rest", () => {

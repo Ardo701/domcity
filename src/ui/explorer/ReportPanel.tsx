@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { REPORT_REASONS, type ReportReason } from "@/format/shared";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
 /** Reports a city. Three reports from different people hide it. */
 export function ReportPanel({ slug, onClose }: { slug: string; onClose: () => void }) {
+  const m = useMessages(CITY).report;
   const [reason, setReason] = useState<ReportReason>("offensive");
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"form" | "sending" | "done" | { error: string }>("form");
@@ -29,12 +32,12 @@ export function ReportPanel({ slug, onClose }: { slug: string; onClose: () => vo
       });
       if (!response.ok) {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
-        setState({ error: data.error ?? "Le signalement a échoué." });
+        setState({ error: data.error ?? m.failed });
         return;
       }
       setState("done");
     } catch {
-      setState({ error: "Connexion impossible." });
+      setState({ error: m.offline });
     }
   };
 
@@ -43,36 +46,36 @@ export function ReportPanel({ slug, onClose }: { slug: string; onClose: () => vo
       <section className={styles.modal}>
         <div className={styles.modalHead}>
           <div>
-            <p className="mono-caps">Modération</p>
-            <h2 id="report-title">Signaler cette ville</h2>
+            <p className="mono-caps">{m.kicker}</p>
+            <h2 id="report-title">{m.title}</h2>
           </div>
-          <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">
+          <button type="button" className={styles.close} onClick={onClose} aria-label={m.close}>
             ×
           </button>
         </div>
 
         {state === "done" ? (
           <>
-            <p className={styles.blurb}>Merci, c&apos;est noté. Si d&apos;autres visiteurs la signalent aussi, la ville sera masquée.</p>
+            <p className={styles.blurb}>{m.done}</p>
             <div className={styles.actionsRow}>
               <button type="button" className={styles.secondary} onClick={onClose}>
-                Fermer
+                {m.close}
               </button>
             </div>
           </>
         ) : (
           <form onSubmit={send} className={styles.reportForm}>
             <fieldset>
-              <legend className="mono-caps">Motif</legend>
-              {(Object.keys(REPORT_REASONS) as ReportReason[]).map((key) => (
+              <legend className="mono-caps">{m.reason}</legend>
+              {REPORT_REASONS.map((key) => (
                 <label key={key} className={styles.radio}>
                   <input type="radio" name="reason" value={key} checked={reason === key} onChange={() => setReason(key)} />
-                  {REPORT_REASONS[key]}
+                  {m.reasons[key]}
                 </label>
               ))}
             </fieldset>
             <label className={styles.textareaLabel}>
-              <span className="mono-caps">Précisions (facultatif)</span>
+              <span className="mono-caps">{m.details}</span>
               <textarea value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} rows={3} />
             </label>
             {typeof state === "object" && (
@@ -82,10 +85,10 @@ export function ReportPanel({ slug, onClose }: { slug: string; onClose: () => vo
             )}
             <div className={styles.actionsRow}>
               <button type="submit" className={styles.primary} disabled={state === "sending"}>
-                {state === "sending" ? "Envoi…" : "Envoyer le signalement"}
+                {state === "sending" ? m.sending : m.submit}
               </button>
               <button type="button" className={styles.secondary} onClick={onClose}>
-                Annuler
+                {m.cancel}
               </button>
             </div>
           </form>

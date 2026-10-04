@@ -1,7 +1,7 @@
 import type { CityDoc } from "@/format/types";
 
 /**
- * Sample page shown on the home page and the Installer page. Built by hand, rendered by the real
+ * Sample page shown on the home page and the Create a city page. Built by hand, rendered by the real
  * 3D engine (/dev/figure). Its images are in public/figures.
  */
 export const HERO_SAMPLE: CityDoc = {

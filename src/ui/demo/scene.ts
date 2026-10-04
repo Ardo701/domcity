@@ -1,5 +1,5 @@
 /**
- * The bookmarklet demo (Créer une ville page): what the server prepares and what the browser animates.
+ * The bookmarklet demo (Create a city page): what the server prepares and what the browser animates.
  * The scene is a drawn 640 × 480 browser; under its bars, the page window is 640 × 388.
  */
 
@@ -15,10 +15,13 @@ export interface PageRect {
   h: number;
 }
 
+/** The words of the sample page, in the page's language (src/i18n/messages/demo.ts). */
+export type SampleWord = "example" | "history" | "places" | "contact";
+
 /** The look of an element in the sample page, before it becomes a building. */
 export type Look =
-  | { type: "words"; text: string }
-  | { type: "title"; text: string; size: number }
+  | { type: "words"; word: SampleWord }
+  | { type: "title"; word: SampleWord; size: number }
   | { type: "lines"; footer?: boolean }
   | { type: "image"; src: string }
   | { type: "rule" }

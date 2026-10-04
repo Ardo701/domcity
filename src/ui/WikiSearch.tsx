@@ -10,18 +10,23 @@ import {
   type WikiLang,
   type WikiSuggestion,
 } from "@/capture/wikipedia";
+import { useLocale } from "@/i18n/client";
+import { WIKI_SEARCH } from "@/i18n/messages/search";
 import styles from "./WikiSearch.module.css";
 
 export function WikiSearch({
-  initialLang = "fr",
+  initialLang,
   autoFocus = false,
 }: {
+  /** By default, the Wikipedia of the page's language. */
   initialLang?: WikiLang;
   autoFocus?: boolean;
 }) {
+  const locale = useLocale();
+  const m = WIKI_SEARCH[locale];
   const router = useRouter();
   const listId = useId();
-  const [lang, setLang] = useState<WikiLang>(initialLang);
+  const [lang, setLang] = useState<WikiLang>(initialLang ?? locale);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<WikiSuggestion[]>([]);
   const [active, setActive] = useState(-1);
@@ -89,7 +94,7 @@ export function WikiSearch({
     <form className={styles.form} onSubmit={submit} role="search">
       <div className={styles.field} ref={boxRef}>
         <label className={styles.lang}>
-          <span className="visually-hidden">Langue de Wikipédia</span>
+          <span className="visually-hidden">{m.lang}</span>
           <select value={lang} onChange={(e) => setLang(e.target.value as WikiLang)}>
             {WIKI_LANGS.map((l) => (
               <option key={l} value={l}>
@@ -110,8 +115,8 @@ export function WikiSearch({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Paris, Croissant, Jazz…"
-          aria-label="Article Wikipédia à construire"
+          placeholder={m.placeholder}
+          aria-label={m.label}
           role="combobox"
           aria-expanded={showList}
           aria-controls={listId}
@@ -122,7 +127,7 @@ export function WikiSearch({
           autoFocus={autoFocus}
         />
         <button className={styles.submit} type="submit" disabled={pending || !query.trim()}>
-          <span className={styles.label}>{pending ? "Relevé…" : "Construire la ville"}</span>
+          <span className={styles.label}>{pending ? m.pending : m.submit}</span>
           <span aria-hidden className={styles.arrow}>→</span>
         </button>
 

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const results = await searchSites(q, 8);
     return Response.json({ results }, { headers: { "cache-control": "public, max-age=30" } });
   } catch (error) {
-    console.error("recherche", error);
+    console.error("search", error);
     return Response.json({ results: [] }, { status: 500 });
   }
 }

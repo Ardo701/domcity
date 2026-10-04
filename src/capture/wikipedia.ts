@@ -16,9 +16,10 @@ export function isWikiLang(value: string): value is WikiLang {
   return (WIKI_LANGS as readonly string[]).includes(value);
 }
 
+/** No such article: the view says so in the visitor's language (CITY.errors.notFound). */
 export class WikiNotFoundError extends Error {
-  constructor(title: string) {
-    super(`Aucun article « ${title} » sur Wikipédia.`);
+  constructor(readonly title: string) {
+    super(`no Wikipedia article "${title}"`);
     this.name = "WikiNotFoundError";
   }
 }
@@ -120,7 +121,7 @@ export async function fetchWikipediaCity(
     { signal, headers: options.headers },
   );
   if (response.status === 404) throw new WikiNotFoundError(requestedTitle);
-  if (!response.ok) throw new Error(`Wikipédia a répondu ${response.status}.`);
+  if (!response.ok) throw new Error(`Wikipedia answered ${response.status}`);
 
   const html = await response.text();
   const parsed = options.parse ? options.parse(html) : new DOMParser().parseFromString(html, "text/html");

@@ -1,10 +1,13 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
-/** A read-only link and its "Copier" button. */
+/** A read-only link and its "Copy" button. */
 export function CopyField({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
+  const m = useMessages(CITY).copy;
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
@@ -28,7 +31,7 @@ export function CopyField({ label, value, secret = false }: { label: string; val
       <div>
         <input id={id} ref={input} readOnly value={value} onFocus={(e) => e.currentTarget.select()} />
         <button type="button" onClick={copy}>
-          {copied ? "Copié" : "Copier"}
+          {copied ? m.copied : m.copy}
         </button>
       </div>
     </div>

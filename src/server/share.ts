@@ -17,12 +17,29 @@ const MAX_GZIP_BYTES = 2 * 1024 * 1024;
 const MAX_JSON_BYTES = 32 * 1024 * 1024;
 const MAX_THUMB_BYTES = 800 * 1024;
 
+export type ShareErrorCode =
+  | "notConfigured"
+  | "cityTooHeavy"
+  | "cityUnreadable"
+  | "cityInvalid"
+  | "thumbTooHeavy"
+  | "thumbNotJpeg"
+  | "thumbSize"
+  | "badAddress"
+  | "localPage"
+  | "addressTooLong"
+  | "blockedDomain"
+  | "refused";
+
+/** A refused share: the API turns its code into a message in the visitor's language (API, REFUSAL). */
 export class ShareError extends Error {
   constructor(
     readonly status: number,
-    message: string,
+    readonly code: ShareErrorCode,
+    /** The validation error (cityInvalid), the expected size (thumbSize), the refusal (refused). */
+    readonly detail?: string,
   ) {
-    super(message);
+    super(detail ? `${code}: ${detail}` : code);
   }
 }
 
@@ -40,21 +57,21 @@ export async function captureWikipediaOnServer(lang: WikiLang, title: string): P
 
 /** City sent as is (bookmarklet): bounded gzip, then strict validation. */
 export function readUploadedCity(gzipped: Uint8Array): CityDoc {
-  if (gzipped.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "Ville trop lourde.");
+  if (gzipped.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "cityTooHeavy");
   let text: string;
   try {
     text = gunzipSync(gzipped, { maxOutputLength: MAX_JSON_BYTES }).toString("utf8");
   } catch {
-    throw new ShareError(400, "Fichier de ville illisible.");
+    throw new ShareError(400, "cityUnreadable");
   }
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new ShareError(400, "Fichier de ville illisible.");
+    throw new ShareError(400, "cityUnreadable");
   }
   const result = validateCityDoc(data);
-  if (!result.ok) throw new ShareError(400, `Ville invalide (${result.error}).`);
+  if (!result.ok) throw new ShareError(400, "cityInvalid", result.error);
   return result.doc;
 }
 
@@ -89,12 +106,12 @@ function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
  * know what it shows (it cannot render the 3D); a misused image gets reported.
  */
 export function readThumbnail(bytes: Uint8Array): Uint8Array {
-  if (bytes.byteLength > MAX_THUMB_BYTES) throw new ShareError(413, "Miniature trop lourde.");
+  if (bytes.byteLength > MAX_THUMB_BYTES) throw new ShareError(413, "thumbTooHeavy");
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (!isJpeg) throw new ShareError(400, "La miniature doit être un JPEG.");
+  if (!isJpeg) throw new ShareError(400, "thumbNotJpeg");
   const size = jpegSize(bytes);
   if (size?.width !== THUMBNAIL.width || size.height !== THUMBNAIL.height) {
-    throw new ShareError(400, `La miniature doit faire ${THUMBNAIL.width} × ${THUMBNAIL.height} pixels.`);
+    throw new ShareError(400, "thumbSize", `${THUMBNAIL.width} × ${THUMBNAIL.height}`);
   }
   return bytes;
 }
@@ -117,20 +134,20 @@ export interface ShareResult {
  */
 export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Promise<ShareResult> {
   const files = fileStore();
-  if (!files) throw new ShareError(503, "Le partage n'est pas configuré.");
+  if (!files) throw new ShareError(503, "notConfigured");
 
   const address = normalizePageUrl(doc.url);
-  if (!address) throw new ShareError(400, "Adresse de page invalide.");
-  if (!isPublicHost(address.domain)) throw new ShareError(400, "Les pages locales ou d'intranet ne se partagent pas.");
+  if (!address) throw new ShareError(400, "badAddress");
+  if (!isPublicHost(address.domain)) throw new ShareError(400, "localPage");
   // Refused sites (in the database): no city for them, and their images do not leave with another site's city.
   const blocked = await store.blocklist();
   const refusal = cityRefusal(doc, blocked);
-  if (refusal) throw new ShareError(403, refusal);
-  if (address.path.length > 1024) throw new ShareError(400, "Adresse de page trop longue.");
+  if (refusal) throw new ShareError(403, "refused", refusal);
+  if (address.path.length > 1024) throw new ShareError(400, "addressTooLong");
 
   const canonical: CityDoc = { ...withoutBlocked(doc, blocked), url: address.url };
   const body = new Uint8Array(gzipSync(JSON.stringify(canonical), { level: 9 }));
-  if (body.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "Ville trop lourde.");
+  if (body.byteLength > MAX_GZIP_BYTES) throw new ShareError(413, "cityTooHeavy");
 
   const token = newDeleteToken();
   const tokenHash = hashToken(token);
@@ -148,7 +165,7 @@ export async function shareCity(doc: CityDoc, thumbnail: Uint8Array | null): Pro
   } catch (error) {
     // The database refuses too: a site added to the list in the meantime.
     if (error instanceof Error && error.message.includes("blocked_domain")) {
-      throw new ShareError(403, "Ce site est sur la liste des sites refusés par DOMCity.");
+      throw new ShareError(403, "blockedDomain");
     }
     throw error;
   }

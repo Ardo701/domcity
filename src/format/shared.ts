@@ -107,14 +107,10 @@ export interface SearchHit {
   pagesMatched: number;
 }
 
-export const REPORT_REASONS = {
-  offensive: "Contenu choquant",
-  spam: "Spam ou publicité",
-  privacy: "Données personnelles",
-  other: "Autre raison",
-} as const;
+/** The reasons for a report (their names: src/i18n/messages/city.tsx). */
+export const REPORT_REASONS = ["offensive", "spam", "privacy", "other"] as const;
 
-export type ReportReason = keyof typeof REPORT_REASONS;
+export type ReportReason = (typeof REPORT_REASONS)[number];
 
 export const sharedCityPath = (slug: string) => `/city/${slug}`;
 /** The files of a city in storage (R2, or the local folder): the city and its thumbnail. */

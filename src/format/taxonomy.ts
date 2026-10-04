@@ -78,53 +78,48 @@ export function kindOf(tag: string, isContainer: boolean, text: number): Kind {
   }
 }
 
+export type KindGroup = "districts" | "buildings" | "monuments" | "facilities" | "nature" | "ambiance";
+
+/** The legend group and the color of each kind. Its name, tags and sentence: src/i18n/messages/kinds.ts. */
 export interface KindInfo {
-  /** Name in the city. */
-  name: string;
-  /** Original tags, for the legend. */
-  tags: string;
-  /** A short sentence for the legend and the inspector. */
-  blurb: string;
   color: string;
-  group: "Quartiers" | "Bâtiments" | "Monuments" | "Équipements" | "Nature et réseaux" | "Ambiance";
+  group: KindGroup;
 }
 
 export const KINDS: Record<Kind, KindInfo> = {
-  terrain:   { name: "Terrain",            tags: "body",                group: "Quartiers",        color: "#4A4B51", blurb: "Le socle de la ville, ceinturé par le périphérique et une bande verte." },
-  district:  { name: "Quartier",           tags: "section · article · main", group: "Quartiers", color: "#CDC7BA", blurb: "Une partie de la page : un quartier, séparé des autres par de grandes avenues." },
-  block:     { name: "Îlot",               tags: "div (avec enfants)",  group: "Quartiers",        color: "#D6D0C3", blurb: "Un bloc qui en regroupe d'autres : un pâté de maisons, bordé de ses rues." },
-  boulevard: { name: "Allée",              tags: "nav",                 group: "Nature et réseaux", color: "#DDD5C3", blurb: "Le menu de navigation : une place pavée, plantée d'arbres." },
-  gate:      { name: "Porte de la ville",  tags: "header",              group: "Quartiers",        color: "#D8CCB0", blurb: "L'en-tête : la place d'entrée, avec son arc monumental." },
-  port:      { name: "Port",               tags: "footer",              group: "Quartiers",        color: "#4F88A6", blurb: "Le pied de page : les quais, les grues, un cargo à quai." },
-  park:      { name: "Parc",               tags: "aside",               group: "Nature et réseaux", color: "#7C9D57", blurb: "Le contenu secondaire : un parc planté d'arbres, traversé d'allées." },
-  estate:    { name: "Lotissement",        tags: "ul · ol",             group: "Quartiers",        color: "#91B264", blurb: "Une liste : des maisons sur gazon, desservies par de petites rues." },
-  townhall:  { name: "Place de la mairie", tags: "form",                group: "Équipements",      color: "#C9C1AE", blurb: "Un formulaire : une place pavée, ses guichets et sa fontaine." },
-  fields:    { name: "Champs",             tags: "table",               group: "Nature et réseaux", color: "#B8B25F", blurb: "Un tableau : des champs cultivés en rangées." },
-  tower:     { name: "Immeuble",           tags: "div",                 group: "Bâtiments",        color: "#7F9BAB", blurb: "Un bloc de texte : un immeuble de bureaux. Avec beaucoup de texte, une tour de verre." },
-  vacant:    { name: "Chantier",           tags: "div (vide)",          group: "Bâtiments",        color: "#A88F6B", blurb: "Un élément vide : un chantier clôturé, parfois avec sa grue. Du balisage pour rien." },
-  residence: { name: "Habitation",         tags: "p · blockquote · pre", group: "Bâtiments",       color: "#E3C9A6", blurb: "Un paragraphe : un immeuble d'habitation. Plus il est long, plus il a d'étages." },
-  gallery:   { name: "Galerie",            tags: "bloc d'images",       group: "Bâtiments",        color: "#4A4F58", blurb: "Un bloc qui ne contient que des images : un immeuble couvert d'écrans, comme à Times Square." },
-  house:     { name: "Maison",             tags: "li",                  group: "Bâtiments",        color: "#F0E2C4", blurb: "Un élément de liste : une maison, son toit et sa cheminée." },
-  monument:  { name: "Monument",           tags: "h1",                  group: "Monuments",        color: "#FF4B12", blurb: "Le titre principal : la tour Art déco qui domine la ville, son nom gravé au sommet." },
-  belfry:    { name: "Beffroi",            tags: "h2",                  group: "Monuments",        color: "#5C8F80", blurb: "Un titre de partie : un beffroi à horloge, qui nomme son quartier." },
-  kiosk:     { name: "Kiosque",            tags: "h3",                  group: "Monuments",        color: "#C4683F", blurb: "Un sous-titre : un pavillon à coupole." },
-  bollard:   { name: "Statue",             tags: "h4 · h5 · h6",        group: "Monuments",        color: "#6D5D45", blurb: "Un petit titre : une statue de bronze sur son socle." },
-  billboard: { name: "Affiche",            tags: "img",                 group: "Équipements",      color: "#2B2B31", blurb: "Une image du site, en affiche sur une façade du bâtiment le plus proche dans la page (sur son toit quand les façades sont pleines). Une icône devient une enseigne, un petit drapeau flotte sur un mât au toit." },
-  ruin:      { name: "Ruine",              tags: "img cassée",          group: "Ambiance",         color: "#8A7F72", blurb: "Une image cassée dans la page : son panneau s'est effondré, au milieu des gravats." },
-  screen:    { name: "Écran géant",        tags: "video · canvas",      group: "Équipements",      color: "#1E1E24", blurb: "Une vidéo ou une zone de dessin : un écran géant sur une façade du bâtiment voisin." },
-  embassy:   { name: "Ambassade",          tags: "iframe",              group: "Équipements",      color: "#EFE8DA", blurb: "Un autre site, enclavé dans celui-ci : un édifice à colonnes, sous son drapeau." },
-  sculpture: { name: "Sculpture",          tags: "svg",                 group: "Équipements",      color: "#E2549A", blurb: "Une illustration vectorielle : une sculpture abstraite sur son socle." },
-  counter:   { name: "Guichet",            tags: "button · input · select", group: "Équipements",  color: "#3657E0", blurb: "Un bouton ou un champ à remplir : un petit kiosque à auvent." },
-  river:     { name: "Canal",              tags: "hr",                  group: "Nature et réseaux", color: "#4F88A6", blurb: "Une ligne de séparation : un canal entre deux quais, franchi par des ponts." },
-  airport:   { name: "Aéroport",           tags: "liens externes",      group: "Nature et réseaux", color: "#8E9197", blurb: "Les liens vers d'autres sites : un aéroport hors les murs, à l'est. Plus il y en a, plus il a de pistes et d'avions. Dans une mégalopole, le site a un grand aéroport et chaque ville son petit aérodrome." },
-  factory:   { name: "Usines",             tags: "script",              group: "Ambiance",         color: "#9A4A37", blurb: "Le JavaScript de la page : des usines qui fument dans la ceinture verte, une pour six scripts." },
-  camera:    { name: "Caméras",            tags: "traqueurs",           group: "Ambiance",         color: "#2B2D31", blurb: "Les traqueurs publicitaires que la page appelle : des caméras au bord des rues, trois par traqueur." },
-  graffiti:  { name: "Graffitis",          tags: "<!-- commentaires -->", group: "Ambiance",       color: "#7A3FB0", blurb: "Les commentaires laissés dans le HTML : des tags bombés au pied des immeubles." },
-  weather:   { name: "Météo",              tags: "poids de la page",    group: "Ambiance",         color: "#8FA3B5", blurb: "Le poids de la page (octets chargés, éléments) : grand soleil pour une page légère, orage pour une page très lourde." },
+  terrain:   { group: "districts",  color: "#4A4B51" },
+  district:  { group: "districts",  color: "#CDC7BA" },
+  block:     { group: "districts",  color: "#D6D0C3" },
+  boulevard: { group: "nature",     color: "#DDD5C3" },
+  gate:      { group: "districts",  color: "#D8CCB0" },
+  port:      { group: "districts",  color: "#4F88A6" },
+  park:      { group: "nature",     color: "#7C9D57" },
+  estate:    { group: "districts",  color: "#91B264" },
+  townhall:  { group: "facilities", color: "#C9C1AE" },
+  fields:    { group: "nature",     color: "#B8B25F" },
+  tower:     { group: "buildings",  color: "#7F9BAB" },
+  vacant:    { group: "buildings",  color: "#A88F6B" },
+  residence: { group: "buildings",  color: "#E3C9A6" },
+  gallery:   { group: "buildings",  color: "#4A4F58" },
+  house:     { group: "buildings",  color: "#F0E2C4" },
+  monument:  { group: "monuments",  color: "#FF4B12" },
+  belfry:    { group: "monuments",  color: "#5C8F80" },
+  kiosk:     { group: "monuments",  color: "#C4683F" },
+  bollard:   { group: "monuments",  color: "#6D5D45" },
+  billboard: { group: "facilities", color: "#2B2B31" },
+  ruin:      { group: "ambiance",   color: "#8A7F72" },
+  screen:    { group: "facilities", color: "#1E1E24" },
+  embassy:   { group: "facilities", color: "#EFE8DA" },
+  sculpture: { group: "facilities", color: "#E2549A" },
+  counter:   { group: "facilities", color: "#3657E0" },
+  river:     { group: "nature",     color: "#4F88A6" },
+  airport:   { group: "nature",     color: "#8E9197" },
+  factory:   { group: "ambiance",   color: "#9A4A37" },
+  camera:    { group: "ambiance",   color: "#2B2D31" },
+  graffiti:  { group: "ambiance",   color: "#7A3FB0" },
+  weather:   { group: "ambiance",   color: "#8FA3B5" },
 };
 
 export const HIGHLIGHT_COLOR = "#FFD23F";
 
-export const LEGEND_GROUPS: KindInfo["group"][] = [
-  "Quartiers", "Bâtiments", "Monuments", "Équipements", "Nature et réseaux", "Ambiance",
-];
+export const LEGEND_GROUPS: KindGroup[] = ["districts", "buildings", "monuments", "facilities", "nature", "ambiance"];

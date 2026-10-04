@@ -3,10 +3,10 @@ import type { CityDoc } from "@/format/types";
 /** Downloads a shared city (gzip-compressed JSON) and decompresses it in the browser. */
 export async function loadSharedCity(fileUrl: string, signal?: AbortSignal): Promise<CityDoc> {
   const response = await fetch(fileUrl, { signal });
-  if (!response.ok || !response.body) throw new Error(`fichier de ville ${response.status}`);
+  if (!response.ok || !response.body) throw new Error(`city file ${response.status}`);
   const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
   const doc = JSON.parse(await new Response(stream).text()) as CityDoc;
-  if (doc?.format !== 1 || !doc.root) throw new Error("format de ville inconnu");
+  if (doc?.format !== 1 || !doc.root) throw new Error("unknown city format");
   return doc;
 }
 

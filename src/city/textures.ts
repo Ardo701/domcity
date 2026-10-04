@@ -4,6 +4,7 @@
  */
 
 import * as THREE from "three";
+import type { PosterLabels } from "@/i18n/messages/posters";
 
 /** "refused": the image comes from a site refused by DOMCity, it is never loaded. */
 export type ImageStatus = "loading" | "shown" | "blocked" | "missing" | "refused";
@@ -60,7 +61,7 @@ const PLACARDS = ["#E6DFCF", "#DCE2DA", "#E4D8D0", "#D9DEE4", "#E8E1CC", "#DED6E
  * plain, like a printed poster. The image's alt text in large type, a discreet
  * note at the bottom. A click always shows the real image.
  */
-export function unavailableTexture(ratio: number, status: ImageStatus, alt?: string): THREE.CanvasTexture {
+export function unavailableTexture(ratio: number, status: ImageStatus, labels: PosterLabels, alt?: string): THREE.CanvasTexture {
   const width = 512;
   const height = Math.max(160, Math.round(width / Math.max(ratio, 0.45)));
   const canvas = document.createElement("canvas");
@@ -69,7 +70,7 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
   const ctx = canvas.getContext("2d")!;
 
   // The alt text of a refused image is not shown: it can be as crude as the image.
-  const text = status === "refused" ? "Image masquée" : alt?.trim() || "Image sans légende";
+  const text = status === "refused" ? labels.hidden : alt?.trim() || labels.untitled;
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
   ctx.fillStyle = PLACARDS[hash % PLACARDS.length];
@@ -80,8 +81,7 @@ export function unavailableTexture(ratio: number, status: ImageStatus, alt?: str
 
   const display = fontFamily("--font-display", "sans-serif");
   const mono = fontFamily("--font-mono", "monospace");
-  const caption =
-    status === "missing" ? "IMAGE INTROUVABLE" : status === "refused" ? "SITE REFUSÉ PAR DOMCITY" : "IMAGE NON AFFICHÉE · CLIC POUR LA VOIR";
+  const caption = status === "missing" ? labels.missing : status === "refused" ? labels.refused : labels.blocked;
   const box = { x: 34, y: 34, w: width - 68, h: height - 104 };
 
   // The alt text, as large as the space allows.
@@ -321,7 +321,7 @@ export function loadCorsImage(src: string): Promise<HTMLImageElement> {
  * walls. The capture does not keep the text of comments: the tags are the words found there
  * most often, always the same ones.
  */
-export const GRAFFITI_TAGS = ["TODO", "FIXME", "<!-- -->", "HACK", "XXX", "WIP", "NE PAS TOUCHER", "V2", "DEBUG", "OLD", "TEMP", "BUG"];
+export const GRAFFITI_TAGS = ["TODO", "FIXME", "<!-- -->", "HACK", "XXX", "WIP", "DO NOT TOUCH", "V2", "DEBUG", "OLD", "TEMP", "BUG"];
 
 const TAG_W = 256;
 const TAG_H = 128;

@@ -1,13 +1,9 @@
-import { WEATHER_NAMES, type Ambiance, type Weather } from "@/city/ambiance";
-import { formatCount } from "@/city/describe";
+import type { Ambiance, Weather } from "@/city/ambiance";
 import type { Kind } from "@/format/taxonomy";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import { KindSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
-
-const plural = (n: number, word: string, many = `${word}s`) => `${formatCount(n)} ${n > 1 ? many : word}`;
-
-const megabytes = (bytes: number) =>
-  `${(bytes / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: bytes < 10_000_000 ? 1 : 0 })} Mo`;
 
 function Row({ kind, name, value, detail, muted }: { kind: Kind; name: string; value: string; detail?: string; muted?: boolean }) {
   return (
@@ -40,6 +36,7 @@ export function AmbiancePanel({
   onRealColors: (on: boolean) => void;
   onClose: () => void;
 }) {
+  const m = useMessages(CITY).ambiance;
   const single = ambiances.length === 1 ? ambiances[0] : null;
   const known = <K extends keyof Ambiance>(key: K) => ambiances.filter((a) => a[key] !== undefined);
   const sum = (pick: (a: Ambiance) => number) => ambiances.reduce((total, a) => total + pick(a), 0);
@@ -50,19 +47,19 @@ export function AmbiancePanel({
   let weather: { value: string; detail: string };
   if (single) {
     const weight = [
-      single.bytes !== undefined ? `${megabytes(single.bytes)} chargés` : null,
-      single.measured === "dom" ? plural(single.elements, "élément") : `${plural(single.elements, "élément")} relevés`,
+      single.bytes !== undefined ? m.loaded(single.bytes) : null,
+      m.elements(single.elements, single.measured !== "dom"),
     ].filter(Boolean);
-    weather = { value: WEATHER_NAMES[single.weather], detail: `${weight.join(" · ")}. Plus la page pèse, plus le ciel se couvre.` };
+    weather = { value: m.weathers[single.weather], detail: m.weatherDetail(weight.join(" · ")) };
   } else {
     const counts = new Map<Weather, number>();
     for (const a of ambiances) counts.set(a.weather, (counts.get(a.weather) ?? 0) + 1);
     const order: Weather[] = ["storm", "overcast", "cloudy", "fair", "clear"];
     weather = {
-      value: `${plural(ambiances.length, "ville")}`,
+      value: m.cities(ambiances.length),
       detail: order
         .filter((w) => counts.has(w))
-        .map((w) => `${WEATHER_NAMES[w]} : ${formatCount(counts.get(w)!)}`)
+        .map((w) => m.weatherCount(m.weathers[w], counts.get(w)!))
         .join(" · "),
     };
   }
@@ -85,61 +82,59 @@ export function AmbiancePanel({
   const ruins = sum((a) => a.ruins);
 
   return (
-    <section className={styles.legend} aria-label="Ambiance">
+    <section className={styles.legend} aria-label={m.title}>
       <div className={styles.legendHead}>
-        <h2>Ambiance</h2>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer l'ambiance">
+        <h2>{m.title}</h2>
+        <button type="button" className={styles.close} onClick={onClose} aria-label={m.close}>
           ×
         </button>
       </div>
-      <p className={styles.ambianceLead}>
-        {single ? "Ce que la page fait" : "Ce que les pages font"} sans le montrer, rendu visible dans la ville.
-      </p>
+      <p className={styles.ambianceLead}>{m.lead(single !== null)}</p>
       <ul className={styles.ambianceList}>
-        <Row kind="weather" name="Météo" value={weather.value} detail={weather.detail} />
+        <Row kind="weather" name={m.weather} value={weather.value} detail={weather.detail} />
         {withScripts.length > 0 ? (
           <Row
             kind="factory"
-            name="Usines"
-            value={factories > 0 ? plural(factories, "usine") : "aucune"}
-            detail={`${plural(scripts, "script")} dans la page : une usine pour six, dans la ceinture verte.`}
+            name={m.factories}
+            value={factories > 0 ? m.factoryCount(factories) : m.none(true)}
+            detail={m.factoriesDetail(scripts)}
           />
         ) : (
-          <Row kind="factory" name="Usines" value="non relevé" detail="Scripts non relevés (seul le favori les compte)." muted />
+          <Row kind="factory" name={m.factories} value={m.notCaptured} detail={m.factoriesMissing} muted />
         )}
         {withThirdParty.length > 0 ? (
           <Row
             kind="camera"
-            name="Caméras"
-            value={cameras > 0 ? plural(cameras, "caméra") : "aucune"}
+            name={m.cameras}
+            value={cameras > 0 ? m.cameraCount(cameras) : m.none(true)}
             detail={
               trackers.length > 0
-                ? `${plural(trackers.length, "traqueur")} publicitaire${trackers.length > 1 ? "s" : ""} : ${trackers.slice(0, 8).join(", ")}${trackers.length > 8 ? "…" : ""}.`
-                : "Aucun traqueur connu parmi les sites tiers de la page."
+                ? m.trackersDetail(trackers.length, `${trackers.slice(0, 8).join(", ")}${trackers.length > 8 ? "…" : ""}`)
+                : m.noTrackers
             }
           />
         ) : (
-          <Row kind="camera" name="Caméras" value="non relevé" detail="Sites tiers non relevés (seul le favori les voit)." muted />
+          <Row kind="camera" name={m.cameras} value={m.notCaptured} detail={m.camerasMissing} muted />
         )}
         {withComments.length > 0 ? (
           <Row
             kind="graffiti"
-            name="Graffitis"
-            value={graffiti > 0 ? plural(graffiti, "tag") : "aucun"}
-            detail={`${plural(comments, "commentaire")} HTML laissé${comments > 1 ? "s" : ""} dans la page, bombé${comments > 1 ? "s" : ""} au pied des immeubles.`}
+            name={m.graffiti}
+            value={graffiti > 0 ? m.tagCount(graffiti) : m.none(false)}
+            detail={m.graffitiDetail(comments)}
           />
         ) : (
-          <Row kind="graffiti" name="Graffitis" value="non relevé" detail="Commentaires HTML non relevés (seul le favori les lit)." muted />
+          <Row kind="graffiti" name={m.graffiti} value={m.notCaptured} detail={m.graffitiMissing} muted />
         )}
         {fromBookmarklet ? (
           <Row
             kind="ruin"
-            name="Ruines"
-            value={ruins > 0 ? plural(ruins, "ruine") : "aucune"}
-            detail={ruins > 0 ? `${plural(ruins, "image cassée", "images cassées")} dans la page : leur panneau s'est effondré.` : "Aucune image cassée au moment du relevé."}
+            name={m.ruins}
+            value={ruins > 0 ? m.ruinCount(ruins) : m.none(true)}
+            detail={ruins > 0 ? m.ruinsDetail(ruins) : m.noRuins}
           />
         ) : (
-          <Row kind="ruin" name="Ruines" value="non relevé" detail="Images cassées non relevées (seul le favori les voit)." muted />
+          <Row kind="ruin" name={m.ruins} value={m.notCaptured} detail={m.ruinsMissing} muted />
         )}
       </ul>
       {painted ? (
@@ -149,17 +144,14 @@ export function AmbiancePanel({
           aria-pressed={realColors}
           onClick={() => onRealColors(!realColors)}
         >
-          <span>Vraies couleurs du site</span>
-          <span className="mono-caps">{realColors ? "Activées" : "Désactivées"}</span>
+          <span>{m.colors}</span>
+          <span className="mono-caps">{realColors ? m.on : m.off}</span>
         </button>
       ) : (
-        <p className={`${styles.legendNote} mono-caps`}>Couleurs du site non relevées</p>
+        <p className={`${styles.legendNote} mono-caps`}>{m.colorsMissing}</p>
       )}
       {!fromBookmarklet && (
-        <p className={`${styles.legendNote} mono-caps`}>
-          {single ? "Relevez la page" : "Relevez les pages"} avec le favori pour tout voir : scripts, traqueurs,
-          commentaires, images cassées.
-        </p>
+        <p className={`${styles.legendNote} mono-caps`}>{m.useBookmarklet(single !== null)}</p>
       )}
     </section>
   );

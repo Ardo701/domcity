@@ -79,6 +79,11 @@
   flex-shrink: 0;
 }
 
+/* The language switch, after GitHub: it moves into the menu on a phone, like GitHub. */
+.lang {
+  margin-left: -20px;
+}
+
 /* ---------- Phone menu ---------- */
 
 .burger,
@@ -221,8 +226,14 @@
   color: var(--ink-3);
 }
 
+.menuTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .menuGithub {
-  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -255,6 +266,10 @@
   .nav {
     gap: 18px;
   }
+
+  .lang {
+    margin-left: -10px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -264,7 +279,8 @@
   }
 
   .nav,
-  .topbar .github {
+  .topbar .github,
+  .topbar .lang {
     display: none;
   }
 

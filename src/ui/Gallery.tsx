@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 import { CardPending } from "./CardPending";
 import styles from "./Gallery.module.css";
 
-export const shortDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-
 /** A grid of thumbnail cards: the gallery's sites, a site's pages. */
 export function Gallery({ children }: { children: ReactNode }) {
   return <ul className={styles.grid}>{children}</ul>;

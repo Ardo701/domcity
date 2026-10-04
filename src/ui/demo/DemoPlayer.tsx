@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useMessages } from "@/i18n/client";
+import { DEMO } from "@/i18n/messages/demo";
 import styles from "./Demo.module.css";
 import { DemoScene } from "./DemoScene";
 import type { DemoCity } from "./scene";
@@ -13,17 +15,13 @@ const subscribeMotion = (onChange: () => void) => {
   return () => query.removeEventListener("change", onChange);
 };
 
-const LABEL =
-  "Démonstration : sur la page Créer une ville, on glisse le bouton DOMCity dans la barre de favoris ; on ouvre un site, " +
-  "on clique sur le favori qui relève la page ; DOMCity l'ouvre dans un nouvel onglet, où la page se couche en plan puis " +
-  "sort de terre en ville.";
-
 /**
  * The demo from start to finish, looping. It only runs while visible on screen; the steps lead to it,
  * and a button stops it. If reduced motion was requested, it stays stopped on the city (the steps
  * each show their frame, the button starts it).
  */
 export function DemoPlayer({ city }: { city: DemoCity }) {
+  const m = useMessages(DEMO);
   const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCED).matches, () => false);
   // "auto": it runs, unless reduced motion was requested.
   const [mode, setMode] = useState<"auto" | "playing" | "paused">("auto");
@@ -82,7 +80,7 @@ export function DemoPlayer({ city }: { city: DemoCity }) {
   return (
     <figure ref={ref} className={styles.demo}>
       <div className={styles.stage}>
-        <DemoScene t={t} city={city} label={LABEL} />
+        <DemoScene t={t} city={city} label={m.label} />
       </div>
       <div className={styles.controls}>
         <ol className={styles.steps}>
@@ -97,7 +95,7 @@ export function DemoPlayer({ city }: { city: DemoCity }) {
                   aria-current={active ? "step" : undefined}
                   onClick={() => goTo(step)}
                 >
-                  <b>{step.n}</b> {step.label}
+                  <b>{step.n}</b> {m.steps[step.n - 1]}
                   {playing && <span aria-hidden className={styles.progress} style={{ transform: `scaleX(${done})` }} />}
                 </button>
               </li>
@@ -108,7 +106,7 @@ export function DemoPlayer({ city }: { city: DemoCity }) {
           type="button"
           className={styles.pause}
           onClick={() => setMode(playing ? "paused" : "playing")}
-          aria-label={playing ? "Mettre la démonstration en pause" : "Lancer la démonstration"}
+          aria-label={playing ? m.pause : m.play}
         >
           <svg viewBox="0 0 12 12" width={12} height={12} aria-hidden>
             {playing ? <path d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z" fill="currentColor" /> : <path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" />}

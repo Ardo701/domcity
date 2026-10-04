@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import { LOCALE_COOKIE, requestLocale, type Locale } from "@/i18n/locale";
 import { secretSalt, siteUrl } from "./config";
 
 /** Fingerprint of the visitor's IP: never the IP itself. */
@@ -31,6 +32,16 @@ function toBytea(bytes: Buffer): string {
 }
 
 export const SLUG_PATTERN = /^[A-Za-z0-9_-]{8}$/;
+
+/** The visitor's language for an API answer: the switcher's cookie, otherwise the browser's languages. */
+export function requestLanguage(request: Request): Locale {
+  const cookie = request.headers
+    .get("cookie")
+    ?.split(";")
+    .map((part) => part.trim().split("="))
+    .find(([name]) => name === LOCALE_COOKIE)?.[1];
+  return requestLocale(cookie, request.headers.get("accept-language"));
+}
 
 export function jsonError(status: number, error: string): Response {
   return Response.json({ error }, { status });

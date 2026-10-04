@@ -18,14 +18,6 @@ import type { CityDoc, CityNode } from "@/format/types";
 
 export type Weather = "clear" | "fair" | "cloudy" | "overcast" | "storm";
 
-export const WEATHER_NAMES: Record<Weather, string> = {
-  clear: "Grand soleil",
-  fair: "Beau temps",
-  cloudy: "Nuageux",
-  overcast: "Couvert",
-  storm: "Orage",
-};
-
 export interface Ambiance {
   weather: Weather;
   /** Bytes loaded by the page (bookmarklet, at least). */

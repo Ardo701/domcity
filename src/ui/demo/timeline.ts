@@ -34,13 +34,12 @@ export const T = {
 
 /** The three steps under the scene, with the instant shown when the animation is stopped. */
 export const STEPS = [
-  { n: 1, label: "Glisser", from: 0, to: 3.1, still: 2.9 },
-  { n: 2, label: "Cliquer", from: 3.1, to: 9.0, still: 7.75 },
-  { n: 3, label: "Visiter", from: 9.0, to: DURATION, still: 14.2 },
+  { n: 1, from: 0, to: 3.1, still: 2.9 },
+  { n: 2, from: 3.1, to: 9.0, still: 7.75 },
+  { n: 3, from: 9.0, to: DURATION, still: 14.2 },
 ] as const;
 
-/** The typed address, letter by letter, at a slightly irregular pace like real typing. */
-export const TYPED = "exemple.org";
+/** The typed address (example.org), letter by letter, at a slightly irregular pace like real typing. */
 const GAPS = [0.09, 0.07, 0.1, 0.08, 0.11, 0.07, 0.09, 0.12, 0.08, 0.09, 0.1];
 export const KEYSTROKES = GAPS.map((_, i) => T.typing + GAPS.slice(0, i).reduce((sum, gap) => sum + gap, 0));
 

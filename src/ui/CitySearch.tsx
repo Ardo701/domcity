@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { linkPath } from "@/format/links";
 import { sharedCityPath, sitePath, type SearchHit } from "@/format/shared";
+import { useMessages } from "@/i18n/client";
+import { SEARCH } from "@/i18n/messages/search";
 import styles from "./CitySearch.module.css";
 
 /**
@@ -13,6 +15,7 @@ import styles from "./CitySearch.module.css";
 export function CitySearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
+  const m = useMessages(SEARCH);
 
   useEffect(() => {
     const q = query.trim();
@@ -35,36 +38,34 @@ export function CitySearch() {
   return (
     <div className={styles.wrap}>
       <label className={styles.field}>
-        <span className="visually-hidden">Chercher une ville partagée</span>
+        <span className="visually-hidden">{m.label}</span>
         <span className={styles.icon} aria-hidden>
           ⌕
         </span>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Chercher un site ou une page : amazon, croissant…"
+          placeholder={m.placeholder}
           autoComplete="off"
           spellCheck={false}
         />
       </label>
       {visible && (
         <ul className={styles.results} aria-live="polite">
-          {visible.length === 0 && <li className={styles.empty}>Aucune ville pour l&apos;instant. À vous de la créer.</li>}
+          {visible.length === 0 && <li className={styles.empty}>{m.empty}</li>}
           {visible.map((hit) => (
             <li key={hit.domain}>
               <Link href={sitePath(hit.domain)}>
-                <span className={`${styles.kind} mono-caps`}>Site</span>
+                <span className={`${styles.kind} mono-caps`}>{m.site}</span>
                 <span className={styles.name}>{hit.domain}</span>
-                <span className={styles.where}>
-                  {hit.pagesCount} ville{hit.pagesCount > 1 ? "s" : ""}
-                </span>
+                <span className={styles.where}>{m.cities(hit.pagesCount)}</span>
               </Link>
               {hit.pages.length > 0 && (
                 <ul className={styles.pages}>
                   {hit.pages.map((page) => (
                     <li key={page.slug}>
                       <Link href={sharedCityPath(page.slug)}>
-                        <span className={`${styles.kind} mono-caps`}>Page</span>
+                        <span className={`${styles.kind} mono-caps`}>{m.page}</span>
                         <span className={styles.name}>{page.title ?? linkPath(page.path)}</span>
                         <span className={styles.where}>{linkPath(page.path)}</span>
                       </Link>
@@ -72,8 +73,7 @@ export function CitySearch() {
                   ))}
                   {hit.pagesMatched > hit.pages.length && (
                     <li className={styles.others}>
-                      et {hit.pagesMatched - hit.pages.length} autre{hit.pagesMatched - hit.pages.length > 1 ? "s" : ""} sur{" "}
-                      <Link href={sitePath(hit.domain)}>la page du site</Link>
+                      {m.others(hit.pagesMatched - hit.pages.length)} <Link href={sitePath(hit.domain)}>{m.sitePage}</Link>
                     </li>
                   )}
                 </ul>

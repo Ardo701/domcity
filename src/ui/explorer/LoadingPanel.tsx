@@ -1,4 +1,5 @@
-import { formatCount } from "@/city/describe";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
 export function LoadingPanel({
@@ -12,10 +13,11 @@ export function LoadingPanel({
   count?: number;
   steps: string[];
 }) {
+  const m = useMessages(CITY).loading;
   return (
     <div className={styles.loadingWrap}>
       <section className={styles.loading} aria-live="polite" aria-busy="true">
-        <p className="mono-caps">Chantier en cours</p>
+        <p className="mono-caps">{m.kicker}</p>
         <h2>{title}</h2>
         <ol className={styles.loadingSteps}>
           {steps.map((label, i) => (
@@ -24,7 +26,7 @@ export function LoadingPanel({
                 {i < step ? "■" : i === step ? "▣" : "□"}
               </span>
               {label}
-              {i === 2 && count ? ` de ${formatCount(count)} éléments` : ""}
+              {i === 2 && count ? m.elements(count) : ""}
             </li>
           ))}
         </ol>

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cityKey, deleteCityPath, sharedCityPath, thumbKey } from "@/format/shared";
+import { useMessages } from "@/i18n/client";
+import { ACCOUNT } from "@/i18n/messages/pages";
 import styles from "./Account.module.css";
 import { CardPending } from "./CardPending";
 import gallery from "./Gallery.module.css";
@@ -11,12 +13,7 @@ import { updateCity, useMyCities, type MyCity } from "./savedCities";
 
 const deletePath = (city: MyCity) => deleteCityPath(city.slug, city.token);
 
-function sharedOn(iso: string) {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? null
-    : date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
+const validDate = (iso: string) => !Number.isNaN(new Date(iso).getTime());
 
 /** The readable address: without "https://", nor a home page's trailing slash. */
 const readableUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -48,6 +45,7 @@ function usePageUrl(city: MyCity, filesBase: string): string | null {
 
 /** Copies the city's public link, the one that gets shared. */
 function CopyLink({ city }: { city: MyCity }) {
+  const labels = useMessages(ACCOUNT).copy;
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {
     try {
@@ -60,7 +58,7 @@ function CopyLink({ city }: { city: MyCity }) {
   };
   return (
     <button type="button" className={styles.action} onClick={copy} aria-live="polite">
-      {state === "copied" ? "Lien copié" : state === "failed" ? "Copie impossible" : "Copier le lien"}
+      {labels[state]}
     </button>
   );
 }
@@ -70,8 +68,8 @@ function CopyLink({ city }: { city: MyCity }) {
  * link, delete it. A city without a thumbnail, or deleted from another browser, keeps the gallery's hatching.
  */
 function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
+  const m = useMessages(ACCOUNT);
   const [broken, setBroken] = useState(false);
-  const date = sharedOn(city.sharedAt);
   const href = sharedCityPath(city.slug);
   const page = usePageUrl(city, filesBase);
   return (
@@ -91,11 +89,11 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
           <span className={gallery.where} title={page ?? undefined}>
             {page ?? "\u00a0"}
           </span>
-          {date && <span className={`${gallery.meta} mono-caps`}>Publiée le {date}</span>}
+          {validDate(city.sharedAt) && <span className={`${gallery.meta} mono-caps`}>{m.published(city.sharedAt)}</span>}
           <div className={styles.actions}>
             <CopyLink city={city} />
             <Link href={deletePath(city)} className={`${styles.action} ${styles.danger}`}>
-              Supprimer
+              {m.remove}
             </Link>
           </div>
         </div>
@@ -107,6 +105,7 @@ function CityCard({ city, filesBase }: { city: MyCity; filesBase: string }) {
 /** The cities published from this browser: see them again, keep their secret link, delete them. */
 export function AccountCities({ filesBase }: { filesBase: string }) {
   const cities = useMyCities();
+  const m = useMessages(ACCOUNT);
 
   // Not read yet (server rendering, first frame): nothing rather than a misleading "no city".
   if (cities === null) return <div className={styles.pending} />;
@@ -114,37 +113,27 @@ export function AccountCities({ filesBase }: { filesBase: string }) {
   if (cities.length === 0) {
     return (
       <div className={styles.empty}>
-        <p className={styles.emptyTitle}>Aucune ville publiée depuis ce navigateur.</p>
-        <p>
-          Relevez une page avec le favori, puis cliquez sur « Publier » : la ville apparaîtra ici, avec le lien qui
-          permet de la supprimer.
-        </p>
+        <p className={styles.emptyTitle}>{m.emptyTitle}</p>
+        <p>{m.emptyText}</p>
         <Link href="/create" className={styles.start}>
-          Créer une ville <span aria-hidden>→</span>
+          {m.create} <span aria-hidden>→</span>
         </Link>
       </div>
     );
   }
 
   return (
-    <section className={styles.cities} aria-labelledby="vos-villes">
+    <section className={styles.cities} aria-labelledby="your-cities">
       <div className={styles.citiesHead}>
-        <h2 id="vos-villes">Vos villes publiées</h2>
-        <span className="mono-caps">
-          {cities.length} ville{cities.length > 1 ? "s" : ""}
-        </span>
+        <h2 id="your-cities">{m.heading}</h2>
+        <span className="mono-caps">{m.count(cities.length)}</span>
       </div>
       <ul className={gallery.grid}>
         {cities.map((city) => (
           <CityCard key={city.slug} city={city} filesBase={filesBase} />
         ))}
       </ul>
-      <p className={styles.note}>
-        Ces villes ne sont gardées que dans ce navigateur. Un autre navigateur, une navigation privée ou
-        l&apos;effacement des données du site ne les connaissent pas, et leur lien secret serait perdu. Pour une ville
-        que vous voudrez peut-être supprimer un jour, ouvrez «&nbsp;Supprimer&nbsp;» et gardez l&apos;adresse de cette page :
-        c&apos;est son lien secret.
-      </p>
+      <p className={styles.note}>{m.note}</p>
     </section>
   );
 }

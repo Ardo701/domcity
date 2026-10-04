@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
-import { formatCount } from "@/city/describe";
 import type { CityView, ViewStats } from "@/city/view";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
-const ms = (value: number) => `${value.toFixed(1).replace(".", ",")} ms`;
-
 /** Smooth above 50 frames per second, fine above 30, slow below. */
-function grade(fps: number): "bon" | "moyen" | "lent" {
-  return fps >= 50 ? "bon" : fps >= 30 ? "moyen" : "lent";
+function grade(fps: number): "good" | "fair" | "slow" {
+  return fps >= 50 ? "good" : fps >= 30 ? "fair" : "slow";
 }
 
 /** FPS meter: frames per second, time per frame, weight of the scene. */
 export function PerfMeter({ viewRef, shifted }: { viewRef: RefObject<CityView | null>; shifted: boolean }) {
+  const m = useMessages(CITY).perf;
   const [stats, setStats] = useState<ViewStats | null>(null);
   // Hidden tab: the browser suspends drawing, the meter drops to zero through no fault of the city.
   const [paused, setPaused] = useState(false);
@@ -30,29 +30,29 @@ export function PerfMeter({ viewRef, shifted }: { viewRef: RefObject<CityView | 
   return (
     <section
       className={`${styles.perf} ${shifted ? styles.perfShifted : ""}`}
-      aria-label="Performances du rendu"
-      title="Mesure en continu : tant que le compteur est affiché, la ville est redessinée à chaque image."
+      aria-label={m.label}
+      title={m.title}
     >
       <p className={styles.perfFps} data-grade={stats && !paused ? grade(stats.fps) : undefined}>
         <strong>{stats ? stats.fps : "…"}</strong>
-        <span className="mono-caps">{paused ? "FPS · onglet caché" : "FPS"}</span>
+        <span className="mono-caps">{paused ? m.hiddenTab : "FPS"}</span>
       </p>
       <dl className={styles.perfFacts}>
         <div>
-          <dt className="mono-caps">Image</dt>
-          <dd>{stats && stats.frameMs > 0 ? ms(stats.frameMs) : "…"}</dd>
+          <dt className="mono-caps">{m.frame}</dt>
+          <dd>{stats && stats.frameMs > 0 ? m.ms(stats.frameMs) : "…"}</dd>
         </div>
         <div>
-          <dt className="mono-caps">Calcul</dt>
-          <dd>{stats ? ms(stats.renderMs) : "…"}</dd>
+          <dt className="mono-caps">{m.compute}</dt>
+          <dd>{stats ? m.ms(stats.renderMs) : "…"}</dd>
         </div>
         <div>
-          <dt className="mono-caps">Triangles</dt>
-          <dd>{stats ? `${formatCount(stats.triangles / 1000)} k` : "…"}</dd>
+          <dt className="mono-caps">{m.triangles}</dt>
+          <dd>{stats ? m.thousands(stats.triangles / 1000) : "…"}</dd>
         </div>
         <div>
-          <dt className="mono-caps">Appels</dt>
-          <dd>{stats ? formatCount(stats.calls) : "…"}</dd>
+          <dt className="mono-caps">{m.calls}</dt>
+          <dd>{stats ? m.count(stats.calls) : "…"}</dd>
         </div>
       </dl>
     </section>

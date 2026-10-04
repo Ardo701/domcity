@@ -13,6 +13,10 @@ import { cityRefusal, withoutBlocked } from "@/format/blocklist";
 import { sharedCityPath, sitePath, type CityVersion, type SharedCity } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { isPublicHost, siteHost } from "@/format/url";
+import { useLocale } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
+import { COMMON } from "@/i18n/messages/common";
+import { REFUSAL } from "@/i18n/messages/refusal";
 import { loadBlocklist } from "@/ui/blocklist";
 import { InkLink } from "@/ui/InkLink";
 import { loadSharedCity } from "@/ui/loadShared";
@@ -45,10 +49,6 @@ type Status =
   | { phase: "ready" }
   | { phase: "error"; title: string; message: string; refused?: boolean };
 
-const WIKI_STEPS = ["Relevé de l'article sur Wikipédia", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
-const SHARED_STEPS = ["Ouverture de la ville partagée", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
-const CAPTURE_STEPS = ["Lecture du relevé", "Tracé du plan et des rues", "Construction", "Mise en lumière"];
-
 /** Lets the browser display the current step. The timer takes over in a background tab, where requestAnimationFrame is suspended. */
 const nextFrame = () =>
   new Promise<void>((resolve) => {
@@ -78,6 +78,8 @@ function readPerf(): boolean {
 /** One instance per city (see the key in the pages): the state starts from zero at each capture. */
 export function CityExplorer({ source, canShare = false }: { source: CitySource; canShare?: boolean }) {
   const router = useRouter();
+  const locale = useLocale();
+  const m = CITY[locale];
   const stageRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
   useBarBottom(barRef);
@@ -136,7 +138,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         if (cancelled) return;
         const refusal = cityRefusal(cityDoc, list);
         if (refusal) {
-          setStatus({ phase: "error", title: "Site refusé", message: refusal, refused: true });
+          setStatus({ phase: "error", title: m.errors.refused, message: REFUSAL[locale].reasons[refusal], refused: true });
           return;
         }
         // Images from refused sites are never requested, even in another site's city.
@@ -164,7 +166,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           onModeChange: setMode,
           onWalkChange: setWalking,
           onImageStatus: (id, s) => setImageStatus((prev) => ({ ...prev, [id]: s })),
-        });
+        }, locale);
         viewRef.current = view;
         view.setMeasuring(readPerf());
         // In development: the view is reachable from the console (rendering experiments, captures).
@@ -177,25 +179,9 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       } catch (error) {
         if (cancelled || controller.signal.aborted) return;
         if (error instanceof WikiNotFoundError) {
-          setStatus({ phase: "error", title: "Terrain introuvable", message: error.message });
-        } else if (source.kind === "shared") {
-          setStatus({
-            phase: "error",
-            title: "Ville inaccessible",
-            message: "Le fichier de cette ville n'a pas pu être chargé. Réessayez dans un instant.",
-          });
-        } else if (source.kind === "capture") {
-          setStatus({
-            phase: "error",
-            title: "Construction impossible",
-            message: "Ce relevé n'a pas pu être bâti. Relancez le favori depuis la page, ou essayez une autre page.",
-          });
+          setStatus({ phase: "error", title: m.errors.notFound.title, message: m.errors.notFound.message(error.title) });
         } else {
-          setStatus({
-            phase: "error",
-            title: "Relevé interrompu",
-            message: "Wikipédia n'a pas pu être joint. Vérifiez votre connexion, puis réessayez.",
-          });
+          setStatus({ phase: "error", ...m.errors[source.kind === "shared" ? "shared" : source.kind === "capture" ? "capture" : "wikipedia"] });
         }
       }
     })();
@@ -212,12 +198,12 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
   const hoverInfo = useMemo(
     // The airport is not a lot: its tooltip reads from the plan, not the page.
-    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id) : null),
-    [layout, hover],
+    () => (layout && hover && !isSpecial(hover.part) ? describeLot(layout, hover.id, locale) : null),
+    [layout, hover, locale],
   );
   const selectedInfo = useMemo(
-    () => (layout && selected !== null ? describeLot(layout, selected) : null),
-    [layout, selected],
+    () => (layout && selected !== null ? describeLot(layout, selected, locale) : null),
+    [layout, selected, locale],
   );
 
   const select = useCallback((id: number | null, focus = false) => viewRef.current?.select(id, focus), []);
@@ -259,18 +245,18 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
   const shareable = canShare && (wiki !== null || (capture !== null && isPublicHost(host)));
   const kicker = shared
     ? shared.city.source === "bookmarklet"
-      ? "Relevé par un visiteur"
-      : "Ville partagée"
+      ? m.kicker.visitor
+      : m.kicker.shared
     : capture
-      ? "Votre relevé · non publié"
-      : "DOMCity · Planche";
+      ? m.kicker.capture
+      : m.kicker.sheet;
 
   return (
     <div className={styles.shell}>
       <div ref={stageRef} className={styles.stage} />
 
       <header ref={barRef} className={styles.bar}>
-        <Link href="/" className={styles.home} aria-label="DOMCity, accueil">
+        <Link href="/" className={styles.home} aria-label={COMMON[locale].homeLabel}>
           <LogoMark size={26} />
           <span>
             DOM<b>City</b>
@@ -278,7 +264,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         </Link>
         <div className={styles.place}>
           {shared ? (
-            <Link href={sitePath(host)} className="mono-caps" title="Toutes les pages de ce site">
+            <Link href={sitePath(host)} className="mono-caps" title={m.sitePages}>
               {host}
             </Link>
           ) : (
@@ -290,18 +276,18 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
         {ready && (
           <div className={styles.tools}>
             {canWalk && (
-              <div className={styles.segmented} role="group" aria-label="Façon de visiter">
+              <div className={styles.segmented} role="group" aria-label={m.tools.modes}>
                 <button type="button" aria-pressed={mode === "aerial"} onClick={() => switchMode("aerial")}>
-                  Vue aérienne
+                  {m.tools.aerial}
                 </button>
                 <button type="button" aria-pressed={mode === "walk"} onClick={() => switchMode("walk")}>
-                  Promenade
+                  {m.tools.walk}
                 </button>
               </div>
             )}
             {mode === "aerial" && (
               <button type="button" className={styles.tool} onClick={() => viewRef.current?.resetView()}>
-                Recadrer
+                {m.tools.reset}
               </button>
             )}
             <button
@@ -313,7 +299,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
                 setLegendOpen((open) => !open);
               }}
             >
-              Légende
+              {m.tools.legend}
             </button>
             {layout?.ambiance && (
               <button
@@ -325,7 +311,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
                   setAmbianceOpen((open) => !open);
                 }}
               >
-                Ambiance
+                {m.tools.ambiance}
               </button>
             )}
             <button
@@ -333,22 +319,22 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
               className={styles.tool}
               aria-pressed={measuring}
               onClick={toggleMeasuring}
-              title="Afficher les images par seconde"
+              title={m.tools.fpsTitle}
             >
               FPS
             </button>
             {shareable && mode === "aerial" && (
               <button type="button" className={`${styles.tool} ${styles.toolAccent}`} onClick={() => setPanel("share")}>
-                Partager
+                {m.tools.share}
               </button>
             )}
             {shared && (
               <>
                 <button type="button" className={styles.tool} onClick={copyLink}>
-                  {copied ? "Lien copié" : "Copier le lien"}
+                  {copied ? m.tools.linkCopied : m.tools.copyLink}
                 </button>
                 <button type="button" className={styles.tool} onClick={() => setPanel("report")}>
-                  Signaler
+                  {m.tools.report}
                 </button>
               </>
             )}
@@ -371,8 +357,9 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
 
       {ready && capture?.outdated && (
         <p className={styles.notice} role="status">
-          Votre favori date d&apos;une version précédente. <Link href="/create">Réinstallez-le</Link> pour
-          profiter des derniers relevés.
+          {m.outdated((label) => (
+            <Link href="/create">{label}</Link>
+          ))}
         </p>
       )}
 
@@ -384,11 +371,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           stats={layout.stats}
           page={doc.page}
           kicker={kicker}
-          kickerNote={
-            shared?.city.source === "bookmarklet"
-              ? "Relevé avec le favori DOMCity par un visiteur : DOMCity ne peut pas vérifier qu'il est fidèle à la page."
-              : undefined
-          }
+          kickerNote={shared?.city.source === "bookmarklet" ? m.visitorNote : undefined}
           shared={shared ? { views: shared.city.views } : undefined}
           versions={shared && shared.versions.length > 1 ? shared.versions : undefined}
           currentSlug={shared?.city.slug}
@@ -401,9 +384,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       {ready && measuring && <PerfMeter viewRef={viewRef} shifted={selectedInfo !== null} />}
 
       {ready && mode === "aerial" && (
-        <p className={`${styles.hint} mono-caps`}>
-          Glisser : se déplacer · Clic droit : tourner · Molette : zoomer · Clic : inspecter · Double-clic : approcher
-        </p>
+        <p className={`${styles.hint} mono-caps`}>{m.hint}</p>
       )}
 
       {ready && mode === "walk" && (
@@ -425,7 +406,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       )}
 
       {ready && departures && !selectedInfo && layout?.airport && (
-        <Departures airport={layout.airport} scope="toute la page" onClose={() => setDepartures(false)} />
+        <Departures airport={layout.airport} scope={m.scope.page} onClose={() => setDepartures(false)} />
       )}
 
       {ready && selectedInfo && (
@@ -460,21 +441,21 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
           title={displayTitle}
           step={status.step}
           count={layout?.lots.length}
-          steps={shared ? SHARED_STEPS : capture ? CAPTURE_STEPS : WIKI_STEPS}
+          steps={m.steps[shared ? "shared" : capture ? "capture" : "wikipedia"]}
         />
       )}
 
       {status.phase === "error" && (
         <div className={styles.errorWrap}>
           <section className={styles.error} role="alert">
-            {!status.refused && <p className="mono-caps">Erreur de relevé</p>}
+            {!status.refused && <p className="mono-caps">{m.errorKicker}</p>}
             <h2>{status.title}</h2>
             <p>{status.message}</p>
             {status.refused ? (
               // As in /new: the home page button, the only way out of a refused site.
               <div className={styles.actionsRow}>
                 <InkLink href="/" size="small">
-                  Retour à l&apos;accueil
+                  {m.home}
                 </InkLink>
               </div>
             ) : (
@@ -482,7 +463,7 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
                 {/* A misspelled article: another one can be searched for. */}
                 {wiki && <WikiSearch initialLang={wiki.lang} />}
                 <Link href="/" className={styles.back}>
-                  ← Retour à l&apos;accueil
+                  {m.backHome}
                 </Link>
               </>
             )}

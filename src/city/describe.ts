@@ -2,26 +2,15 @@
 
 import { KINDS, type Kind } from "@/format/taxonomy";
 import type { CityImage, CityLinks } from "@/format/types";
-import { FLOOR, type CityLayout, type Lot, type RoadStyle } from "./layout";
+import type { Locale } from "@/i18n/locale";
+import { KINDS_TEXT } from "@/i18n/messages/kinds";
+import { FLOOR, type CityLayout, type Lot } from "./layout";
 
 export interface LotStep {
   id: number;
   selector: string;
   name: string;
 }
-
-/**
- * Streets are not in the page: the city draws them between the elements of a container.
- * On hover, they carry the name of their kind, and the card is that of the container.
- */
-export const ROAD_NAMES: Record<RoadStyle, string> = {
-  ring: "Périphérique",
-  avenue: "Avenue",
-  street: "Rue",
-  lane: "Ruelle",
-  path: "Allée",
-  highway: "Autoroute",
-};
 
 export interface LotInfo {
   id: number;
@@ -54,12 +43,6 @@ export interface LotInfo {
 
 const STOREYED = new Set<Kind>(["tower", "residence", "house", "monument", "belfry", "embassy"]);
 
-/** Small images are not posters: they have their own name. */
-const EMBLEMS = {
-  sign: { name: "Enseigne", blurb: "Une icône du site (moins de 48 px), en enseigne au rez-de-chaussée du bâtiment le plus proche dans la page." },
-  flag: { name: "Drapeau", blurb: "Un petit drapeau du site (moins de 48 px), hissé sur un mât, au toit du bâtiment le plus proche dans la page." },
-} as const;
-
 /** Building added by the city: for a container's direct text, or to carry its images. */
 const added = (lot: Lot) => lot.ownText || lot.gallery !== undefined;
 
@@ -67,37 +50,35 @@ const added = (lot: Lot) => lot.ownText || lot.gallery !== undefined;
  * Name and sentence of a lot: those of its kind, except small images, and text written
  * directly in a container (in a table, the text of its cells: a farm).
  */
-function nameOf(lot: Lot, layout?: CityLayout): { name: string; blurb: string } {
-  if (lot.panel?.emblem) return EMBLEMS[lot.panel.emblem];
+function nameOf(lot: Lot, locale: Locale, layout?: CityLayout): { name: string; blurb: string } {
+  const m = KINDS_TEXT[locale];
+  if (lot.panel?.emblem) return m.emblems[lot.panel.emblem];
   if (lot.gallery !== undefined && layout) {
     const where = `<${selectorOf(layout.lots[lot.parent])}>`;
-    return {
-      name: KINDS.gallery.name,
-      blurb: `${lot.gallery > 1 ? `Les ${lot.gallery} images` : "L'image"} de ${where}, sans texte à côté pour les porter : un immeuble couvert d'écrans.`,
-    };
+    return { name: m.kinds.gallery.name, blurb: m.galleryBlurb(lot.gallery, where) };
   }
   if (lot.ownText && layout) {
     const parent = layout.lots[lot.parent];
     const where = `<${selectorOf(parent)}>`;
     return parent.kind === "fields"
-      ? { name: "Ferme", blurb: `Le texte des cases du tableau ${where} : une ferme au milieu de ses champs.` }
-      : { name: KINDS[lot.kind].name, blurb: `Le texte écrit directement dans ${where}, sans balise à lui.` };
+      ? { name: m.farm, blurb: m.farmBlurb(where) }
+      : { name: m.kinds[lot.kind].name, blurb: m.ownTextBlurb(where) };
   }
-  return KINDS[lot.kind];
+  return m.kinds[lot.kind];
 }
 
 export function selectorOf(lot: Lot): string {
   return `${lot.node.tag}${lot.node.label ?? ""}`;
 }
 
-export function describeLot(layout: CityLayout, id: number): LotInfo {
+export function describeLot(layout: CityLayout, id: number, locale: Locale): LotInfo {
   const lot = layout.lots[id];
   const kind = KINDS[lot.kind];
   const path: LotStep[] = [];
   let current: Lot | undefined = lot;
   while (current) {
     if (!added(current)) {
-      path.unshift({ id: current.id, selector: selectorOf(current), name: nameOf(current).name });
+      path.unshift({ id: current.id, selector: selectorOf(current), name: nameOf(current, locale).name });
     }
     current = current.parent >= 0 ? layout.lots[current.parent] : undefined;
   }
@@ -116,8 +97,7 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
   return {
     id,
     kind: lot.kind,
-    name: nameOf(lot, layout).name,
-    blurb: nameOf(lot, layout).blurb,
+    ...nameOf(lot, locale, layout),
     color: kind.color,
     selector: selectorOf(lot),
     heading: lot.node.heading,
@@ -135,21 +115,4 @@ export function describeLot(layout: CityLayout, id: number): LotInfo {
     floors: STOREYED.has(lot.kind) ? Math.max(1, Math.round(lot.h / FLOOR)) : undefined,
     path,
   };
-}
-
-const numberFormat = new Intl.NumberFormat("fr-FR");
-
-export function formatCount(value: number): string {
-  return numberFormat.format(Math.round(value));
-}
-
-/** Readable weight: 840 Ko, 2,4 Mo. */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${formatCount(bytes)} o`;
-  if (bytes < 1024 * 1024) return `${formatCount(bytes / 1024)} Ko`;
-  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
-}
-
-export function formatChars(value: number): string {
-  return `${formatCount(value)} caractère${value > 1 ? "s" : ""}`;
 }

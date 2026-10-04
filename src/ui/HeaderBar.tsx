@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useMessages } from "@/i18n/client";
+import { COMMON } from "@/i18n/messages/common";
 import { GithubLink, GithubMark, REPO_URL } from "./GithubLink";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { Wordmark } from "./Logo";
 import styles from "./SiteHeader.module.css";
 
@@ -15,18 +18,19 @@ const subscribeScroll = (onChange: () => void) => {
 const isScrolled = () => window.scrollY > 4;
 
 /**
- * The top bar: the brand (back to the home page), "Découvrir", "Créer une ville", the account, GitHub.
+ * The top bar: the brand (back to the home page), "Explore", "Create a city", the account, GitHub, the language.
  * It stays at the top when the page scrolls; its rule then widens to the edges of the screen.
  * On a phone, the links move into a full-screen menu, behind a three-line button.
  */
 export function HeaderBar({ sharing, current }: { sharing: boolean; current?: SitePage }) {
   const scrolled = useSyncExternalStore(subscribeScroll, isScrolled, () => false);
   const [open, setOpen] = useState(false);
+  const m = useMessages(COMMON);
 
   const links: Array<{ page: SitePage; href: string; label: string }> = [
-    ...(sharing ? [{ page: "explore" as const, href: "/explore", label: "Découvrir" }] : []),
-    { page: "create", href: "/create", label: "Créer une ville" },
-    ...(sharing ? [{ page: "account" as const, href: "/account", label: "Votre compte" }] : []),
+    ...(sharing ? [{ page: "explore" as const, href: "/explore", label: m.nav.explore }] : []),
+    { page: "create", href: "/create", label: m.nav.create },
+    ...(sharing ? [{ page: "account" as const, href: "/account", label: m.nav.account }] : []),
   ];
   const here = (page: SitePage) => (current === page ? "page" : undefined);
 
@@ -53,25 +57,26 @@ export function HeaderBar({ sharing, current }: { sharing: boolean; current?: Si
 
   return (
     <header className={styles.topbar} data-scrolled={scrolled || open || undefined} data-open={open || undefined}>
-      <Link href="/" className={styles.brand} aria-label="DOMCity, accueil" onClick={() => setOpen(false)}>
+      <Link href="/" className={styles.brand} aria-label={m.homeLabel} onClick={() => setOpen(false)}>
         <Wordmark />
       </Link>
 
-      <nav className={styles.nav} aria-label="Navigation">
+      <nav className={styles.nav} aria-label={m.nav.label}>
         {links.map((link) => (
           <Link key={link.page} href={link.href} aria-current={here(link.page)}>
             {link.label}
           </Link>
         ))}
       </nav>
-      <GithubLink className={styles.github} />
+      <GithubLink label={m.githubLabel} className={styles.github} />
+      <LanguageSwitch className={styles.lang} />
 
       <button
         type="button"
         className={styles.burger}
         aria-expanded={open}
-        aria-controls="menu-telephone"
-        aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+        aria-controls="phone-menu"
+        aria-label={open ? m.menu.close : m.menu.open}
         onClick={() => setOpen((was) => !was)}
       >
         <span />
@@ -79,8 +84,8 @@ export function HeaderBar({ sharing, current }: { sharing: boolean; current?: Si
         <span />
       </button>
 
-      <div id="menu-telephone" className={styles.menu} inert={!open}>
-        <nav aria-label="Menu">
+      <div id="phone-menu" className={styles.menu} inert={!open}>
+        <nav aria-label={m.menu.label}>
           <ul className={styles.menuLinks}>
             {links.map((link, i) => (
               <li key={link.page} style={{ "--i": i } as React.CSSProperties}>
@@ -96,11 +101,14 @@ export function HeaderBar({ sharing, current }: { sharing: boolean; current?: Si
           </ul>
         </nav>
         <div className={styles.menuFoot} style={{ "--i": links.length } as React.CSSProperties}>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className={styles.menuGithub}>
-            <GithubMark />
-            <span className="mono-caps">Le code sur GitHub</span>
-          </a>
-          <p className="mono-caps">Chaque page web est une ville.</p>
+          <div className={styles.menuTools}>
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className={styles.menuGithub}>
+              <GithubMark />
+              <span className="mono-caps">{m.menu.github}</span>
+            </a>
+            <LanguageSwitch />
+          </div>
+          <p className="mono-caps">{m.tagline}</p>
         </div>
       </div>
     </header>

@@ -17,26 +17,11 @@ import type { CityDoc, CityNode } from "./types";
 export const BLOCK_CATEGORIES = ["adult", "violence", "bank", "private", "gambling", "danger"] as const;
 export type BlockCategory = (typeof BLOCK_CATEGORIES)[number];
 
-/** The name of each category, to show them to the visitor (Créer une ville page). */
-export const BLOCK_LABELS: Record<BlockCategory, string> = {
-  adult: "Sites pour adultes",
-  violence: "Violence et images choquantes",
-  bank: "Banques et services financiers",
-  private: "Données personnelles : messageries, comptes, impôts, santé",
-  gambling: "Jeux d'argent",
-  danger: "Sites dangereux : pistage, logiciels espions, téléchargements piratés",
-};
-
-/** What DOMCity says about a refused site, according to its category. */
-const REASONS: Record<BlockCategory, string> = {
-  adult: "Ce site est sur la liste des sites refusés par DOMCity : sites pour adultes.",
-  violence: "Ce site est sur la liste des sites refusés par DOMCity : images violentes ou choquantes.",
-  bank: "Ce site est sur la liste des sites refusés par DOMCity : banques et services financiers, dont les pages montrent des comptes et des noms.",
-  private:
-    "Ce site est sur la liste des sites refusés par DOMCity : messageries, comptes, administration, santé… des pages qui montrent la vie d'une personne.",
-  gambling: "Ce site est sur la liste des sites refusés par DOMCity : jeux d'argent.",
-  danger: "Ce site est sur la liste des sites refusés par DOMCity : pistage, logiciels espions ou téléchargements piratés.",
-};
+/**
+ * Why a city is not built: the category of its site, or "adult-page" for a page that declares itself
+ * adults only. The names and the texts shown to the visitor are in src/i18n/messages/refusal.ts.
+ */
+export type Refusal = BlockCategory | "adult-page";
 
 /** The list, as the database returns it: domain (or extension) → category. */
 export type Blocklist = ReadonlyMap<string, BlockCategory>;
@@ -73,12 +58,11 @@ export function isBlockedUrl(url: string, list: Blocklist): boolean {
   return host !== null && blockedCategory(host, list) !== undefined;
 }
 
-/** Why this city is not built (the text shown to the person), or null. */
-export function cityRefusal(doc: CityDoc, list: Blocklist): string | null {
-  if (doc.page?.adult) return "Cette page se déclare réservée aux adultes : DOMCity n'en construit pas de ville.";
+/** Why this city is not built, or null. */
+export function cityRefusal(doc: CityDoc, list: Blocklist): Refusal | null {
+  if (doc.page?.adult) return "adult-page";
   const host = hostOf(doc.url);
-  const category = host ? blockedCategory(host, list) : undefined;
-  return category ? REASONS[category] : null;
+  return (host && blockedCategory(host, list)) || null;
 }
 
 /**

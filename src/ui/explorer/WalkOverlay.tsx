@@ -1,4 +1,6 @@
 import type { WalkState } from "@/city/view";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
 function Key({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
@@ -15,53 +17,52 @@ export function WalkOverlay({
   onStart: () => void;
   onLeave: () => void;
 }) {
+  const m = useMessages(CITY).walk;
   if (state === "locked") {
     return (
       <>
         <div className={styles.crosshair} aria-hidden />
-        <p className={`${styles.walkHint} mono-caps`}>Échap : libérer la souris</p>
+        <p className={`${styles.walkHint} mono-caps`}>{m.locked}</p>
       </>
     );
   }
   if (state === "free") {
     return (
-      <p className={`${styles.walkHint} mono-caps`}>
-        Glisser : regarder · ZQSD : avancer · Espace / Maj : monter, descendre · Échap : pause
-      </p>
+      <p className={`${styles.walkHint} mono-caps`}>{m.free}</p>
     );
   }
 
   return (
     <div className={styles.walkWrap}>
       <section className={styles.walk}>
-        <p className="mono-caps">Mode promenade</p>
-        <h2>On descend dans la rue</h2>
+        <p className="mono-caps">{m.kicker}</p>
+        <h2>{m.title}</h2>
         <div className={styles.walkGrid}>
           <div className={styles.keys}>
             <span />
-            <Key>Z</Key>
+            <Key>{m.keys[0]}</Key>
             <span />
-            <Key>Q</Key>
-            <Key>S</Key>
-            <Key>D</Key>
+            <Key>{m.keys[1]}</Key>
+            <Key>{m.keys[2]}</Key>
+            <Key>{m.keys[3]}</Key>
           </div>
-          <p>Avancer, reculer, aller de côté. Sur un clavier anglais : W A S D.</p>
+          <p>{m.move}</p>
           <div className={styles.keysRow}>
-            <Key wide>Espace</Key>
-            <Key wide>Maj</Key>
+            <Key wide>{m.space}</Key>
+            <Key wide>{m.shift}</Key>
           </div>
-          <p>Monter et descendre, comme un drone.</p>
+          <p>{m.fly}</p>
           <div className={styles.keysRow}>
-            <Key wide>Souris</Key>
+            <Key wide>{m.mouse}</Key>
           </div>
-          <p>Regarder autour. Un clic sur un bâtiment l&apos;inspecte.</p>
+          <p>{m.look}</p>
         </div>
         <div className={styles.walkActions}>
           <button type="button" className={styles.primary} onClick={onStart}>
-            Commencer la promenade
+            {m.start}
           </button>
           <button type="button" className={styles.secondary} onClick={onLeave}>
-            Revenir à la vue aérienne
+            {m.leave}
           </button>
         </div>
       </section>

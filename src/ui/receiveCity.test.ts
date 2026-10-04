@@ -64,7 +64,7 @@ describe("receiving a city in /new", () => {
     setOpener(opener);
     const pending = (await freshReceive())();
     reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city: CITY }, "https://intrus.example");
-    await expect(pending).rejects.toThrow(/ne vient pas/);
+    await expect(pending).rejects.toMatchObject({ code: "foreign" });
   });
 
   it("refuses a site on the list, or a page that declares itself adults only, without keeping anything", async () => {
@@ -78,7 +78,7 @@ describe("receiving a city in /new", () => {
       setOpener(opener);
       const pending = (await freshReceive())();
       reply(opener, { type: MESSAGES.city, version: BOOKMARKLET_VERSION, city }, origin);
-      await expect(pending).rejects.toMatchObject({ title: "Site refusé", refused: true });
+      await expect(pending).rejects.toMatchObject({ code: "refused", refused: true });
       expect(sessionStorage.getItem("domcity:new")).toBeNull();
     }
     // The browser downloaded the list: it sent nothing about the visited page.
@@ -110,6 +110,6 @@ describe("receiving a city in /new", () => {
   });
 
   it("explains what to do when nothing was sent", async () => {
-    await expect((await freshReceive())()).rejects.toThrow(/favori DOMCity/);
+    await expect((await freshReceive())()).rejects.toMatchObject({ code: "nothing" });
   });
 });

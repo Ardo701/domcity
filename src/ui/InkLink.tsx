@@ -6,7 +6,7 @@ import styles from "./InkLink.module.css";
 import { LogoLoader } from "./LogoLoader";
 
 /**
- * The main DOMCity button ("Créer une ville" on the home page): off-white, and on hover the orange
+ * The main DOMCity button ("Create a city" on the home page): off-white, and on hover the orange
  * drops into the center like a drop and spreads to the edges, its edge rippling with noise.
  * Each button has its own SVG filter: two buttons on the same page do not share an identifier.
  * While the target page loads, the logo builds itself and falls in place of the arrow.

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import type { CityView } from "@/city/view";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import styles from "./explorer.module.css";
 
 /** Distance from the "N" to the center of the compass rose, in pixels. */
@@ -12,6 +14,7 @@ const LETTER = 25;
  * wherever we look; the "N" follows it while staying upright. A click puts north back at the top of the screen.
  */
 export function NorthArrow({ viewRef }: { viewRef: RefObject<CityView | null> }) {
+  const m = useMessages(CITY).north;
   const needle = useRef<SVGGElement>(null);
   const letter = useRef<SVGTextElement>(null);
 
@@ -38,8 +41,8 @@ export function NorthArrow({ viewRef }: { viewRef: RefObject<CityView | null> })
       type="button"
       className={styles.north}
       onClick={() => viewRef.current?.faceNorth()}
-      title="Remettre le haut de la page en haut de l'écran"
-      aria-label="Nord : haut de la page. Remettre le nord en haut de l'écran"
+      title={m.title}
+      aria-label={m.label}
     >
       <svg width="64" height="64" viewBox="-32 -32 64 64" aria-hidden>
         <circle className={styles.northDial} r="17.5" />
@@ -60,7 +63,7 @@ export function NorthArrow({ viewRef }: { viewRef: RefObject<CityView | null> })
           N
         </text>
       </svg>
-      <span className="mono-caps">Haut de page</span>
+      <span className="mono-caps">{m.caption}</span>
     </button>
   );
 }

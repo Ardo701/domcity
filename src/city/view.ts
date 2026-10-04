@@ -12,6 +12,8 @@ import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
 import { THUMBNAIL } from "@/format/shared";
 import { HIGHLIGHT_COLOR } from "@/format/taxonomy";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { POSTERS, type PosterLabels } from "@/i18n/messages/posters";
 import type { Weather } from "./ambiance";
 import type { Airport, CityLayout, Lot, RoadStyle } from "./layout";
 import { createMaterials, type CityMaterials } from "./materials";
@@ -115,6 +117,8 @@ export class CityView {
   private world: World;
   private readonly container: HTMLElement;
   private readonly events: ViewEvents;
+  /** The texts of the placeholder posters, in the page's language. */
+  private readonly posters: PosterLabels;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
@@ -171,8 +175,9 @@ export class CityView {
    */
   heading = 0;
 
-  constructor(container: HTMLElement, world: World | CityLayout, events: ViewEvents = {}) {
+  constructor(container: HTMLElement, world: World | CityLayout, events: ViewEvents = {}, locale: Locale = DEFAULT_LOCALE) {
     this.container = container;
+    this.posters = POSTERS[locale];
     this.world = "parts" in world ? world : singleWorld(world);
     const layout = this.world.layout;
     this.layout = layout;
@@ -962,7 +967,7 @@ export class CityView {
       };
       // An image from a refused site no longer has an address: it is never requested from its site.
       if (refused) {
-        apply(unavailableTexture(board.ratio, "refused"), "refused");
+        apply(unavailableTexture(board.ratio, "refused", this.posters), "refused");
         continue;
       }
       void this.enqueue(async () => {
@@ -972,7 +977,7 @@ export class CityView {
           apply(await loadImageTexture(src), "shown");
         } catch {
           const status = src ? await probeImage(src) : "missing";
-          apply(unavailableTexture(board.ratio, status, board.lot.node.img?.alt), status);
+          apply(unavailableTexture(board.ratio, status, this.posters, board.lot.node.img?.alt), status);
         }
       });
     }

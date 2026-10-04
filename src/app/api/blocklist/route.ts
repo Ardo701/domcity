@@ -8,7 +8,7 @@ import { blocklist } from "@/server/store";
  * A few thousand domains, cached for a few minutes by the browser and by Vercel's network.
  */
 export async function GET() {
-  if (!sharingEnabled()) return Response.json({ error: "Liste indisponible." }, { status: 503 });
+  if (!sharingEnabled()) return Response.json({ error: "List unavailable." }, { status: 503 });
   try {
     const grouped = Object.fromEntries(BLOCK_CATEGORIES.map((category) => [category, [] as string[]])) as Record<
       BlockCategory,
@@ -20,6 +20,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("refused sites list", error);
-    return Response.json({ error: "Liste indisponible." }, { status: 500 });
+    return Response.json({ error: "List unavailable." }, { status: 500 });
   }
 }

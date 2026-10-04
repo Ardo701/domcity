@@ -1,18 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { formatChars, formatCount, type LotInfo } from "@/city/describe";
+import type { LotInfo } from "@/city/describe";
 import type { ImageStatus } from "@/city/textures";
+import { useLocale } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
+import { KINDS_TEXT } from "@/i18n/messages/kinds";
 import { KindSwatch } from "@/ui/KindSwatch";
 import { FitImage } from "./FitImage";
 import styles from "./explorer.module.css";
-
-const IMAGE_STATUS: Record<ImageStatus, string> = {
-  loading: "Chargement de l'affiche…",
-  shown: "Affichée dans la ville",
-  blocked: "Le site de l'image interdit de l'utiliser en 3D. Elle reste visible ici.",
-  missing: "Introuvable : l'image a disparu de son site.",
-  refused: "Masquée : son site est refusé par DOMCity.",
-};
 
 /** Detailed card of the selected element. */
 export function Inspector({
@@ -38,27 +33,28 @@ export function Inspector({
   onFocus: () => void;
   onViewImage: () => void;
 }) {
+  const locale = useLocale();
+  const m = CITY[locale].inspector;
+  const chars = KINDS_TEXT[locale].chars;
   const added = info.ownText || info.gallery;
   // An image from a refused site is neither shown nor described (its alt text can be as crude as the image).
   const refused = info.img?.refused === true;
   const parent = info.path.length > 1 ? info.path[info.path.length - (added ? 1 : 2)] : null;
   const rows: Array<[string, ReactNode]> = [
-    ["Texte propre", formatChars(info.text)],
-    ["Texte en tout", formatChars(info.textTotal)],
-    ["Éléments dedans", info.children > 0 ? `${formatCount(info.children)} directs, ${formatCount(info.descendants)} en tout` : "aucun"],
-    ["Profondeur", `niveau ${info.depth}`],
+    [m.ownText, chars(info.text)],
+    [m.totalText, chars(info.textTotal)],
+    [m.inside, info.children > 0 ? m.insideValue(info.children, info.descendants) : m.none],
+    [m.depth, m.level(info.depth)],
   ];
-  if (info.floors) rows.push(["Hauteur", `${formatCount(info.floors)} étage${info.floors > 1 ? "s" : ""}`]);
-  if (info.links) {
-    rows.splice(3, 0, ["Liens", `${formatCount(info.links.internal)} internes · ${formatCount(info.links.external)} externes`]);
-  }
+  if (info.floors) rows.push([m.height, m.floors(info.floors)]);
+  if (info.links) rows.splice(3, 0, [m.links, m.linksValue(info.links.internal, info.links.external)]);
   if (info.rect) {
-    const [, y, w, h] = info.rect.map(formatCount);
-    rows.push(["Sur la page", `${w} × ${h} px, à ${y} px du haut`]);
+    const [, y, w, h] = info.rect;
+    rows.push([m.onPage, m.onPageValue(w, h, y)]);
   }
   if (info.background) {
     rows.push([
-      "Fond réel",
+      m.background,
       <span key="fond" className={styles.colorValue}>
         <span className={styles.colorChip} style={{ background: info.background }} aria-hidden />
         {info.background}
@@ -67,28 +63,28 @@ export function Inspector({
   }
 
   return (
-    <aside className={styles.inspector} aria-label="Inspecteur">
+    <aside className={styles.inspector} aria-label={m.label}>
       <div className={styles.inspectorHead}>
         <KindSwatch kind={info.kind} size={40} />
         <div>
-          <p className={`${styles.inspectorKicker} mono-caps`}>Élément n° {number}</p>
+          <p className={`${styles.inspectorKicker} mono-caps`}>{m.number(number)}</p>
           <h2>{info.name}</h2>
         </div>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer l'inspecteur">
+        <button type="button" className={styles.close} onClick={onClose} aria-label={m.close}>
           ×
         </button>
       </div>
 
       {page && (
         <p className={styles.inspectorPage}>
-          <span className="mono-caps">Page</span>
+          <span className="mono-caps">{m.page}</span>
           <span className={styles.inspectorPagePath}>{page.path}</span>
-          <Link href={page.href}>Sa ville seule →</Link>
+          <Link href={page.href}>{m.ownCity}</Link>
         </p>
       )}
 
       <code className={styles.selector}>
-        {info.ownText ? `texte direct de <${parent?.selector}>` : info.gallery ? `images de <${parent?.selector}>` : `<${info.selector}>`}
+        {info.ownText ? m.directTextOf(parent?.selector ?? "") : info.gallery ? m.imagesOf(parent?.selector ?? "") : `<${info.selector}>`}
       </code>
       <p className={styles.blurb}>{info.blurb}</p>
 
@@ -97,15 +93,15 @@ export function Inspector({
       {info.img && (
         <div className={styles.imageBlock}>
           {refused ? (
-            <p className={styles.imageMissing}>Image masquée : elle vient d&apos;un site refusé par DOMCity.</p>
+            <p className={styles.imageMissing}>{m.refused}</p>
           ) : info.img.src ? (
-            <button type="button" className={styles.imagePreview} onClick={onViewImage} aria-label="Voir l'image">
+            <button type="button" className={styles.imagePreview} onClick={onViewImage} aria-label={m.viewImage}>
               <FitImage src={info.img.src} alt={info.img.alt ?? ""} minSide={160} lazy />
             </button>
           ) : (
-            <p className={styles.imageMissing}>Pas d&apos;adresse d&apos;image.</p>
+            <p className={styles.imageMissing}>{m.noAddress}</p>
           )}
-          {imageStatus && !refused && <p className={`${styles.imageStatus} mono-caps`}>{IMAGE_STATUS[imageStatus]}</p>}
+          {imageStatus && !refused && <p className={`${styles.imageStatus} mono-caps`}>{m.status[imageStatus]}</p>}
           {info.img.alt && !refused && <p className={styles.alt}>{info.img.alt}</p>}
         </div>
       )}
@@ -120,7 +116,7 @@ export function Inspector({
       </dl>
 
       <div className={styles.pathBlock}>
-        <p className="mono-caps">Adresse dans la page</p>
+        <p className="mono-caps">{m.path}</p>
         <ol className={styles.path}>
           {info.path.map((step) => (
             <li key={step.id}>
@@ -140,12 +136,12 @@ export function Inspector({
       <div className={styles.actions}>
         {canFocus && (
           <button type="button" className={styles.primary} onClick={onFocus}>
-            Approcher
+            {m.approach}
           </button>
         )}
         {parent && !added && (
           <button type="button" className={styles.secondary} onClick={() => onSelect(parent.id)}>
-            Voir le parent
+            {m.parent}
           </button>
         )}
       </div>

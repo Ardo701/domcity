@@ -16,9 +16,9 @@ export function GithubMark() {
 }
 
 /** Button to the DOMCity code, on the right of the header. */
-export function GithubLink({ className }: { className?: string }) {
+export function GithubLink({ label, className }: { label: string; className?: string }) {
   return (
-    <a className={className ? `${styles.github} ${className}` : styles.github} href={REPO_URL} target="_blank" rel="noreferrer" aria-label="Le code de DOMCity sur GitHub">
+    <a className={className ? `${styles.github} ${className}` : styles.github} href={REPO_URL} target="_blank" rel="noreferrer" aria-label={label}>
       <GithubMark />
       <span className="mono-caps">GitHub</span>
     </a>

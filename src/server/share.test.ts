@@ -55,34 +55,34 @@ describe("uploaded files", () => {
 
   it("refuses a malformed city", () => {
     const bad = { ...DOC, root: { tag: "BODY<script>" } };
-    expect(() => readUploadedCity(new Uint8Array(gzipSync(JSON.stringify(bad))))).toThrow(/Ville invalide/);
+    expect(() => readUploadedCity(new Uint8Array(gzipSync(JSON.stringify(bad))))).toThrow(expect.objectContaining({ code: "cityInvalid" }));
   });
 
   it("refuses to publish a local or intranet page", async () => {
     for (const url of ["http://localhost:3000/admin", "http://192.168.1.20/", "https://nas.local/photos"]) {
-      await expect(shareCity({ ...DOC, url }, null)).rejects.toThrow(/locales/);
+      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ code: "localPage" });
     }
   });
 
   it("refuses to publish a refused site (the database list), or a page that declares itself adults only", async () => {
-    const cases: Array<[string, RegExp]> = [
-      ["https://fr.pornhub.com/", /sites pour adultes/],
-      ["https://www.exemple.xxx/page", /sites pour adultes/],
-      ["https://mabanque.bnpparibas/fr/connexion", /banques/],
-      ["https://mail.google.com/mail/u/0/", /messageries/],
+    const cases: Array<[string, string]> = [
+      ["https://fr.pornhub.com/", "adult"],
+      ["https://www.exemple.xxx/page", "adult"],
+      ["https://mabanque.bnpparibas/fr/connexion", "bank"],
+      ["https://mail.google.com/mail/u/0/", "private"],
     ];
-    for (const [url, message] of cases) {
-      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ status: 403, message: expect.stringMatching(message) });
+    for (const [url, refusal] of cases) {
+      await expect(shareCity({ ...DOC, url }, null)).rejects.toMatchObject({ status: 403, code: "refused", detail: refusal });
     }
-    await expect(shareCity({ ...DOC, page: { adult: true } }, null)).rejects.toThrow(/réservée aux adultes/);
+    await expect(shareCity({ ...DOC, page: { adult: true } }, null)).rejects.toMatchObject({ code: "refused", detail: "adult-page" });
   });
 
   it("only accepts JPEG thumbnails", () => {
     expect(readThumbnail(JPEG)).toBe(JPEG);
-    expect(() => readThumbnail(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toThrow(/JPEG/);
+    expect(() => readThumbnail(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toThrow(expect.objectContaining({ code: "thumbNotJpeg" }));
     // An image other than the engine's (a screenshot, a photo) does not have its format.
-    expect(() => readThumbnail(jpeg(800, 600))).toThrow(/1200 × 630/);
-    expect(() => readThumbnail(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))).toThrow(/1200 × 630/);
+    expect(() => readThumbnail(jpeg(800, 600))).toThrow(expect.objectContaining({ code: "thumbSize", detail: "1200 × 630" }));
+    expect(() => readThumbnail(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))).toThrow(expect.objectContaining({ code: "thumbSize" }));
   });
 });
 
@@ -98,7 +98,7 @@ describe("sharing from start to finish (local database)", () => {
   it("publishes the city with a cleaned address", async () => {
     const city = await store.getCapture(slug);
     expect(city).toMatchObject({ domain: "exemple.org", path: "/livres", title: "Les livres", source: "bookmarklet" });
-    // The address the browser keeps in "Votre compte": the same, cleaned.
+    // The address the browser keeps in "Your account": the same, cleaned.
     expect(pageUrl).toBe("https://exemple.org/livres");
     expect(city?.stats.thumbnail).toBe(true);
     expect(city?.stats.monuments).toBe(1);

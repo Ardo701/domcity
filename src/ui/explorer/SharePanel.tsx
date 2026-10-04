@@ -6,6 +6,8 @@ import type { WikiLang } from "@/capture/wikipedia";
 import { sharedCityPath } from "@/format/shared";
 import type { CityDoc, CityNode } from "@/format/types";
 import { normalizePageUrl } from "@/format/url";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import { gzipCity } from "@/ui/loadShared";
 import { rememberCity } from "@/ui/savedCities";
 import { CopyField } from "./CopyField";
@@ -43,6 +45,7 @@ export function SharePanel({
   takeSnapshot: () => Promise<Blob | null>;
   onClose: () => void;
 }) {
+  const m = useMessages(CITY).share;
   const [state, setState] = useState<State>({ step: "preview" });
   const [thumb, setThumb] = useState<{ blob: Blob; url: string } | null>(null);
   const [title, setTitle] = useState(doc.title);
@@ -54,14 +57,10 @@ export function SharePanel({
     const pages = doc.linksTo?.pages?.length ?? 0;
     const sites = doc.linksTo?.sites?.map(([domain]) => domain) ?? [];
     const out: string[] = [];
-    if (pages > 0) {
-      out.push(`${pages} autre${pages > 1 ? "s" : ""} page${pages > 1 ? "s" : ""} du site (une empreinte de chaque adresse, pas l'adresse)`);
-    }
-    if (sites.length > 0) {
-      out.push(`${sites.length} site${sites.length > 1 ? "s" : ""} (${sites.slice(0, 6).join(", ")}${sites.length > 6 ? "…" : ""})`);
-    }
+    if (pages > 0) out.push(m.otherPages(pages));
+    if (sites.length > 0) out.push(m.sites(sites.length, `${sites.slice(0, 6).join(", ")}${sites.length > 6 ? "…" : ""}`));
     return out;
-  }, [doc]);
+  }, [doc, m]);
 
   useEffect(() => {
     let url: string | null = null;
@@ -96,9 +95,9 @@ export function SharePanel({
         form.set("title", doc.title);
       } else {
         form.set("source", "bookmarklet");
-        form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "ville.json.gz");
+        form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "city.json.gz");
       }
-      if (thumb) form.set("thumbnail", thumb.blob, "miniature.jpg");
+      if (thumb) form.set("thumbnail", thumb.blob, "thumbnail.jpg");
       const response = await fetch("/api/captures", { method: "POST", body: form });
       const data = (await response.json()) as {
         slug?: string;
@@ -110,7 +109,7 @@ export function SharePanel({
         error?: string;
       };
       if (!response.ok || !data.slug || !data.url || !data.deleteUrl || !data.token) {
-        setState({ step: "error", message: data.error ?? "Le partage a échoué." });
+        setState({ step: "error", message: data.error ?? m.failed });
         return;
       }
       rememberCity({
@@ -122,7 +121,7 @@ export function SharePanel({
       });
       setState({ step: "done", slug: data.slug, url: data.url, deleteUrl: data.deleteUrl });
     } catch {
-      setState({ step: "error", message: "Connexion impossible. Réessayez dans un instant." });
+      setState({ step: "error", message: m.offline });
     }
   };
 
@@ -131,11 +130,11 @@ export function SharePanel({
       <section className={styles.modal}>
         <div className={styles.modalHead}>
           <div>
-            <p className="mono-caps">{state.step === "done" ? "Ville publiée" : "Partager la ville"}</p>
+            <p className="mono-caps">{state.step === "done" ? m.published : m.kicker}</p>
             <h2 id="share-title">{bookmarklet ? title || doc.title : doc.title}</h2>
           </div>
           {state.step !== "sending" && (
-            <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">
+            <button type="button" className={styles.close} onClick={onClose} aria-label={m.close}>
               ×
             </button>
           )}
@@ -143,18 +142,15 @@ export function SharePanel({
 
         {state.step === "done" ? (
           <div className={styles.shareDone}>
-            <CopyField label="Lien public, à partager" value={state.url} />
-            <CopyField label="Lien secret de suppression" value={state.deleteUrl} secret />
-            <p className={styles.warning}>
-              Le lien secret permet de supprimer la ville. Gardez-le pour vous : il n&apos;est affiché qu&apos;une
-              fois. Ce navigateur s&apos;en souvient aussi, dans « Vos villes » sur l&apos;accueil.
-            </p>
+            <CopyField label={m.publicLink} value={state.url} />
+            <CopyField label={m.secretLink} value={state.deleteUrl} secret />
+            <p className={styles.warning}>{m.warning}</p>
             <div className={styles.actionsRow}>
               <Link href={sharedCityPath(state.slug)} className={styles.primary}>
-                Voir la ville partagée
+                {m.seeCity}
               </Link>
               <button type="button" className={styles.secondary} onClick={onClose}>
-                Fermer
+                {m.close}
               </button>
             </div>
           </div>
@@ -163,20 +159,17 @@ export function SharePanel({
             <div className={styles.thumbFrame}>
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumb.url} alt="Miniature de la ville" />
+                <img src={thumb.url} alt={m.thumbAlt} />
               ) : (
-                <span className="mono-caps">Rendu de la maquette…</span>
+                <span className="mono-caps">{m.rendering}</span>
               )}
             </div>
-            <p className={styles.thumbNote}>
-              L&apos;image de la ville est faite par DOMCity : toute la maquette, toujours vue du même angle. Elle sert
-              d&apos;aperçu sur les réseaux et dans la galerie.
-            </p>
+            <p className={styles.thumbNote}>{m.thumbNote}</p>
 
             {bookmarklet && (
               <>
                 <label className={styles.titleField}>
-                  <span className="mono-caps">Titre publié</span>
+                  <span className="mono-caps">{m.titleField}</span>
                   <input
                     value={title}
                     maxLength={300}
@@ -184,40 +177,32 @@ export function SharePanel({
                     disabled={state.step === "sending"}
                   />
                 </label>
-                <p className={styles.privacy}>
-                  <strong>Page privée ? Ne la publiez pas.</strong> Messagerie, compte client, document interne : sa
-                  structure et ses titres deviendraient visibles de tous. La ville portera la mention « relevé par un
-                  visiteur ».
-                </p>
+                <p className={styles.privacy}>{m.privacy}</p>
               </>
             )}
 
             <div className={styles.published}>
-              <p className="mono-caps">Ce qui sera publié</p>
+              <p className="mono-caps">{m.whatTitle}</p>
               <ul>
                 {address && (
                   <li>
-                    L&apos;adresse de la page, sans ses paramètres : <code className={styles.address}>{address.domain}{address.path}</code>
+                    {m.address}{" "}
+                    <code className={styles.address}>
+                      {address.domain}
+                      {address.path}
+                    </code>
                   </li>
                 )}
-                <li>La structure de la page : les balises, leur imbrication, la quantité de texte.</li>
-                <li>Les adresses des images, pas les images elles-mêmes.</li>
-                {bookmarklet && (
-                  <li>
-                    La position et la couleur de fond de chaque élément, les images cassées, le nombre de
-                    commentaires HTML
-                    {thirdParty > 0 ? `, le nombre de scripts et les ${thirdParty} sites tiers contactés par la page` : ""}.
-                  </li>
-                )}
-                {linkTargets.length > 0 && <li>Où mènent ses liens : {linkTargets.join(", et ")}.</li>}
-                <li>
-                  Le texte des titres, et lui seulement ({headings.length} titre{headings.length > 1 ? "s" : ""}) :
-                </li>
+                <li>{m.structure}</li>
+                <li>{m.images}</li>
+                {bookmarklet && <li>{m.bookmarklet(thirdParty)}</li>}
+                {linkTargets.length > 0 && <li>{m.linksTo(linkTargets)}</li>}
+                <li>{m.headings(headings.length)}</li>
               </ul>
               {headings.length > 0 && (
                 <p className={styles.headingList}>
                   {headings.slice(0, 12).join(" · ")}
-                  {headings.length > 12 ? ` · et ${headings.length - 12} autres` : ""}
+                  {headings.length > 12 ? m.moreHeadings(headings.length - 12) : ""}
                 </p>
               )}
             </div>
@@ -230,10 +215,10 @@ export function SharePanel({
 
             <div className={styles.actionsRow}>
               <button type="button" className={styles.primary} onClick={publish} disabled={state.step === "sending"}>
-                {state.step === "sending" ? "Publication…" : "Publier la ville"}
+                {state.step === "sending" ? m.publishing : m.publish}
               </button>
               <button type="button" className={styles.secondary} onClick={onClose} disabled={state.step === "sending"}>
-                Annuler
+                {m.cancel}
               </button>
             </div>
           </>

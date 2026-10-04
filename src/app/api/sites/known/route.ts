@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const sites = await knownSites(domains);
     return Response.json({ sites }, { headers: { "cache-control": "public, max-age=300" } });
   } catch (error) {
-    console.error("sites connus", error);
+    console.error("known sites", error);
     return Response.json({ sites: [] }, { status: 500 });
   }
 }

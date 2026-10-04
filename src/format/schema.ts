@@ -94,8 +94,8 @@ export function validateCityDoc(data: unknown): ValidationResult {
   while (stack.length > 0) {
     const [node, depth] = stack.pop()!;
     count += 1;
-    if (count > LIMITS.maxNodes) return { ok: false, error: `plus de ${LIMITS.maxNodes} éléments` };
-    if (depth > LIMITS.maxDepth) return { ok: false, error: `profondeur supérieure à ${LIMITS.maxDepth}` };
+    if (count > LIMITS.maxNodes) return { ok: false, error: `more than ${LIMITS.maxNodes} elements` };
+    if (depth > LIMITS.maxDepth) return { ok: false, error: `deeper than ${LIMITS.maxDepth}` };
     const children = (node as { children?: unknown } | null)?.children;
     if (Array.isArray(children)) {
       for (const child of children) stack.push([child, depth + 1]);
@@ -105,7 +105,7 @@ export function validateCityDoc(data: unknown): ValidationResult {
   const parsed = cityDocSchema.safeParse(data);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return { ok: false, error: `${issue.path.join(".") || "racine"} : ${issue.message}` };
+    return { ok: false, error: `${issue.path.join(".") || "root"}: ${issue.message}` };
   }
   return { ok: true, doc: parsed.data as CityDoc };
 }

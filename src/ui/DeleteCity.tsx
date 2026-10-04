@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { sharedCityPath } from "@/format/shared";
+import { useMessages } from "@/i18n/client";
+import { DELETE } from "@/i18n/messages/pages";
 import { forgetCity } from "./savedCities";
 import styles from "./Sheet.module.css";
 
@@ -14,6 +16,7 @@ const subscribeHash = (onChange: () => void) => {
 const readToken = () => decodeURIComponent(window.location.hash.slice(1));
 
 export function DeleteCity({ slug, title }: { slug: string; title: string | null }) {
+  const m = useMessages(DELETE);
   const token = useSyncExternalStore(subscribeHash, readToken, () => "");
   const [state, setState] = useState<"confirm" | "sending" | "done" | { error: string }>("confirm");
 
@@ -27,24 +30,24 @@ export function DeleteCity({ slug, title }: { slug: string; title: string | null
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
-        setState({ error: data.error ?? "La suppression a échoué." });
+        setState({ error: data.error ?? m.failed });
         return;
       }
       forgetCity(slug);
       window.history.replaceState(null, "", window.location.pathname);
       setState("done");
     } catch {
-      setState({ error: "Connexion impossible. Réessayez dans un instant." });
+      setState({ error: m.offline });
     }
   };
 
   if (state === "done") {
     return (
       <div className={styles.card}>
-        <p>La ville a été supprimée, avec ses fichiers. Son lien public ne mène plus nulle part.</p>
+        <p>{m.done}</p>
         <div className={styles.actions}>
           <Link href="/" className={styles.ghost}>
-            Retour à l&apos;accueil
+            {m.home}
           </Link>
         </div>
       </div>
@@ -54,10 +57,7 @@ export function DeleteCity({ slug, title }: { slug: string; title: string | null
   if (!token) {
     return (
       <div className={styles.card}>
-        <p>
-          Ce lien est incomplet : il manque le jeton secret, la partie après le « # ». Utilisez le lien de suppression
-          complet reçu au moment du partage.
-        </p>
+        <p>{m.incomplete}</p>
       </div>
     );
   }
@@ -67,20 +67,20 @@ export function DeleteCity({ slug, title }: { slug: string; title: string | null
       <p>
         {title ? (
           <>
-            Vous allez supprimer la ville <strong>« {title} »</strong>.
+            {m.confirmNamed} <strong>{m.quoted(title)}</strong>.
           </>
         ) : (
-          <>Vous allez supprimer cette ville.</>
+          <>{m.confirm}</>
         )}{" "}
-        Son lien public cessera de fonctionner. C&apos;est définitif.
+        {m.final}
       </p>
       {typeof state === "object" && <p className={styles.alert}>{state.error}</p>}
       <div className={styles.actions}>
         <button type="button" className={styles.button} onClick={remove} disabled={state === "sending"}>
-          {state === "sending" ? "Suppression…" : "Supprimer définitivement"}
+          {state === "sending" ? m.deleting : m.submit}
         </button>
         <Link href={sharedCityPath(slug)} className={styles.ghost}>
-          Annuler
+          {m.cancel}
         </Link>
       </div>
     </div>

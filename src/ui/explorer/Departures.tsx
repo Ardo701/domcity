@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { formatCount } from "@/city/describe";
 import type { Airport } from "@/city/layout";
+import { useMessages } from "@/i18n/client";
+import { CITY } from "@/i18n/messages/city";
 import { sitePath, type KnownSite } from "@/format/shared";
 import { KindSwatch } from "@/ui/KindSwatch";
 import styles from "./explorer.module.css";
@@ -14,6 +15,7 @@ import styles from "./explorer.module.css";
  * have cities on DOMCity can be opened.
  */
 export function Departures({ airport, scope, onClose }: { airport: Airport; scope: string; onClose: () => void }) {
+  const m = useMessages(CITY).departures;
   const [known, setKnown] = useState<Map<string, number>>(new Map());
   const destinations = airport.destinations;
   const flying = new Set(airport.flights.map((flight) => flight.domain));
@@ -39,29 +41,24 @@ export function Departures({ airport, scope, onClose }: { airport: Airport; scop
   }, [onClose]);
 
   return (
-    <aside className={styles.inspector} aria-label="Tableau des départs">
+    <aside className={styles.inspector} aria-label={m.label}>
       <div className={styles.inspectorHead}>
         <KindSwatch kind="airport" size={40} />
         <div>
           <p className={`${styles.inspectorKicker} mono-caps`}>
-            {small ? "Aérodrome" : "Hors les murs"} · {scope}
+            {small ? m.airfield : m.outside} · {scope}
           </p>
-          <h2>Départs</h2>
+          <h2>{m.title}</h2>
         </div>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer le tableau des départs">
+        <button type="button" className={styles.close} onClick={onClose} aria-label={m.close}>
           ×
         </button>
       </div>
       <p className={styles.blurb}>
-        {small
-          ? `${formatCount(airport.external)} liens de cette page mènent vers d'autres sites. Ses longs courriers partent du grand aéroport du site, à l'est.`
-          : `${formatCount(airport.external)} liens mènent vers d'autres sites. Chaque destination est un site visé ; les premières ont leur avion en vol.`}
+        {small ? m.airfieldBlurb(airport.external) : m.airportBlurb(airport.external)}
       </p>
       {destinations.length === 0 ? (
-        <p className={styles.blurb}>
-          Ce relevé ne dit pas encore vers quels sites mènent ses liens : seules les villes relevées depuis
-          octobre 2026 le savent.
-        </p>
+        <p className={styles.blurb}>{m.unknown}</p>
       ) : (
         <ol className={styles.board}>
           {destinations.map(([domain, links], i) => {
@@ -72,18 +69,16 @@ export function Departures({ airport, scope, onClose }: { airport: Airport; scop
                 <span className={styles.boardDomain} title={domain}>
                   {domain}
                 </span>
-                <span className={styles.boardLinks}>
-                  {formatCount(links)} lien{links > 1 ? "s" : ""}
-                </span>
+                <span className={styles.boardLinks}>{m.links(links)}</span>
                 <span className={styles.boardStatus}>
                   {pages ? (
-                    <Link href={sitePath(domain)} title={`${pages} page${pages > 1 ? "s" : ""} sur DOMCity`}>
-                      Voir sa ville →
+                    <Link href={sitePath(domain)} title={m.pagesOnDomcity(pages)}>
+                      {m.seeCity}
                     </Link>
                   ) : flying.has(domain) ? (
-                    "En vol"
+                    m.inFlight
                   ) : (
-                    "À l'heure"
+                    m.onTime
                   )}
                 </span>
               </li>

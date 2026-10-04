@@ -1,63 +1,68 @@
 import Link from "next/link";
+import { COMMON } from "@/i18n/messages/common";
+import { getMessages } from "@/i18n/server";
 import { sharingEnabled } from "@/server/config";
 import { GithubMark, REPO_URL } from "./GithubLink";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { Wordmark } from "./Logo";
 import styles from "./SiteFooter.module.css";
 
-/** The footer of the site's pages: the brand, the pages, the project, the legal pages. */
-export function SiteFooter() {
+/** The footer of the site's pages: the brand, the pages, the project, the legal pages, the language. */
+export async function SiteFooter() {
   const sharing = sharingEnabled();
+  const m = await getMessages(COMMON);
+  const f = m.footer;
   return (
     <footer className={styles.footer}>
       <div className={styles.top}>
         <div className={styles.about}>
-          <Link href="/" className={styles.brand} aria-label="DOMCity, accueil">
+          <Link href="/" className={styles.brand} aria-label={m.homeLabel}>
             <Wordmark />
           </Link>
-          <p>Chaque page web est une ville. Relevez une page, DOMCity la construit en 3D et vous la fait visiter.</p>
+          <p>{f.about}</p>
         </div>
 
-        <nav className={styles.columns} aria-label="Pied de page">
+        <nav className={styles.columns} aria-label={f.label}>
           <div>
-            <h2 className="mono-caps">Villes</h2>
+            <h2 className="mono-caps">{f.cities}</h2>
             <ul>
               {sharing && (
                 <li>
-                  <Link href="/explore">Découvrir</Link>
+                  <Link href="/explore">{m.nav.explore}</Link>
                 </li>
               )}
               <li>
-                <Link href="/create">Créer une ville</Link>
+                <Link href="/create">{m.nav.create}</Link>
               </li>
               {sharing && (
                 <li>
-                  <Link href="/account">Votre compte</Link>
+                  <Link href="/account">{m.nav.account}</Link>
                 </li>
               )}
             </ul>
           </div>
           <div>
-            <h2 className="mono-caps">Projet</h2>
+            <h2 className="mono-caps">{f.project}</h2>
             <ul>
               <li>
                 <a href={REPO_URL} target="_blank" rel="noreferrer" className={styles.github}>
                   <GithubMark />
-                  Code source
+                  {f.sourceCode}
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h2 className="mono-caps">Légal</h2>
+            <h2 className="mono-caps">{f.legal}</h2>
             <ul>
               <li>
-                <Link href="/legal">Mentions légales</Link>
+                <Link href="/legal">{f.legalNotice}</Link>
               </li>
               <li>
-                <Link href="/terms">Conditions d&apos;utilisation</Link>
+                <Link href="/terms">{f.terms}</Link>
               </li>
               <li>
-                <Link href="/privacy">Confidentialité</Link>
+                <Link href="/privacy">{f.privacy}</Link>
               </li>
             </ul>
           </div>
@@ -66,8 +71,9 @@ export function SiteFooter() {
 
       <div className={styles.bottom}>
         <span className="mono-caps">© 2026 DOMCity</span>
+        <LanguageSwitch />
         <a href="#" className="mono-caps">
-          Haut de page ↑
+          {f.top}
         </a>
       </div>
     </footer>

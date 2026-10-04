@@ -1,7 +1,7 @@
 import type { CityLayout } from "@/city/layout";
 
 /**
- * The sheet's figures (the home page, the Installer page) are real images from the 3D engine,
+ * The sheet's figures (the home page, the Create a city page) are real images from the 3D engine,
  * rendered in development (/dev/figure) and versioned: the page stays light, without Three.js.
  * They come with their camera's matrix, to put the markers in the right place,
  * and with the fingerprint of the urban plan they show: a test fails if the engine has changed

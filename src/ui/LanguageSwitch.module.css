@@ -1,0 +1,33 @@
+/* Two small keys side by side, framed in ink like the GitHub button: the page's language is inked in. */
+.switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink);
+  overflow: hidden;
+}
+
+.switch button {
+  padding: 7px 9px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.switch button + button {
+  border-left: 1.5px solid var(--ink);
+}
+
+.switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+  cursor: default;
+}
+
+.switch button[aria-pressed="false"]:hover {
+  background: var(--beacon);
+}
