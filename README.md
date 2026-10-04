@@ -205,6 +205,11 @@ production, sharing is simply hidden).
   carry meaning (construction orange for actions and monuments, beacon yellow for hover and selection).
 - Decisions, the history of the project and what comes next are in [`docs/ROADMAP.md`](docs/ROADMAP.md) (in French).
 
+## License
+
+DOMCity is released under the [MIT license](LICENSE). It covers the code; it does not allow using the DOMCity name
+or logo to present another site.
+
 ## Credits
 
 Built with [Three.js](https://threejs.org), [Next.js](https://nextjs.org), [Supabase](https://supabase.com) and the

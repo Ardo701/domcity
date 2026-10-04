@@ -18,4 +18,4 @@ export const PUBLISHER = {
 };
 
 /** Date of the last update of the legal pages. */
-export const LEGAL_UPDATED = "3 octobre 2026";
+export const LEGAL_UPDATED = "4 octobre 2026";

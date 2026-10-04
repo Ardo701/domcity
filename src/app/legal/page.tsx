@@ -66,8 +66,10 @@ export default function LegalNoticePage() {
         Le code de DOMCity est publié sur{" "}
         <a href={REPO_URL} target="_blank" rel="noreferrer">
           GitHub
-        </a>
-        . Le nom, le logo et l&apos;identité visuelle de DOMCity appartiennent à son éditeur.
+        </a>{" "}
+        sous licence MIT : chacun peut le reprendre et le modifier, y compris à des fins commerciales, en gardant la
+        mention de son auteur. Elle ne donne pas le droit d&apos;utiliser le nom DOMCity, son logo ou son identité
+        visuelle pour désigner un autre site : ils appartiennent à son éditeur.
       </p>
 
       <h2>Signaler un contenu</h2>
