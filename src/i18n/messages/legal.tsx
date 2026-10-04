@@ -357,9 +357,14 @@ export const PRIVACY = defineMessages<LegalText>({
           To know whether a site is refused (adult sites, banks, messaging…), your browser downloads the whole list of
           refused sites and checks on its own: DOMCity does not learn which page you capture.
         </p>
+        <p>
+          When you open “Share”, your browser asks DOMCity which pages of the site were published less than 30 days ago,
+          to warn you before you publish a new version. It only sends the name of the site (example.org), never the
+          address of the page: it looks for the page among the answers itself.
+        </p>
 
         <h2>What stays in your browser</h2>
-        <p>As long as you do not publish, nothing leaves your browser. It keeps:</p>
+        <p>Apart from that, nothing leaves your browser as long as you do not publish. It keeps:</p>
         <ul>
           <li>the current capture, for the session (it disappears when you close the tab);</li>
           <li>
@@ -479,9 +484,14 @@ export const PRIVACY = defineMessages<LegalText>({
           Pour savoir si un site est refusé (sites pour adultes, banques, messageries…), votre navigateur télécharge la
           liste entière des sites refusés et vérifie lui-même : DOMCity n&apos;apprend pas quelle page vous relevez.
         </p>
+        <p>
+          Quand vous ouvrez « Partager », votre navigateur demande à DOMCity quelles pages du site ont été publiées il y a
+          moins de 30 jours, pour vous prévenir avant de publier une nouvelle version. Il n&apos;envoie que le nom du site
+          (exemple.org), jamais l&apos;adresse de la page : il cherche lui-même la page parmi les réponses.
+        </p>
 
         <h2>Ce qui reste dans votre navigateur</h2>
-        <p>Tant que vous ne publiez pas, rien ne quitte votre navigateur. Il garde :</p>
+        <p>À part cela, tant que vous ne publiez pas, rien ne quitte votre navigateur. Il garde :</p>
         <ul>
           <li>le relevé en cours, le temps de la session (il disparaît quand vous fermez l&apos;onglet) ;</li>
           <li>

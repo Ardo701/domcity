@@ -1329,6 +1329,11 @@
   line-height: 1.5;
 }
 
+.recentVersion a {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .actionsRow {
   display: flex;
   flex-wrap: wrap;

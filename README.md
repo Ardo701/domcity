@@ -77,8 +77,8 @@ What the page does without showing it becomes visible in the city.
 
 ## The megalopolis
 
-Every capture is a dated version of a page (a new version less than 30 days after the previous one asks for a
-confirmation). All the pages of a site come together in a megalopolis: each page is a
+Every capture is a dated version of a page (the share panel warns when the page already has a version less than 30
+days old). All the pages of a site come together in a megalopolis: each page is a
 city, placed according to its address (the path becomes the geography). When one page links to another, a highway
 connects their cities. The site gets a large shared airport, and every city open enough to the web keeps its own
 airfield.
@@ -90,8 +90,9 @@ airfield.
 - The text of the page is never stored, only how much there is. The one exception is the `h1` to `h3` headings
   (shortened to 120 characters), engraved on the monuments. The list is shown before publishing.
 - Addresses are cleaned: no `?query`, no `#anchor`, no `www.`.
-- Nothing leaves the browser until "Publish" is clicked. The bookmarklet never reads paragraphs, form fields or
-  cookies.
+- Nothing from the page leaves the browser until "Publish" is clicked. Opening "Share" only sends the site's name, to
+  warn when the page already has a city less than 30 days old (the browser finds the page among the answers itself).
+  The bookmarklet never reads paragraphs, form fields or cookies.
 - Links to other pages of the same site are only kept as fingerprints (FNV-1a hashes of their paths): a private path
   cannot be read in a shared city.
 - Each shared city comes with a secret deletion link. Its token sits after the `#`, so it is never sent to the server
@@ -174,7 +175,7 @@ search, the gallery and the megalopolis all work without an account.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server, sharing in local mode |
-| `npm test` | 130 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
+| `npm test` | 131 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
 | `npm run bookmarklet` | Recompiles the bookmarklet (`src/bookmarklet/generated.ts`) after a change in `src/capture` or `src/bookmarklet` |

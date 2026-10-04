@@ -61,7 +61,7 @@ export const CREATE = defineMessages<CreateMessages>({
     transparency: "Transparency",
     readTitle: "What the bookmarklet captures",
     readLead:
-      "The bookmarklet only reads the page, in your browser. Nothing leaves your computer until you click “Publish”: DOMCity first shows you everything that will be sent.",
+      "The bookmarklet only reads the page, in your browser. Nothing from the page leaves your computer until you click “Publish”: DOMCity first shows you everything that will be sent. Opening “Share” only sends the name of the site, to tell you whether the page already has a recent city.",
     readColumn: "Captured",
     read: [
       "The structure of the page: the tags and how they nest",
@@ -148,7 +148,7 @@ export const CREATE = defineMessages<CreateMessages>({
     transparency: "Transparence",
     readTitle: "Ce que le favori relève",
     readLead:
-      "Le favori ne fait que lire la page, dans votre navigateur. Rien ne quitte votre ordinateur tant que vous ne cliquez pas sur « Publier » : DOMCity vous montre d'abord tout ce qui partira.",
+      "Le favori ne fait que lire la page, dans votre navigateur. Rien de la page ne quitte votre ordinateur tant que vous ne cliquez pas sur « Publier » : DOMCity vous montre d'abord tout ce qui partira. Ouvrir « Partager » n'envoie que le nom du site, pour vous dire si la page a déjà une ville récente.",
     readColumn: "Relevé",
     read: [
       "La structure de la page : les balises et leur imbrication",

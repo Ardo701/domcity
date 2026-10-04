@@ -131,15 +131,31 @@ export function statsOf(doc: CityDoc): CityStatsSummary {
   return { ...layout.stats, elements: layout.lots.length };
 }
 
+const isRecent = (capturedAt: Date) => Date.now() - capturedAt.getTime() < RECENT_VERSION_DAYS * 86_400_000;
+
+/**
+ * The pages of a site whose latest visible version is less than 30 days old. Asked when the share panel opens,
+ * with the site's name only: the browser looks for its page among them, so the page's address is not sent.
+ */
+export async function recentPageVersions(domain: string): Promise<Array<ExistingVersion & { path: string }>> {
+  const pages = await store.sitePages(domain);
+  return pages.flatMap(({ path, latestSlug, lastCaptureAt }) => {
+    if (!latestSlug || !lastCaptureAt) return [];
+    const capturedAt = new Date(lastCaptureAt);
+    return isRecent(capturedAt) ? [{ path, slug: latestSlug, capturedAt: capturedAt.toISOString() }] : [];
+  });
+}
+
 /**
  * The latest visible version of the page, if it was published less than 30 days ago and the visitor has not
- * confirmed over it. A hidden version (reports) does not count.
+ * confirmed over it. A hidden version (reports) does not count. The share panel usually knows it already
+ * (recentPageVersions): this is the last word, for a version published in the meantime.
  */
 async function checkRecentVersion(domain: string, path: string, newVersionOf: string | null): Promise<void> {
   const [latest] = await store.pageVersions(domain, path);
   if (!latest || latest.slug === newVersionOf) return;
   const capturedAt = new Date(latest.capturedAt);
-  if (Date.now() - capturedAt.getTime() < RECENT_VERSION_DAYS * 86_400_000) {
+  if (isRecent(capturedAt)) {
     throw new RecentVersion({ slug: latest.slug, capturedAt: capturedAt.toISOString() });
   }
 }

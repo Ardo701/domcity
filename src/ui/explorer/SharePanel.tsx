@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { WikiLang } from "@/capture/wikipedia";
 import { sharedCityPath, type ExistingVersion, type RecentVersionAnswer } from "@/format/shared";
 import type { CityDoc, CityNode } from "@/format/types";
-import { normalizePageUrl } from "@/format/url";
+import { isPublicHost, normalizePageUrl } from "@/format/url";
 import { useMessages } from "@/i18n/client";
 import { CITY } from "@/i18n/messages/city";
 import { gzipCity } from "@/ui/loadShared";
@@ -17,9 +17,7 @@ type State =
   | { step: "preview" }
   | { step: "sending" }
   | { step: "done"; slug: string; url: string; deleteUrl: string }
-  | { step: "error"; message: string }
-  // The page has a city published less than 30 days ago: publishing again needs a confirmation.
-  | { step: "recent"; existing: ExistingVersion };
+  | { step: "error"; message: string };
 
 function headingsOf(root: CityNode): string[] {
   const out: string[] = [];
@@ -53,6 +51,9 @@ export function SharePanel({
   const [title, setTitle] = useState(doc.title);
   const headings = useMemo(() => headingsOf(doc.root), [doc]);
   const address = useMemo(() => normalizePageUrl(doc.url), [doc]);
+  // The page's city published less than 30 days ago, if any: the panel warns before publishing a new version.
+  const [existing, setExisting] = useState<ExistingVersion | null>(null);
+  const notice = useRef<HTMLParagraphElement>(null);
   const bookmarklet = source.kind === "bookmarklet";
   const thirdParty = doc.page?.thirdParty?.length ?? 0;
   const linkTargets = useMemo(() => {
@@ -78,6 +79,25 @@ export function SharePanel({
     };
   }, [takeSnapshot]);
 
+  // Asked with the site's name only: the page is looked for here, its address does not leave the browser.
+  useEffect(() => {
+    if (!address || !isPublicHost(address.domain)) return;
+    const controller = new AbortController();
+    fetch(`/api/sites/recent?d=${encodeURIComponent(address.domain)}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : { pages: [] }))
+      .then((data: { pages?: Array<ExistingVersion & { path: string }> }) => {
+        const page = data.pages?.find((candidate) => candidate.path === address.path);
+        if (page) setExisting((current) => current ?? { slug: page.slug, capturedAt: page.capturedAt });
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [address]);
+
+  // Learned when publishing (a version published in the meantime): the warning is at the top of the panel.
+  useEffect(() => {
+    if (existing) notice.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [existing]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && state.step !== "sending") onClose();
@@ -86,8 +106,7 @@ export function SharePanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, state.step]);
 
-  /** `newVersionOf`: the recent version the visitor confirmed over. */
-  const publish = async (newVersionOf?: string) => {
+  const publish = async () => {
     setState({ step: "sending" });
     const publishedTitle = title.replace(/\s+/g, " ").trim() || doc.title;
     const form = new FormData();
@@ -101,7 +120,8 @@ export function SharePanel({
         form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "city.json.gz");
       }
       if (thumb) form.set("thumbnail", thumb.blob, "thumbnail.jpg");
-      if (newVersionOf) form.set("newVersionOf", newVersionOf);
+      // The warning was shown: publishing is confirming over that version.
+      if (existing) form.set("newVersionOf", existing.slug);
       const response = await fetch("/api/captures", { method: "POST", body: form });
       const data = (await response.json()) as Partial<RecentVersionAnswer> & {
         slug?: string;
@@ -113,7 +133,8 @@ export function SharePanel({
         error?: string;
       };
       if (response.status === 409 && data.existing) {
-        setState({ step: "recent", existing: data.existing });
+        setExisting(data.existing);
+        setState({ step: "preview" });
         return;
       }
       if (!response.ok || !data.slug || !data.url || !data.deleteUrl || !data.token) {
@@ -164,6 +185,15 @@ export function SharePanel({
           </div>
         ) : (
           <>
+            {existing && (
+              <p ref={notice} className={styles.recentVersion} role="status">
+                {m.recent(existing.capturedAt)}{" "}
+                {/* In a new tab: this city stays here, ready to be published after comparing. */}
+                <Link href={sharedCityPath(existing.slug)} target="_blank" rel="noopener" prefetch={false}>
+                  {m.seeExisting}
+                </Link>
+              </p>
+            )}
             <div className={styles.thumbFrame}>
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -220,47 +250,14 @@ export function SharePanel({
                 {state.message}
               </p>
             )}
-            {state.step === "recent" && (
-              <p className={styles.recentVersion} role="status">
-                {m.recent(state.existing.capturedAt)}
-              </p>
-            )}
 
             <div className={styles.actionsRow}>
-              {state.step === "recent" ? (
-                <>
-                  <button type="button" className={styles.primary} onClick={() => publish(state.existing.slug)}>
-                    {m.publishNew}
-                  </button>
-                  {/* In a new tab: this city stays here, ready to be published after comparing. */}
-                  <Link
-                    href={sharedCityPath(state.existing.slug)}
-                    target="_blank"
-                    rel="noopener"
-                    prefetch={false}
-                    className={styles.secondary}
-                  >
-                    {m.seeExisting}
-                  </Link>
-                  <button type="button" className={styles.secondary} onClick={onClose}>
-                    {m.cancel}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    onClick={() => publish()}
-                    disabled={state.step === "sending"}
-                  >
-                    {state.step === "sending" ? m.publishing : m.publish}
-                  </button>
-                  <button type="button" className={styles.secondary} onClick={onClose} disabled={state.step === "sending"}>
-                    {m.cancel}
-                  </button>
-                </>
-              )}
+              <button type="button" className={styles.primary} onClick={publish} disabled={state.step === "sending"}>
+                {state.step === "sending" ? m.publishing : existing ? m.publishNew : m.publish}
+              </button>
+              <button type="button" className={styles.secondary} onClick={onClose} disabled={state.step === "sending"}>
+                {m.cancel}
+              </button>
             </div>
           </>
         )}

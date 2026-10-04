@@ -10,7 +10,8 @@ const dataDir = mkdtempSync(join(tmpdir(), "domcity-test-"));
 process.env.DOMCITY_DATA_DIR = dataDir;
 for (const key of ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "R2_BUCKET"]) delete process.env[key];
 
-const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, statsOf, ShareError, RecentVersion } = await import("./share");
+const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, statsOf, ShareError, RecentVersion, recentPageVersions } =
+  await import("./share");
 const { hashToken } = await import("./security");
 const store = await import("./store");
 const { readLocalFile, cityKey } = await import("./files");
@@ -180,13 +181,15 @@ const sql = async (text: string, params: unknown[] = []) => {
 describe("a page already published (local database)", () => {
   const MILL: CityDoc = { ...DOC, url: "https://moulins.fr/farines", title: "Les farines" };
   const pageVersions = async () => (await store.pageVersions("moulins.fr", "/farines")).map((version) => version.slug);
-  /** Ages the versions of the page, as if they had been published this many days ago. */
-  const age = (days: number) =>
-    sql(
-      `update public.captures set captured_at = now() - make_interval(days => $1)
-        where page_id in (select p.id from public.pages p join public.sites s on s.id = p.site_id where s.domain = 'moulins.fr')`,
-      [days],
+  /** Ages the versions of the page, as if they had been published this many days ago (and its page with them). */
+  const age = async (days: number) => {
+    const pages = "select p.id from public.pages p join public.sites s on s.id = p.site_id where s.domain = 'moulins.fr'";
+    await sql(`update public.captures set captured_at = now() - make_interval(days => $1) where page_id in (${pages})`, [days]);
+    await sql(
+      `update public.pages p set last_capture_at = (select max(c.captured_at) from public.captures c
+         where c.page_id = p.id and c.status = 'visible') where p.id in (${pages})`,
     );
+  };
   let first = "";
 
   beforeAll(async () => {
@@ -222,6 +225,16 @@ describe("a page already published (local database)", () => {
     await sql("update public.captures set status = 'hidden' where slug = $1", [latest]);
     const { slug } = await shareCity(MILL, null);
     expect((await pageVersions())[0]).toBe(slug);
+  });
+
+  it("lists the site's pages published less than 30 days ago, for the share panel to warn before publishing", async () => {
+    const [latest] = await pageVersions();
+    const [page] = await recentPageVersions("moulins.fr");
+    expect(page).toMatchObject({ path: "/farines", slug: latest });
+    expect(Date.now() - Date.parse(page.capturedAt)).toBeLessThan(60_000);
+    await age(30);
+    expect(await recentPageVersions("moulins.fr")).toEqual([]);
+    expect(await recentPageVersions("inconnu.fr")).toEqual([]);
   });
 });
 
