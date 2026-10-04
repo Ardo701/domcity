@@ -230,7 +230,7 @@ describe("a page already published (local database)", () => {
   it("lists the site's pages published less than 30 days ago, for the share panel to warn before publishing", async () => {
     const [latest] = await pageVersions();
     const [page] = await recentPageVersions("moulins.fr");
-    expect(page).toMatchObject({ path: "/farines", slug: latest });
+    expect(page).toMatchObject({ path: "/farines", slug: latest, thumbnail: `/api/dev-files/city/${latest}.jpg` });
     expect(Date.now() - Date.parse(page.capturedAt)).toBeLessThan(60_000);
     await age(30);
     expect(await recentPageVersions("moulins.fr")).toEqual([]);

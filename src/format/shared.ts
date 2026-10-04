@@ -43,6 +43,8 @@ export interface ExistingVersion {
   slug: string;
   /** ISO date of its publication. */
   capturedAt: string;
+  /** Address of its thumbnail (the file may be missing: the gallery's hatching then shows). */
+  thumbnail: string | null;
 }
 
 /** The answer (409) to a publication less than 30 days after the page's latest version: the visitor confirms. */

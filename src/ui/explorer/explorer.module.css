@@ -1321,17 +1321,36 @@
   font-size: 14px;
 }
 
-.recentVersion {
-  padding: 9px 12px;
-  border-left: 4px solid var(--beacon);
-  background: var(--paper);
-  font-size: 14px;
-  line-height: 1.5;
+/* A question over the share panel: the page already has a recent city. */
+.dialogWrap {
+  position: fixed;
+  inset: 0;
+  z-index: 16;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(21, 21, 26, 0.45);
+  overflow-y: auto;
 }
 
-.recentVersion a {
-  font-weight: 700;
-  white-space: nowrap;
+.dialog {
+  composes: panel;
+  width: min(460px, 100%);
+  padding: 20px 22px 22px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.dialog h2 {
+  font-size: clamp(26px, 4vw, 34px);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.dialogNote {
+  font-size: 13.5px;
+  color: var(--ink-3);
 }
 
 .actionsRow {

@@ -186,8 +186,12 @@ interface CityMessages {
     publish: string;
     publishing: string;
     cancel: string;
-    /** The page has a city published less than 30 days ago: the visitor confirms or not. */
+    /** The page has a city published less than 30 days ago: a dialog asks whether to publish a new version. */
+    recentKicker: string;
+    recentTitle: string;
     recent: (date: string) => string;
+    recentNote: string;
+    existingThumbAlt: string;
     seeExisting: string;
     publishNew: string;
   };
@@ -489,8 +493,11 @@ export const CITY = defineMessages<CityMessages>({
       publish: "Publish the city",
       publishing: "Publishing…",
       cancel: "Cancel",
-      recent: (date) =>
-        `This page already has a city, published ${timeAgo(date, "en")} (${longDate(date, "en")}). Publish a new version anyway?`,
+      recentKicker: "Already published",
+      recentTitle: "This page already has a city",
+      recent: (date) => `Published ${timeAgo(date, "en")} (${longDate(date, "en")}). Publish a new version anyway?`,
+      recentNote: "The earlier one stays visible: a city keeps all its versions.",
+      existingThumbAlt: "Thumbnail of the existing city",
       seeExisting: "See the existing city ↗",
       publishNew: "Publish a new version",
     },
@@ -803,8 +810,11 @@ export const CITY = defineMessages<CityMessages>({
       publish: "Publier la ville",
       publishing: "Publication…",
       cancel: "Annuler",
-      recent: (date) =>
-        `Cette page a déjà une ville, publiée ${timeAgo(date, "fr")} (le ${longDate(date, "fr")}). Publier quand même une nouvelle version ?`,
+      recentKicker: "Déjà publiée",
+      recentTitle: "Cette page a déjà une ville",
+      recent: (date) => `Publiée ${timeAgo(date, "fr")} (le ${longDate(date, "fr")}). Publier quand même une nouvelle version ?`,
+      recentNote: "La précédente reste consultable : une ville garde toutes ses versions.",
+      existingThumbAlt: "Miniature de la ville existante",
       seeExisting: "Voir la ville existante ↗",
       publishNew: "Publier une nouvelle version",
     },

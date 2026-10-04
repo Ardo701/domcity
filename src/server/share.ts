@@ -133,6 +133,12 @@ export function statsOf(doc: CityDoc): CityStatsSummary {
 
 const isRecent = (capturedAt: Date) => Date.now() - capturedAt.getTime() < RECENT_VERSION_DAYS * 86_400_000;
 
+const existingVersion = (slug: string, capturedAt: Date): ExistingVersion => ({
+  slug,
+  capturedAt: capturedAt.toISOString(),
+  thumbnail: fileStore()?.publicUrl(thumbKey(slug)) ?? null,
+});
+
 /**
  * The pages of a site whose latest visible version is less than 30 days old. Asked when the share panel opens,
  * with the site's name only: the browser looks for its page among them, so the page's address is not sent.
@@ -142,7 +148,7 @@ export async function recentPageVersions(domain: string): Promise<Array<Existing
   return pages.flatMap(({ path, latestSlug, lastCaptureAt }) => {
     if (!latestSlug || !lastCaptureAt) return [];
     const capturedAt = new Date(lastCaptureAt);
-    return isRecent(capturedAt) ? [{ path, slug: latestSlug, capturedAt: capturedAt.toISOString() }] : [];
+    return isRecent(capturedAt) ? [{ path, ...existingVersion(latestSlug, capturedAt) }] : [];
   });
 }
 
@@ -156,7 +162,7 @@ async function checkRecentVersion(domain: string, path: string, newVersionOf: st
   if (!latest || latest.slug === newVersionOf) return;
   const capturedAt = new Date(latest.capturedAt);
   if (isRecent(capturedAt)) {
-    throw new RecentVersion({ slug: latest.slug, capturedAt: capturedAt.toISOString() });
+    throw new RecentVersion(existingVersion(latest.slug, capturedAt));
   }
 }
 

@@ -30,6 +30,67 @@ function headingsOf(root: CityNode): string[] {
   return out;
 }
 
+/**
+ * The page already has a city published less than 30 days ago: a dialog over the panel asks whether to publish
+ * a new version. Its thumbnail, its date, and the way to see it in a new tab (the capture stays here).
+ */
+function RecentVersionDialog({
+  existing,
+  onConfirm,
+  onCancel,
+}: {
+  existing: ExistingVersion;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const m = useMessages(CITY).share;
+  const [broken, setBroken] = useState(false);
+  const confirm = useRef<HTMLButtonElement>(null);
+  useEffect(() => confirm.current?.focus(), []);
+  return (
+    <div className={styles.dialogWrap}>
+      <section
+        className={styles.dialog}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="recent-title"
+        aria-describedby="recent-text"
+      >
+        <div className={styles.thumbFrame}>
+          {existing.thumbnail && !broken && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={existing.thumbnail} alt={m.existingThumbAlt} onError={() => setBroken(true)} />
+          )}
+        </div>
+        <div>
+          <p className="mono-caps">{m.recentKicker}</p>
+          <h2 id="recent-title">{m.recentTitle}</h2>
+        </div>
+        <p id="recent-text">{m.recent(existing.capturedAt)}</p>
+        <p className={styles.dialogNote}>{m.recentNote}</p>
+        <div className={styles.actionsRow}>
+          <button ref={confirm} type="button" className={styles.primary} onClick={onConfirm}>
+            {m.publishNew}
+          </button>
+          {/* In a new tab: this city stays here, ready to be published after comparing. */}
+          <Link
+            href={sharedCityPath(existing.slug)}
+            target="_blank"
+            rel="noopener"
+            prefetch={false}
+            className={styles.secondary}
+          >
+            {m.seeExisting}
+          </Link>
+          <button type="button" className={styles.secondary} onClick={onCancel}>
+            {m.cancel}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** Wikipedia: the server captures the article itself. Bookmarklet: the city is sent as is. */
 export type ShareSource = { kind: "wikipedia"; lang: WikiLang } | { kind: "bookmarklet" };
 
@@ -51,9 +112,10 @@ export function SharePanel({
   const [title, setTitle] = useState(doc.title);
   const headings = useMemo(() => headingsOf(doc.root), [doc]);
   const address = useMemo(() => normalizePageUrl(doc.url), [doc]);
-  // The page's city published less than 30 days ago, if any: the panel warns before publishing a new version.
+  // The page's city published less than 30 days ago, if any, and the dialog that asks about it: as soon as the
+  // panel opens ("open"), or when publishing if a version came in the meantime ("publish": confirming publishes).
   const [existing, setExisting] = useState<ExistingVersion | null>(null);
-  const notice = useRef<HTMLParagraphElement>(null);
+  const [asking, setAsking] = useState<"open" | "publish" | null>(null);
   const bookmarklet = source.kind === "bookmarklet";
   const thirdParty = doc.page?.thirdParty?.length ?? 0;
   const linkTargets = useMemo(() => {
@@ -87,16 +149,13 @@ export function SharePanel({
       .then((response) => (response.ok ? response.json() : { pages: [] }))
       .then((data: { pages?: Array<ExistingVersion & { path: string }> }) => {
         const page = data.pages?.find((candidate) => candidate.path === address.path);
-        if (page) setExisting((current) => current ?? { slug: page.slug, capturedAt: page.capturedAt });
+        if (!page) return;
+        setExisting((current) => current ?? { slug: page.slug, capturedAt: page.capturedAt, thumbnail: page.thumbnail });
+        setAsking((current) => current ?? "open");
       })
       .catch(() => undefined);
     return () => controller.abort();
   }, [address]);
-
-  // Learned when publishing (a version published in the meantime): the warning is at the top of the panel.
-  useEffect(() => {
-    if (existing) notice.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [existing]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -120,7 +179,7 @@ export function SharePanel({
         form.set("city", await gzipCity({ ...doc, title: publishedTitle.slice(0, 300) }), "city.json.gz");
       }
       if (thumb) form.set("thumbnail", thumb.blob, "thumbnail.jpg");
-      // The warning was shown: publishing is confirming over that version.
+      // The dialog was answered: publishing is confirming over that version.
       if (existing) form.set("newVersionOf", existing.slug);
       const response = await fetch("/api/captures", { method: "POST", body: form });
       const data = (await response.json()) as Partial<RecentVersionAnswer> & {
@@ -134,6 +193,7 @@ export function SharePanel({
       };
       if (response.status === 409 && data.existing) {
         setExisting(data.existing);
+        setAsking("publish");
         setState({ step: "preview" });
         return;
       }
@@ -185,15 +245,6 @@ export function SharePanel({
           </div>
         ) : (
           <>
-            {existing && (
-              <p ref={notice} className={styles.recentVersion} role="status">
-                {m.recent(existing.capturedAt)}{" "}
-                {/* In a new tab: this city stays here, ready to be published after comparing. */}
-                <Link href={sharedCityPath(existing.slug)} target="_blank" rel="noopener" prefetch={false}>
-                  {m.seeExisting}
-                </Link>
-              </p>
-            )}
             <div className={styles.thumbFrame}>
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -262,6 +313,16 @@ export function SharePanel({
           </>
         )}
       </section>
+      {existing && asking && state.step !== "done" && (
+        <RecentVersionDialog
+          existing={existing}
+          onConfirm={() => {
+            setAsking(null);
+            if (asking === "publish") void publish();
+          }}
+          onCancel={onClose}
+        />
+      )}
     </div>
   );
 }
