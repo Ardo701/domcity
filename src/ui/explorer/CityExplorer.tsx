@@ -256,7 +256,8 @@ export function CityExplorer({ source, canShare = false }: { source: CitySource;
       <div ref={stageRef} className={styles.stage} />
 
       <header ref={barRef} className={styles.bar}>
-        <Link href="/" className={styles.home} aria-label={COMMON[locale].homeLabel}>
+        {/* Not prefetched: the browser would keep for 5 minutes a home page from before the city was published. */}
+        <Link href="/" prefetch={false} className={styles.home} aria-label={COMMON[locale].homeLabel}>
           <LogoMark size={26} />
           <span>
             DOM<b>City</b>

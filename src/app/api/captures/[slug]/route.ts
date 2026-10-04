@@ -1,5 +1,6 @@
 import { API } from "@/i18n/messages/api";
 import { sharingEnabled } from "@/server/config";
+import { refreshGalleries } from "@/server/galleries";
 import { clientActor, jsonError, requestLanguage, sameOrigin, SLUG_PATTERN } from "@/server/security";
 import { deleteSharedCity } from "@/server/share";
 import { hitRateLimit } from "@/server/store";
@@ -26,6 +27,7 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/captures/
     }
     const deleted = await deleteSharedCity(slug, token);
     if (!deleted) return jsonError(403, m.remove.alreadyGone);
+    refreshGalleries();
     return Response.json({ deleted: true });
   } catch (error) {
     console.error("deletion", error);

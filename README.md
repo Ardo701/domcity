@@ -173,7 +173,7 @@ search, the gallery and the megalopolis all work without an account.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server, sharing in local mode |
-| `npm test` | 123 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
+| `npm test` | 125 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
 | `npm run bookmarklet` | Recompiles the bookmarklet (`src/bookmarklet/generated.ts`) after a change in `src/capture` or `src/bookmarklet` |

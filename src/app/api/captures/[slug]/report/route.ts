@@ -1,6 +1,7 @@
 import { REPORT_REASONS, type ReportReason } from "@/format/shared";
 import { API } from "@/i18n/messages/api";
 import { sharingEnabled } from "@/server/config";
+import { refreshGalleries } from "@/server/galleries";
 import { clientActor, jsonError, requestLanguage, sameOrigin, SLUG_PATTERN } from "@/server/security";
 import { hitRateLimit, reportCapture } from "@/server/store";
 
@@ -29,6 +30,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/captures/[s
       return jsonError(429, m.report.tooMany);
     }
     const recorded = await reportCapture(slug, reason, details, actor);
+    // The third report hides the city: the galleries must stop showing it.
+    if (recorded) refreshGalleries();
     return Response.json({ recorded });
   } catch (error) {
     console.error("report", error);

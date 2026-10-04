@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { sharedCityPath } from "@/format/shared";
 import { useMessages } from "@/i18n/client";
@@ -17,6 +18,7 @@ const readToken = () => decodeURIComponent(window.location.hash.slice(1));
 
 export function DeleteCity({ slug, title }: { slug: string; title: string | null }) {
   const m = useMessages(DELETE);
+  const router = useRouter();
   const token = useSyncExternalStore(subscribeHash, readToken, () => "");
   const [state, setState] = useState<"confirm" | "sending" | "done" | { error: string }>("confirm");
 
@@ -36,6 +38,8 @@ export function DeleteCity({ slug, title }: { slug: string; title: string | null
       forgetCity(slug);
       window.history.replaceState(null, "", window.location.pathname);
       setState("done");
+      // The pages kept by the browser (home page, Explore) still show the city: they are fetched again.
+      router.refresh();
     } catch {
       setState({ error: m.offline });
     }

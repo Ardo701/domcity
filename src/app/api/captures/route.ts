@@ -5,6 +5,7 @@ import type { CityDoc } from "@/format/types";
 import { API } from "@/i18n/messages/api";
 import { REFUSAL } from "@/i18n/messages/refusal";
 import { sharingEnabled, siteUrl } from "@/server/config";
+import { refreshGalleries } from "@/server/galleries";
 import { clientActor, jsonError, requestLanguage, sameOrigin } from "@/server/security";
 import { captureWikipediaOnServer, readThumbnail, readUploadedCity, shareCity, ShareError } from "@/server/share";
 import { hitRateLimit } from "@/server/store";
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     const thumbnail = thumb instanceof Blob && thumb.size > 0 ? readThumbnail(new Uint8Array(await thumb.arrayBuffer())) : null;
 
     const { slug, token, pageUrl } = await shareCity(doc, thumbnail);
+    refreshGalleries();
     const base = siteUrl(request);
     return Response.json(
       {
