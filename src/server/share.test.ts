@@ -10,7 +10,7 @@ const dataDir = mkdtempSync(join(tmpdir(), "domcity-test-"));
 process.env.DOMCITY_DATA_DIR = dataDir;
 for (const key of ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "R2_BUCKET"]) delete process.env[key];
 
-const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, statsOf, ShareError, DuplicateCity } = await import("./share");
+const { readThumbnail, readUploadedCity, shareCity, deleteSharedCity, statsOf, ShareError, RecentVersion } = await import("./share");
 const { hashToken } = await import("./security");
 const store = await import("./store");
 const { readLocalFile, cityKey } = await import("./files");
@@ -142,9 +142,8 @@ describe("sites first (local database)", () => {
 
   it("the gallery shows the site once, with the thumbnail of its home page", async () => {
     ({ slug: accueil } = await shareCity(page("https://vergers.fr/", "Les vergers"), JPEG));
-    // A second version of the page, different and confirmed (the first is less than 7 days old).
-    const second = { ...page("https://vergers.fr/pommes/reinette", "La reinette"), root: { tag: "body", children: [{ tag: "h1", text: 11, heading: "La reinette" }] } };
-    await shareCity(second, null, { newVersionOf: reinette });
+    // A second version of the page, confirmed (the first is less than 30 days old).
+    await shareCity(page("https://vergers.fr/pommes/reinette", "La reinette"), null, { newVersionOf: reinette });
     const sites = (await store.recentSites(60)).filter((site) => site.domain === "vergers.fr");
     expect(sites).toEqual([
       expect.objectContaining({ pagesCount: 2, capturesCount: 3, cover: { slug: accueil, thumbnail: true } }),
@@ -179,75 +178,50 @@ const sql = async (text: string, params: unknown[] = []) => {
 };
 
 describe("a page already published (local database)", () => {
-  const URL = "https://moulins.fr/farines";
-  const mill = (paragraphs: number, heading = "Les farines"): CityDoc => ({
-    ...DOC,
-    url: URL,
-    title: heading,
-    root: {
-      tag: "body",
-      children: [
-        { tag: "h1", text: 11, heading },
-        ...Array.from({ length: paragraphs }, (_, i) => ({ tag: "p", text: 300, rect: [0, i * 40, 800, 36] as [number, number, number, number] })),
-      ],
-    },
-  });
-  const duplicate = (promise: Promise<unknown>) => promise.then(() => null, (error: unknown) => error);
+  const MILL: CityDoc = { ...DOC, url: "https://moulins.fr/farines", title: "Les farines" };
+  const pageVersions = async () => (await store.pageVersions("moulins.fr", "/farines")).map((version) => version.slug);
+  /** Ages the versions of the page, as if they had been published this many days ago. */
+  const age = (days: number) =>
+    sql(
+      `update public.captures set captured_at = now() - make_interval(days => $1)
+        where page_id in (select p.id from public.pages p join public.sites s on s.id = p.site_id where s.domain = 'moulins.fr')`,
+      [days],
+    );
   let first = "";
 
   beforeAll(async () => {
-    ({ slug: first } = await shareCity(mill(100), null));
+    ({ slug: first } = await shareCity(MILL, null));
   }, 60_000);
 
-  it("refuses the same city again, even captured later in another window, even confirmed", async () => {
-    const again = { ...mill(100), capturedAt: "2026-10-04T09:00:00.000Z", root: { ...mill(100).root, bg: "#ffffff" } };
-    const error = await duplicate(shareCity(again, JPEG));
-    expect(error).toBeInstanceOf(DuplicateCity);
-    expect(error).toMatchObject({ duplicate: "unchanged", existing: { slug: first }, difference: 0 });
-    await expect(shareCity(again, JPEG, { newVersionOf: first })).rejects.toMatchObject({ duplicate: "unchanged" });
-    expect(await store.pageVersions("moulins.fr", "/farines")).toHaveLength(1);
+  it("asks to confirm a new version less than 30 days after the latest, whatever it holds", async () => {
+    const error = await shareCity(MILL, JPEG).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(RecentVersion);
+    expect(error).toMatchObject({ existing: { slug: first } });
+    expect(Date.now() - Date.parse((error as InstanceType<typeof RecentVersion>).existing.capturedAt)).toBeLessThan(60_000);
+    expect(await pageVersions()).toEqual([first]);
   });
 
-  it("asks to confirm a different city when the latest version is less than 7 days old", async () => {
-    const error = await duplicate(shareCity(mill(120), null));
-    expect(error).toMatchObject({ duplicate: "recent", existing: { slug: first } });
-    expect((error as InstanceType<typeof DuplicateCity>).difference).toBeCloseTo(20 / 122, 6) // 20 paragraphs more, over the 122 elements of the new city;
-    // Confirmed over another version than the latest: asked again.
-    await expect(shareCity(mill(120), null, { newVersionOf: "AbCdEfGh" })).rejects.toMatchObject({ duplicate: "recent" });
-
-    const { slug } = await shareCity(mill(120), null, { newVersionOf: first });
-    expect((await store.pageVersions("moulins.fr", "/farines")).map((v) => v.slug)).toEqual([slug, first]);
-    // The latest version is now the one to compare with.
-    await expect(shareCity(mill(120), null)).rejects.toMatchObject({ duplicate: "unchanged", existing: { slug } });
+  it("publishes once confirmed over the latest version, and asks again if another one came in between", async () => {
+    await expect(shareCity(MILL, null, { newVersionOf: "AbCdEfGh" })).rejects.toBeInstanceOf(RecentVersion);
+    const { slug } = await shareCity(MILL, null, { newVersionOf: first });
+    expect(await pageVersions()).toEqual([slug, first]);
+    await expect(shareCity(MILL, null, { newVersionOf: first })).rejects.toMatchObject({ existing: { slug } });
   });
 
-  it("publishes without asking once the latest version is 7 days old, and still refuses the same city", async () => {
-    await sql(
-      `update public.captures set captured_at = now() - interval '8 days'
-        where page_id in (select p.id from public.pages p join public.sites s on s.id = p.site_id where s.domain = 'moulins.fr')`,
-    );
-    const { slug } = await shareCity(mill(100, "Les farines du moulin"), null);
-    expect((await store.pageVersions("moulins.fr", "/farines"))[0].slug).toBe(slug);
-    await sql("update public.captures set captured_at = now() - interval '8 days' where slug = $1", [slug]);
-    await expect(shareCity(mill(100, "Les farines du moulin"), null)).rejects.toMatchObject({ duplicate: "unchanged" });
+  it("publishes without asking once the latest version is 30 days old", async () => {
+    await age(29);
+    await expect(shareCity(MILL, null)).rejects.toBeInstanceOf(RecentVersion);
+    await age(30);
+    const { slug } = await shareCity(MILL, null);
+    expect((await pageVersions())[0]).toBe(slug);
   });
 
-  it("a hidden version (reports) no longer holds the page", async () => {
-    const [latest] = await store.pageVersions("moulins.fr", "/farines");
-    await sql("update public.captures set status = 'hidden' where slug = $1", [latest.slug]);
-    const { slug } = await shareCity(mill(100, "Les farines du moulin"), null);
-    expect((await store.pageVersions("moulins.fr", "/farines"))[0].slug).toBe(slug);
-  });
-
-  it("without the file of the latest version, asks to confirm without a difference", async () => {
-    const [latest] = await store.pageVersions("moulins.fr", "/farines");
-    const { fileStore } = await import("./files");
-    await fileStore()!.remove([cityKey(latest.slug)]);
-    await expect(shareCity(mill(100, "Les farines du moulin"), null)).rejects.toMatchObject({
-      duplicate: "recent",
-      existing: { slug: latest.slug },
-      difference: null,
-    });
+  it("a hidden version (reports) does not count", async () => {
+    // The latest version is a minute old, the others 30 days: hidden, it no longer asks for a confirmation.
+    const [latest] = await pageVersions();
+    await sql("update public.captures set status = 'hidden' where slug = $1", [latest]);
+    const { slug } = await shareCity(MILL, null);
+    expect((await pageVersions())[0]).toBe(slug);
   });
 });
 

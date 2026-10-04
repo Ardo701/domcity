@@ -4,7 +4,7 @@ import { proxy } from "@/proxy";
 import { API } from "./messages/api";
 import { CITY } from "./messages/city";
 import { negotiateLocale, requestLocale } from "./locale";
-import { formatBytes, formatCount, formatPercent, plural, timeAgo } from "./format";
+import { formatBytes, formatCount, plural, timeAgo } from "./format";
 
 const visit = (path: string, headers: Record<string, string> = {}) => proxy(new NextRequest(`http://localhost:3000${path}`, { headers }));
 
@@ -64,8 +64,6 @@ describe("languages", () => {
     expect(plural("en", 0, "city", "cities")).toBe("0 cities");
     expect(plural("fr", 0, "ville", "villes")).toBe("0 ville");
     expect(plural("fr", 2, "ville", "villes")).toBe("2 villes");
-    expect(formatPercent(0.14, "en")).toBe("14%");
-    expect(formatPercent(0.14, "fr")).toMatch(/^14\s%$/u); // a no-break space, narrow or not depending on the engine
   });
 
   it("says how long ago a version was published", () => {

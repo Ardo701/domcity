@@ -1321,7 +1321,7 @@
   font-size: 14px;
 }
 
-.duplicate {
+.recentVersion {
   padding: 9px 12px;
   border-left: 4px solid var(--beacon);
   background: var(--paper);

@@ -1,6 +1,6 @@
 import { isWikiLang } from "@/capture/wikipedia";
 import type { Refusal } from "@/format/blocklist";
-import { deleteCityPath, sharedCityPath, type DuplicateAnswer } from "@/format/shared";
+import { deleteCityPath, sharedCityPath, type RecentVersionAnswer } from "@/format/shared";
 import type { CityDoc } from "@/format/types";
 import { API } from "@/i18n/messages/api";
 import { REFUSAL } from "@/i18n/messages/refusal";
@@ -9,8 +9,8 @@ import { refreshGalleries } from "@/server/galleries";
 import { clientActor, jsonError, requestLanguage, sameOrigin } from "@/server/security";
 import {
   captureWikipediaOnServer,
-  DuplicateCity,
   readThumbnail,
+  RecentVersion,
   readUploadedCity,
   shareCity,
   ShareError,
@@ -74,13 +74,8 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    if (error instanceof DuplicateCity) {
-      const answer: DuplicateAnswer = {
-        error: m.duplicate[error.duplicate](error.existing.capturedAt),
-        duplicate: error.duplicate,
-        existing: error.existing,
-        difference: error.difference,
-      };
+    if (error instanceof RecentVersion) {
+      const answer: RecentVersionAnswer = { error: m.share.recentVersion(error.existing.capturedAt), existing: error.existing };
       return Response.json(answer, { status: 409 });
     }
     if (error instanceof ShareError) {

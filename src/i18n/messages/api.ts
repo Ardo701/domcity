@@ -17,9 +17,9 @@ export const API = defineMessages<{
     badSource: string;
     unknownSource: string;
     failed: string;
+    /** The page has a version less than 30 days old (the panel shows its own text, this goes with the answer). */
+    recentVersion: (date: string) => string;
   };
-  /** The page already has a version (the panel shows its own text, these go with the answer). */
-  duplicate: { unchanged: (date: string) => string; recent: (date: string) => string };
   remove: { badLink: string; tooMany: string; alreadyGone: string; failed: string };
   report: { badReason: string; tooMany: string; failed: string };
 }>({
@@ -46,10 +46,8 @@ export const API = defineMessages<{
       localPage: () => "Local or intranet pages cannot be shared.",
       addressTooLong: () => "The page address is too long.",
       blockedDomain: () => "This site is on the list of sites refused by DOMCity.",
-    },
-    duplicate: {
-      unchanged: (date) => `This page has not changed since its city of ${longDate(date, "en")}.`,
-      recent: (date) => `This page already has a city, published on ${longDate(date, "en")}. Confirm to publish a new version.`,
+      recentVersion: (date) =>
+        `This page already has a city, published on ${longDate(date, "en")}. Confirm to publish a new version.`,
     },
     remove: {
       badLink: "Invalid deletion link.",
@@ -86,10 +84,8 @@ export const API = defineMessages<{
       localPage: () => "Les pages locales ou d'intranet ne se partagent pas.",
       addressTooLong: () => "Adresse de page trop longue.",
       blockedDomain: () => "Ce site est sur la liste des sites refusés par DOMCity.",
-    },
-    duplicate: {
-      unchanged: (date) => `Cette page n'a pas changé depuis sa ville du ${longDate(date, "fr")}.`,
-      recent: (date) => `Cette page a déjà une ville, publiée le ${longDate(date, "fr")}. Confirmez pour publier une nouvelle version.`,
+      recentVersion: (date) =>
+        `Cette page a déjà une ville, publiée le ${longDate(date, "fr")}. Confirmez pour publier une nouvelle version.`,
     },
     remove: {
       badLink: "Lien de suppression invalide.",

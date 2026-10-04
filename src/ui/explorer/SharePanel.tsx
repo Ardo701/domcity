@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { WikiLang } from "@/capture/wikipedia";
-import { sharedCityPath, type DuplicateAnswer, type ExistingVersion } from "@/format/shared";
+import { sharedCityPath, type ExistingVersion, type RecentVersionAnswer } from "@/format/shared";
 import type { CityDoc, CityNode } from "@/format/types";
 import { normalizePageUrl } from "@/format/url";
 import { useMessages } from "@/i18n/client";
@@ -18,10 +18,8 @@ type State =
   | { step: "sending" }
   | { step: "done"; slug: string; url: string; deleteUrl: string }
   | { step: "error"; message: string }
-  // The page already has the same city: nothing is published.
-  | { step: "unchanged"; existing: ExistingVersion; similarity: number }
-  // The page has a different city, published less than 7 days ago: publishing again needs a confirmation.
-  | { step: "recent"; existing: ExistingVersion; difference: number | null };
+  // The page has a city published less than 30 days ago: publishing again needs a confirmation.
+  | { step: "recent"; existing: ExistingVersion };
 
 function headingsOf(root: CityNode): string[] {
   const out: string[] = [];
@@ -105,7 +103,7 @@ export function SharePanel({
       if (thumb) form.set("thumbnail", thumb.blob, "thumbnail.jpg");
       if (newVersionOf) form.set("newVersionOf", newVersionOf);
       const response = await fetch("/api/captures", { method: "POST", body: form });
-      const data = (await response.json()) as Partial<DuplicateAnswer> & {
+      const data = (await response.json()) as Partial<RecentVersionAnswer> & {
         slug?: string;
         title?: string;
         pageUrl?: string;
@@ -115,12 +113,7 @@ export function SharePanel({
         error?: string;
       };
       if (response.status === 409 && data.existing) {
-        const { existing, difference = null } = data;
-        setState(
-          data.duplicate === "unchanged"
-            ? { step: "unchanged", existing, similarity: 1 - (difference ?? 0) }
-            : { step: "recent", existing, difference },
-        );
+        setState({ step: "recent", existing: data.existing });
         return;
       }
       if (!response.ok || !data.slug || !data.url || !data.deleteUrl || !data.token) {
@@ -227,29 +220,14 @@ export function SharePanel({
                 {state.message}
               </p>
             )}
-            {state.step === "unchanged" && (
-              <p className={styles.duplicate} role="status">
-                {m.unchanged(state.existing.capturedAt, state.similarity)}
-              </p>
-            )}
             {state.step === "recent" && (
-              <p className={styles.duplicate} role="status">
+              <p className={styles.recentVersion} role="status">
                 {m.recent(state.existing.capturedAt)}
-                {state.difference !== null && ` ${m.difference(state.difference)}`}
               </p>
             )}
 
             <div className={styles.actionsRow}>
-              {state.step === "unchanged" ? (
-                <>
-                  <Link href={sharedCityPath(state.existing.slug)} className={styles.primary}>
-                    {m.seeIt}
-                  </Link>
-                  <button type="button" className={styles.secondary} onClick={onClose}>
-                    {m.close}
-                  </button>
-                </>
-              ) : state.step === "recent" ? (
+              {state.step === "recent" ? (
                 <>
                   <button type="button" className={styles.primary} onClick={() => publish(state.existing.slug)}>
                     {m.publishNew}

@@ -77,8 +77,8 @@ What the page does without showing it becomes visible in the city.
 
 ## The megalopolis
 
-Every capture is a dated version of a page, published only if its city changed: the same city as the page's latest
-version is refused, and a new version less than 7 days after the previous one asks for a confirmation. All the pages of a site come together in a megalopolis: each page is a
+Every capture is a dated version of a page (a new version less than 30 days after the previous one asks for a
+confirmation). All the pages of a site come together in a megalopolis: each page is a
 city, placed according to its address (the path becomes the geography). When one page links to another, a highway
 connects their cities. The site gets a large shared airport, and every city open enough to the web keeps its own
 airfield.
@@ -174,7 +174,7 @@ search, the gallery and the megalopolis all work without an account.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server, sharing in local mode |
-| `npm test` | 137 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
+| `npm test` | 130 tests: capture, bookmarklet, urban planning, megalopolis, sharing end to end on the local database, languages |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript |
 | `npm run bookmarklet` | Recompiles the bookmarklet (`src/bookmarklet/generated.ts`) after a change in `src/capture` or `src/bookmarklet` |

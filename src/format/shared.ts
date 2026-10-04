@@ -45,14 +45,10 @@ export interface ExistingVersion {
   capturedAt: string;
 }
 
-/** The answer (409) to a publication that meets a version of the page already published. */
-export interface DuplicateAnswer {
+/** The answer (409) to a publication less than 30 days after the page's latest version: the visitor confirms. */
+export interface RecentVersionAnswer {
   error: string;
-  /** unchanged: refused, the city would be the same. recent: published less than 7 days ago, the visitor confirms. */
-  duplicate: "unchanged" | "recent";
   existing: ExistingVersion;
-  /** Share of elements that differ, from 0 to 1; null when the existing version could not be read. */
-  difference: number | null;
 }
 
 export interface CityVersion {

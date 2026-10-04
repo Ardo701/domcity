@@ -3,7 +3,6 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // A fake local R2: like the real one, it refuses an upload whose length is not announced (411).
-// It holds a single file, city/abc.json.gz.
 let server: Server;
 let origin: string;
 const received: Array<{ length?: string; type?: string; bytes: number }> = [];
@@ -12,12 +11,6 @@ let fileStore: typeof import("./files").fileStore;
 
 beforeAll(async () => {
   server = createServer((req, res) => {
-    if (req.method === "GET") {
-      const found = req.url === "/domcity-villes/city/abc.json.gz";
-      res.statusCode = found ? 200 : 404;
-      res.end(found ? Buffer.from([1, 2, 3]) : undefined);
-      return;
-    }
     let bytes = 0;
     req.on("data", (chunk: Buffer) => (bytes += chunk.length));
     req.on("end", () => {
@@ -66,10 +59,5 @@ describe("files on R2", () => {
     const thumbnail = new Uint8Array(150_000).fill(7);
     await fileStore()!.put("city/abc.jpg", thumbnail, "image/jpeg");
     expect(received.at(-1)).toEqual({ length: "150000", type: "image/jpeg", bytes: 150_000 });
-  });
-
-  it("reads a file back, or null when it does not exist", async () => {
-    expect(await fileStore()!.get("city/abc.json.gz")).toEqual(new Uint8Array([1, 2, 3]));
-    expect(await fileStore()!.get("city/missing.json.gz")).toBeNull();
   });
 });
